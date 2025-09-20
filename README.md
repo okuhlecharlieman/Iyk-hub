@@ -43,12 +43,12 @@ No chats, no negativity — just a space for kasi youth to shine.
    ```bash
    git clone https://github.com/okuhlecharlieman/Iyk-hub.git
    cd Iyk-hub
-Install dependencies:
+2. Install dependencies:
 
 npm install
 
 
-Add Firebase config:
+3. Add Firebase config:
 Create a .env.local file and add:
 
 NEXT_PUBLIC_FIREBASE_API_KEY=your_key
@@ -59,7 +59,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
 
-Run locally:
+4. Run locally:
 
 npm run dev
 

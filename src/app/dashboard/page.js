@@ -25,9 +25,9 @@ export default function DashboardPage() {
   if (loading) return <p className="text-center">Loading...</p>;
 
   return (
-    <section>
+    <div>
       <h1 className="text-3xl font-semibold mb-4">Dashboard</h1>
       <p>Welcome, {user?.email} 🎉</p>
-    </section>
+    </div>
   );
 }

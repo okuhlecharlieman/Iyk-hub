@@ -22,7 +22,7 @@ export default function SignupPage() {
   };
 
   return (
-<>     <section className="max-w-md mx-auto py-10">
+<div className="max-w-md mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6 text-center">Signup</h1>
       {error && <p className="text-red-500">{error}</p>}
       <form onSubmit={handleSignup} className="flex flex-col space-y-4">
@@ -46,7 +46,8 @@ export default function SignupPage() {
           Signup
         </button>
       </form>
-    </section> </>
+    </div>
+
   );
 }
 

@@ -1,5 +1,8 @@
 "use client";
 
+
+export const dynamic = "force-dynamic";
+
 export default function Opportunities() {
   return (
     <div className="p-6">

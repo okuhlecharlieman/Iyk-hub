@@ -22,7 +22,7 @@ export default function LoginPage() {
   };
 
   return (
-    <section className="max-w-md mx-auto py-10">
+    <>  <section className="max-w-md mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6 text-center">Login</h1>
       {error && <p className="text-red-500">{error}</p>}
       <form onSubmit={handleLogin} className="flex flex-col space-y-4">
@@ -46,6 +46,7 @@ export default function LoginPage() {
           Login
         </button>
       </form>
-    </section>
+    </section></>
+  
   );
 }

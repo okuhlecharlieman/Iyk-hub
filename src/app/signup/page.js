@@ -1,0 +1,52 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { auth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+
+export default function SignupPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <section className="max-w-md mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-6 text-center">Signup</h1>
+      {error && <p className="text-red-500">{error}</p>}
+      <form onSubmit={handleSignup} className="flex flex-col space-y-4">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="p-2 border rounded"
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password (min 6 chars)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="p-2 border rounded"
+          required
+        />
+        <button type="submit" className="bg-green-600 text-white p-2 rounded">
+          Signup
+        </button>
+      </form>
+    </section>
+  );
+}
+

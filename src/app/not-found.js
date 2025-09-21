@@ -1,3 +1,4 @@
+import Link from "next/link";
 
 export default function NotFound() {
   return (
@@ -6,9 +7,9 @@ export default function NotFound() {
         404 - Page Not Found
       </h1>
       <p>Eish sorry, the page you’re looking for does not exist.</p>
-      <a href="/" className="mt-6 text-blue-500 underline">
+      <Link href="/" className="mt-6 text-blue-500 underline">
         Go back home
-      </a>
+      </Link>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 // hooks/useGamesList.js
 //
-// React hook for real-time subscription to list of games in Firestore
+// React hook to subscribe to real-time games list from Firestore
 //
 
 import { useEffect, useState } from "react";
@@ -12,12 +12,12 @@ export function useGamesList() {
 
   useEffect(() => {
     const q = query(collection(db, "games"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const gamesList = [];
-      querySnapshot.forEach((doc) => {
-        gamesList.push({ id: doc.id, ...doc.data() });
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
       });
-      setGames(gamesList);
+      setGames(list);
     });
 
     return () => unsubscribe();

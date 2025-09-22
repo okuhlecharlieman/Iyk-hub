@@ -1,55 +1,54 @@
+// app/signup/page.jsx
+//
+// Signup page component
+//
+
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function SignupPage() {
+  const { signup } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const router = useRouter();
 
-  const handleSignup = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard");
+      await signup(email, password);
+      router.push("/");
     } catch (err) {
       setError(err.message);
     }
   };
 
   return (
-<div className="max-w-md mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6 text-center">Signup</h1>
-      {error && <p className="text-red-500">{error}</p>}
-      <form onSubmit={handleSignup} className="flex flex-col space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="p-2 border rounded"
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password (min 6 chars)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="p-2 border rounded"
-          required
-        />
-        <button type="submit" className="bg-green-600 text-white p-2 rounded">
-          Signup
-        </button>
-      </form>
-    </div>
-
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Sign Up</h1>
+      <input
+        type="email"
+        className="input"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        className="input"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <button className="btn-primary" type="submit">
+        Sign Up
+      </button>
+      {error && <p className="text-red-600">{error}</p>}
+    </form>
   );
 }
-

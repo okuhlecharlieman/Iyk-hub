@@ -1,39 +1,41 @@
 // app/games/page.jsx
 //
-// Component: GamesPage
+// Games list and creation page
 //
 
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useGamesList } from "@/hooks/useGamesList";
 import { createGame } from "@/lib/firebaseHelpers";
-import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function GamesPage() {
   const games = useGamesList();
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const [creating, setCreating] = useState(false);
 
   const handleNewGame = async () => {
-    setLoading(true);
-    const newGameId = await createGame("user1"); // Replace with authenticated user ID
-    setLoading(false);
+    if (!user) return alert("Login to create a game");
+    setCreating(true);
+    const newGameId = await createGame(user.uid);
+    setCreating(false);
     window.location.href = `/games/${newGameId}`;
   };
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-4">Available Games</h1>
+      <h1 className="text-2xl font-bold mb-6">Available Games</h1>
       <button
         onClick={handleNewGame}
-        disabled={loading}
-        className="mb-6 p-2 bg-blue-600 text-white rounded"
+        disabled={creating}
+        className="mb-6 px-4 py-2 bg-blue-600 text-white rounded"
       >
-        {loading ? "Creating..." : "New Game"}
+        {creating ? "Creating..." : "New Game"}
       </button>
-
-      <ul className="space-y-2">
-        {games.length === 0 && <li>No games found.</li>}
+      <ul>
+        {games.length === 0 && <li>No games found</li>}
         {games.map(({ id }) => (
           <li key={id}>
             <Link href={`/games/${id}`} className="text-blue-600 hover:underline">

@@ -1,19 +1,19 @@
 // app/games/[gameId]/page.jsx
 //
-// Component: GamePage
+// Dynamic game page for playing XO Game
 //
 
 import XOGame from "@/components/games/XOGame";
-
-// Replace this with your auth user ID logic or pass as prop/context
-const currentUserId = "user1";
+import { useAuth } from "@/context/AuthContext";
 
 export default function GamePage({ params }) {
   const { gameId } = params;
+  const { user } = useAuth();
+  const currentUserId = user?.uid || "guest";
 
   return (
     <div className="p-8">
-      <h1 className="text-xl font-semibold mb-4">Game ID: {gameId}</h1>
+      <h1 className="mb-4 text-xl font-semibold">Playing Game ID: {gameId}</h1>
       <XOGame gameId={gameId} currentUserId={currentUserId} />
     </div>
   );

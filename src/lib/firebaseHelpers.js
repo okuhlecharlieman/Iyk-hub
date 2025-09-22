@@ -1,13 +1,13 @@
 // lib/firebaseHelpers.js
 //
-// Functions to create and manage games in Firestore
+// Firestore helpers: create and manage games
 //
 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export async function createGame(playerId) {
-  const gameRef = await addDoc(collection(db, "games"), {
+  const docRef = await addDoc(collection(db, "games"), {
     board: Array(9).fill(""),
     currentPlayer: "X",
     winner: "",
@@ -15,5 +15,5 @@ export async function createGame(playerId) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  return gameRef.id;
+  return docRef.id;
 }

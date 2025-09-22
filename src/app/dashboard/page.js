@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const QUOTES = [
   "Keep shining, your light is needed!",
@@ -46,11 +47,11 @@ export default function DashboardPage() {
       </h1>
       <p className="mb-4 italic text-green-700">{quote}</p>
       <ul className="mt-6 space-y-2">
-        <li><a href="/games" className="text-blue-600 underline">🎮 Play Games</a></li>
-        <li><a href="/showcase" className="text-blue-600 underline">🎨 Creativity Wall</a></li>
-        <li><a href="/leaderboard" className="text-blue-600 underline">🏆 Leaderboard</a></li>
-        <li><a href="/opportunities" className="text-blue-600 underline">🚀 Opportunities</a></li>
-        <li><a href="/profile" className="text-blue-600 underline">👤 Profile</a></li>
+        <li><Link href="/games" className="text-blue-600 underline">🎮 Play Games</Link></li>
+        <li><Link href="/showcase" className="text-blue-600 underline">🎨 Creativity Wall</Link></li>
+        <li><Link href="/leaderboard" className="text-blue-600 underline">🏆 Leaderboard</Link></li>
+        <li><Link href="/opportunities" className="text-blue-600 underline">🚀 Opportunities</Link></li>
+        <li><Link href="/profile" className="text-blue-600 underline">👤 Profile</Link></li>
       </ul>
       <button
         onClick={handleLogout}

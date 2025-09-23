@@ -3,8 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ensureUserDoc } from '../lib/firebaseHelpers';
-import { awardDailyLogin } from '../lib/firebaseHelpers';
+import { ensureUserDoc, awardDailyLogin } from '../lib/firebaseHelpers';
 
 const AuthContext = createContext({ user: null, loading: true });
 
@@ -17,12 +16,8 @@ export function AuthProvider({ children }) {
       setUser(u);
       setLoading(false);
       if (u) {
-        await ensureUserDoc(u);
-        try {
-          await awardDailyLogin(u.uid);
-        } catch (e) {
-          // silent fail for daily login
-        }
+        try { await ensureUserDoc(u); } catch (e) { console.warn('ensureUserDoc failed', e); }
+        try { await awardDailyLogin(u.uid); } catch (e) { /* ignore */ }
       }
     });
     return () => unsub();

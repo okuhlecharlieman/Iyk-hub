@@ -1,24 +1,13 @@
 // src/lib/firebaseHelpers.js
 import { auth, db, storage } from './firebase';
 import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  limit,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
+  addDoc, collection, doc, getDoc, getDocs, increment, limit,
+  orderBy, query, runTransaction, serverTimestamp, setDoc,
+  updateDoc, where,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-// USERS
+// Users
 export async function ensureUserDoc(user) {
   if (!user) return;
   const refDoc = doc(db, 'users', user.uid);
@@ -35,35 +24,24 @@ export async function ensureUserDoc(user) {
     });
   }
 }
-
 export async function getUserDoc(uid) {
   if (!uid) return null;
   const snap = await getDoc(doc(db, 'users', uid));
   return snap.exists() ? { id: uid, ...snap.data() } : null;
 }
-
 export async function updateUserDoc(uid, data) {
   await updateDoc(doc(db, 'users', uid), data);
 }
 
-// POINTS
+// Points
 async function logPoints(uid, amount, reason, customId) {
   const col = collection(db, 'users', uid, 'pointsLog');
   if (customId) {
-    await setDoc(doc(col, customId), {
-      amount,
-      reason,
-      createdAt: serverTimestamp(),
-    });
+    await setDoc(doc(col, customId), { amount, reason, createdAt: serverTimestamp() });
   } else {
-    await addDoc(col, {
-      amount,
-      reason,
-      createdAt: serverTimestamp(),
-    });
+    await addDoc(col, { amount, reason, createdAt: serverTimestamp() });
   }
 }
-
 export async function awardPoints(uid, amount, reason) {
   const userRef = doc(db, 'users', uid);
   await runTransaction(db, async (tx) => {
@@ -73,7 +51,6 @@ export async function awardPoints(uid, amount, reason) {
   });
   await logPoints(uid, amount, reason);
 }
-
 export async function awardDailyLogin(uid) {
   const today = new Date().toISOString().slice(0, 10);
   const logId = `daily-${today}`;
@@ -84,24 +61,19 @@ export async function awardDailyLogin(uid) {
     await awardPoints(uid, 5, 'Daily login');
   }
 }
-
 export async function awardGamePoints(uid, game, score) {
   const amt = Math.min(10, Math.max(1, Math.round(score || 1)));
   await awardPoints(uid, amt, `Game: ${game}`);
 }
 
-export async function awardUploadPoints(uid) {
-  await awardPoints(uid, 10, 'Creativity upload');
-}
-
-// QUOTES
+// Quotes
 export async function fetchLatestQuote() {
-  const qy = query(collection(db, 'quotes'), orderBy('day', 'desc'), limit(1));
-  const snap = await getDocs(qy);
+  const qy = query(collection(db, 'quotes')), // optional order if you store day
+        snap = await getDocs(qy);
   return snap.docs[0]?.data() || { text: 'Keep going. Keep growing.' };
 }
 
-// OPPORTUNITIES
+// Opportunities
 export async function submitOpportunity(data, uid) {
   return addDoc(collection(db, 'opportunities'), {
     ...data,
@@ -110,7 +82,6 @@ export async function submitOpportunity(data, uid) {
     createdBy: uid || null,
   });
 }
-
 export async function listApprovedOpportunities(limitN = 50) {
   const qy = query(
     collection(db, 'opportunities'),
@@ -121,7 +92,6 @@ export async function listApprovedOpportunities(limitN = 50) {
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
-
 export async function listPendingOpportunities(limitN = 50) {
   const qy = query(
     collection(db, 'opportunities'),
@@ -132,7 +102,6 @@ export async function listPendingOpportunities(limitN = 50) {
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
-
 export async function approveOpportunity(id) {
   await updateDoc(doc(db, 'opportunities', id), { status: 'approved' });
 }
@@ -140,7 +109,7 @@ export async function rejectOpportunity(id) {
   await updateDoc(doc(db, 'opportunities', id), { status: 'rejected' });
 }
 
-// WALL
+// Wall
 export async function createWallPost({ type, title, description, mediaUrl, code, language }, uid) {
   return addDoc(collection(db, 'wallPosts'), {
     uid,
@@ -155,13 +124,11 @@ export async function createWallPost({ type, title, description, mediaUrl, code,
     createdAt: serverTimestamp(),
   });
 }
-
 export async function listWallPosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
-
 export async function reactToPost(postId, emoji) {
   const refDoc = doc(db, 'wallPosts', postId);
   await runTransaction(db, async (tx) => {
@@ -174,14 +141,14 @@ export async function reactToPost(postId, emoji) {
   });
 }
 
-// STORAGE
-export async function uploadToStorage(file, pathPrefix = 'uploads') {
-  const fileRef = ref(storage, `${pathPrefix}/${Date.now()}-${file.name}`);
+// Storage
+export async function uploadToStorage(file, prefix = 'uploads') {
+  const fileRef = ref(storage, `${prefix}/${Date.now()}-${file.name}`);
   await uploadBytes(fileRef, file);
   return getDownloadURL(fileRef);
 }
 
-// GAMES SESSIONS (optional logging)
+// Games session log (optional)
 export async function logGameSession(uid, game, score, duration) {
   await addDoc(collection(db, 'gamesSessions'), {
     uid,
@@ -192,7 +159,7 @@ export async function logGameSession(uid, game, score, duration) {
   });
 }
 
-// LEADERBOARD
+// Leaderboard
 export async function listTopUsers(limitN = 20) {
   const qy = query(collection(db, 'users'), orderBy('points', 'desc'), limit(limitN));
   const snap = await getDocs(qy);

@@ -1,11 +1,13 @@
-// lib/firebase.js
-//
-// Firebase app and services initialization
-//
-
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+// src/lib/firebase.js
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,7 +18,28 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+function missing(v) {
+  return !v || v === 'undefined' || v === 'null';
+}
+
+if (typeof window !== 'undefined') {
+  if (missing(firebaseConfig.apiKey) || missing(firebaseConfig.projectId)) {
+    console.error('Firebase env vars are missing. Check .env.local (must use NEXT_PUBLIC_ prefixes).', firebaseConfig);
+  }
+}
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+
+// Use persistent cache to make SDK more resilient
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  });
+} catch (e) {
+  db = getFirestore(app);
+}
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const storage = getStorage(app);
+export { db };

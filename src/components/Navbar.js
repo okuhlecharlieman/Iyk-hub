@@ -11,7 +11,7 @@ export default function Navbar() {
     <header className="border-b bg-white">
       <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-bold">
-          <img src="/assets/logo.png" className="h-8 w-8" alt="logo" />
+          <img src="/logo.png" className="h-8 w-8" alt="logo" />
           <span>Intwana Hub</span>
         </Link>
         <nav className="flex items-center gap-4 text-sm">

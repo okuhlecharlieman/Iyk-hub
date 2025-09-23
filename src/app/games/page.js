@@ -1,49 +1,25 @@
-// app/games/page.jsx
-//
-// Games list and creation page
-//
+'use client';
+import Link from 'next/link';
 
-"use client";
+const GAMES = [
+  { id: 'rps', name: 'Rock-Paper-Scissors' },
+  { id: 'tictactoe', name: 'Tic-Tac-Toe' },
+  { id: 'memory', name: 'Memory Match' },
+  { id: 'hangman', name: 'Hangman' },
+  { id: 'quiz', name: 'Quiz' },
+];
 
-import Link from "next/link";
-import { useState } from "react";
-import { useGamesList } from "@/hooks/useGamesList";
-import { createGame } from "@/lib/firebaseHelpers";
-import { useAuth } from "@/context/AuthContext";
-
-export default function GamesPage() {
-  const games = useGamesList();
-  const { user } = useAuth();
-  const [creating, setCreating] = useState(false);
-
-  const handleNewGame = async () => {
-    if (!user) return alert("Login to create a game");
-    setCreating(true);
-    const newGameId = await createGame(user.uid);
-    setCreating(false);
-    window.location.href = `/games/${newGameId}`;
-  };
-
+export default function GamesIndex() {
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Available Games</h1>
-      <button
-        onClick={handleNewGame}
-        disabled={creating}
-        className="mb-6 px-4 py-2 bg-blue-600 text-white rounded"
-      >
-        {creating ? "Creating..." : "New Game"}
-      </button>
-      <ul>
-        {games.length === 0 && <li>No games found</li>}
-        {games.map(({ id }) => (
-          <li key={id}>
-            <Link href={`/games/${id}`} className="text-blue-600 hover:underline">
-              Game ID: {id}
-            </Link>
-          </li>
+    <div>
+      <h1 className="text-2xl font-bold mb-4">Mini Games</h1>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {GAMES.map((g) => (
+          <Link key={g.id} href={`/games/${g.id}`} className="border rounded p-4 hover:bg-neutral-50">
+            {g.name}
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

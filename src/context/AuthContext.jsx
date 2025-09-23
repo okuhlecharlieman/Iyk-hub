@@ -1,46 +1,34 @@
-// context/AuthContext.jsx
-//
-// Provides Firebase auth context to the app
-//
+// src/context/AuthContext.jsx
+'use client';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { auth } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { ensureUserDoc } from '../lib/firebaseHelpers';
+import { awardDailyLogin } from '../lib/firebaseHelpers';
 
-"use client";
-
-import { createContext, useContext, useEffect, useState } from "react";
-import { auth } from "@/lib/firebase";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-
-const AuthContext = createContext();
+const AuthContext = createContext({ user: null, loading: true });
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
       setLoading(false);
+      if (u) {
+        await ensureUserDoc(u);
+        try {
+          await awardDailyLogin(u.uid);
+        } catch (e) {
+          // silent fail for daily login
+        }
+      }
     });
-    return unsubscribe;
+    return () => unsub();
   }, []);
 
-  const login = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password);
-
-  const signup = (email, password) =>
-    createUserWithEmailAndPassword(auth, email, password);
-
-  const logout = () => signOut(auth);
-
-  return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, loading }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

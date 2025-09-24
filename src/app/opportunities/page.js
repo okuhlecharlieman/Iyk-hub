@@ -1,8 +1,31 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { listApprovedOpportunities, submitOpportunity, listPendingOpportunities, approveOpportunity, rejectOpportunity, getUserDoc } from '../../lib/firebaseHelpers';
+
+function EditOpportunityModal({ open, onClose, onSave, opportunity }) {
+  const [form, setForm] = useState({ ...opportunity });
+  const firstInput = useRef(null);
+  useEffect(() => { if (open && firstInput.current) firstInput.current.focus(); }, [open]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded shadow-lg p-6 w-full max-w-md relative">
+        <button onClick={onClose} className="absolute top-2 right-2 text-xl">×</button>
+        <h2 className="font-bold mb-4">Edit Opportunity</h2>
+        <form onSubmit={e => { e.preventDefault(); onSave(form); }} className="space-y-3">
+          <input ref={firstInput} className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={e=>setForm(f=>({...f, title: e.target.value}))} />
+          <input className="w-full border p-2 rounded" placeholder="Organization" value={form.org} onChange={e=>setForm(f=>({...f, org: e.target.value}))} />
+          <input className="w-full border p-2 rounded" placeholder="Link (https://…)" value={form.link} onChange={e=>setForm(f=>({...f, link: e.target.value}))} />
+          <textarea className="w-full border p-2 rounded" placeholder="Description" rows={3} value={form.description} onChange={e=>setForm(f=>({...f, description: e.target.value}))} />
+          <input className="w-full border p-2 rounded" placeholder="Tags (comma separated)" value={form.tags} onChange={e=>setForm(f=>({...f, tags: e.target.value}))} />
+          <button className="w-full bg-blue-600 text-white rounded py-2">Save</button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function OpportunitiesPage() {
   const { user } = useAuth();
@@ -10,6 +33,7 @@ export default function OpportunitiesPage() {
   const [pending, setPending] = useState([]);
   const [form, setForm] = useState({ title: '', org: '', description: '', link: '', tags: '' });
   const [isAdmin, setIsAdmin] = useState(false);
+  const [editModal, setEditModal] = useState({ open: false, opportunity: null });
 
   async function load() {
     const a = await listApprovedOpportunities(30);
@@ -39,6 +63,16 @@ export default function OpportunitiesPage() {
 
   return (
     <ProtectedRoute>
+      <EditOpportunityModal
+        open={editModal.open}
+        opportunity={editModal.opportunity}
+        onClose={() => setEditModal({ open: false, opportunity: null })}
+        onSave={async (form) => {
+          await submitOpportunity({ ...form, tags: form.tags.split(',').map(t=>t.trim()).filter(Boolean) }, form.ownerId || user.uid, form.id, true);
+          setEditModal({ open: false, opportunity: null });
+          await load();
+        }}
+      />
       <div className="grid md:grid-cols-3 gap-6">
         <div className="bg-white p-4 rounded shadow">
           <h2 className="font-semibold mb-3">Submit Opportunity</h2>
@@ -63,14 +97,7 @@ export default function OpportunitiesPage() {
               </a>
               {(isAdmin || o.ownerId === user?.uid) && (
                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                  <button onClick={async()=>{
-                    // Edit: prompt for new values (simple example)
-                    const newTitle = prompt("Edit title", o.title);
-                    if (newTitle && newTitle !== o.title) {
-                      await submitOpportunity({ ...o, title: newTitle }, o.ownerId || user.uid, o.id, true);
-                      await load();
-                    }
-                  }} className="px-2 py-1 rounded bg-yellow-400 text-black text-xs">Edit</button>
+                  <button onClick={()=>setEditModal({ open: true, opportunity: o })} className="px-2 py-1 rounded bg-yellow-400 text-black text-xs">Edit</button>
                   <button onClick={async()=>{
                     if (confirm("Delete this opportunity?")) {
                       await rejectOpportunity(o.id, true); // true = delete

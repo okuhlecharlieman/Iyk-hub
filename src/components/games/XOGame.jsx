@@ -1,20 +1,63 @@
 // components/games/XOGame.jsx
 //
-// Component: XOGame
+// Multiplayer TicTacToe with Firestore sync
 //
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
+import { useAuth } from "@/context/AuthContext";
 
-export default function XOGame({ gameId, playerSymbol }) {
+export default function XOGame({ gameId }) {
+  const { user } = useAuth();
   const [board, setBoard] = useState(Array(9).fill(""));
   const [currentPlayer, setCurrentPlayer] = useState("X");
   const [winner, setWinner] = useState("");
+  const [players, setPlayers] = useState({ X: "", O: "" });
+  const [playerSymbol, setPlayerSymbol] = useState("");
+  const [status, setStatus] = useState("Joining game...");
   const gameDocRef = doc(db, "games", gameId);
 
+  // Join or create game room
+  useEffect(() => {
+    if (!user) return;
+    async function joinGame() {
+      const snap = await getDoc(gameDocRef);
+      if (!snap.exists()) {
+        // Create new game
+        await setDoc(gameDocRef, {
+          board: Array(9).fill(""),
+          currentPlayer: "X",
+          winner: "",
+          players: { X: user.uid, O: "" },
+        });
+        setPlayerSymbol("X");
+        setStatus("You are X. Waiting for O...");
+      } else {
+        const data = snap.data();
+        if (!data.players.O && data.players.X !== user.uid) {
+          // Join as O
+          await updateDoc(gameDocRef, { "players.O": user.uid });
+          setPlayerSymbol("O");
+          setStatus("You are O. Game on!");
+        } else if (data.players.X === user.uid) {
+          setPlayerSymbol("X");
+          setStatus("You are X.");
+        } else if (data.players.O === user.uid) {
+          setPlayerSymbol("O");
+          setStatus("You are O.");
+        } else {
+          setStatus("Room full. Spectating.");
+        }
+      }
+    }
+    joinGame();
+    // eslint-disable-next-line
+  }, [gameId, user]);
+
+  // Listen for game state
   useEffect(() => {
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -22,6 +65,7 @@ export default function XOGame({ gameId, playerSymbol }) {
         setBoard(data.board);
         setCurrentPlayer(data.currentPlayer);
         setWinner(data.winner || "");
+        setPlayers(data.players || { X: "", O: "" });
       }
     });
     return () => unsubscribe();
@@ -42,12 +86,10 @@ export default function XOGame({ gameId, playerSymbol }) {
 
   async function handleClick(idx) {
     if (board[idx] !== "" || winner !== "" || currentPlayer !== playerSymbol) return;
-
     const newBoard = [...board];
     newBoard[idx] = playerSymbol;
     const newWinner = calculateWinner(newBoard);
     const nextPlayer = (playerSymbol === "X") ? "O" : "X";
-
     await updateDoc(gameDocRef, {
       board: newBoard,
       currentPlayer: newWinner ? "" : nextPlayer,
@@ -55,22 +97,51 @@ export default function XOGame({ gameId, playerSymbol }) {
     });
   }
 
+  async function handleReset() {
+    await updateDoc(gameDocRef, {
+      board: Array(9).fill(""),
+      currentPlayer: "X",
+      winner: ""
+    });
+  }
+
   return (
     <div>
-      <h2>Turn: {currentPlayer || "Game Over"}</h2>
+      <h2 className="mb-2">Room: {gameId}</h2>
+      <p className="mb-2">{status}</p>
+      <p className="mb-2">X: {players.X ? players.X : "Waiting..."}</p>
+      <p className="mb-2">O: {players.O ? players.O : "Waiting..."}</p>
+      <h3 className="mb-2">Turn: {currentPlayer || "Game Over"}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 80px)", gap: "8px" }}>
         {board.map((cell, idx) => (
           <button
             key={idx}
             onClick={() => handleClick(idx)}
             style={{ width: 80, height: 80, fontSize: 32 }}
-            disabled={winner !== "" || currentPlayer !== playerSymbol}
+            disabled={
+              winner !== "" ||
+              currentPlayer !== playerSymbol ||
+              !playerSymbol ||
+              (playerSymbol !== "X" && playerSymbol !== "O")
+            }
           >
             {cell}
           </button>
         ))}
       </div>
-      {winner && <p>{winner === "draw" ? "Draw game!" : `Winner: ${winner}`}</p>}
+      {winner && (
+        <div className="mt-4">
+          <p>{winner === "draw" ? "Draw game!" : `Winner: ${winner}`}</p>
+          {(playerSymbol === "X" || playerSymbol === "O") && (
+            <button
+              onClick={handleReset}
+              className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Reset Game
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

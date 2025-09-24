@@ -53,68 +53,72 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-4">Create account</h1>
-      {err ? <p className="text-red-600 mb-2">{err}</p> : null}
+    <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-12 md:py-20 bg-gradient-to-br from-yellow-50 via-blue-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 md:p-10">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-600 bg-clip-text text-transparent drop-shadow-lg">
+          Sign Up
+        </h2>
+        {err ? <p className="text-red-600 mb-2">{err}</p> : null}
 
-      {/* Email signup form */}
-      <form onSubmit={onSubmit} className="space-y-3">
-        <input
-          className="w-full border p-2 rounded"
-          placeholder="Display name"
-          value={displayName}
-          onChange={(e)=>setDisplayName(e.target.value)}
-        />
-        <input
-          className="w-full border p-2 rounded"
-          placeholder="Email"
-          value={email}
-          onChange={(e)=>setEmail(e.target.value)}
-        />
-        <input
-          className="w-full border p-2 rounded"
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e)=>setPassword(e.target.value)}
-        />
-        <button 
-          className="w-full bg-neutral-900 text-white rounded py-2" 
+        {/* Email signup form */}
+        <form onSubmit={onSubmit} className="space-y-3">
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="Display name"
+            value={displayName}
+            onChange={(e)=>setDisplayName(e.target.value)}
+          />
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="Email"
+            value={email}
+            onChange={(e)=>setEmail(e.target.value)}
+          />
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(e)=>setPassword(e.target.value)}
+          />
+          <button 
+            className="w-full bg-neutral-900 text-white rounded py-2" 
+            disabled={loading}
+          >
+            {loading ? <LoadingSpinner /> : 'Sign up'}
+          </button>
+        </form>
+
+        {/* Divider */}
+        <div className="flex items-center my-4">
+          <hr className="flex-grow border-gray-300" />
+          <span className="px-2 text-gray-500 text-sm">or</span>
+          <hr className="flex-grow border-gray-300" />
+        </div>
+
+        {/* Google signup button */}
+        <button
+          onClick={signUpWithGoogle}
           disabled={loading}
+          className="w-full border border-gray-300 flex items-center justify-center gap-2 py-2 rounded hover:bg-gray-50"
         >
-          {loading ? <LoadingSpinner /> : 'Sign up'}
+          {loading ? <LoadingSpinner /> : (
+            <>
+              <img 
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                alt="Google" 
+                className="w-5 h-5"
+              />
+              Continue with Google
+            </>
+          )}
         </button>
-      </form>
 
-      {/* Divider */}
-      <div className="flex items-center my-4">
-        <hr className="flex-grow border-gray-300" />
-        <span className="px-2 text-gray-500 text-sm">or</span>
-        <hr className="flex-grow border-gray-300" />
+        <p className="mt-4 text-sm">
+          Already have an account?{' '}
+          <a className="underline" href="/login">Sign in</a>
+        </p>
       </div>
-
-      {/* Google signup button */}
-      <button
-        onClick={signUpWithGoogle}
-        disabled={loading}
-        className="w-full border border-gray-300 flex items-center justify-center gap-2 py-2 rounded hover:bg-gray-50"
-      >
-        {loading ? <LoadingSpinner /> : (
-          <>
-            <img 
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-              alt="Google" 
-              className="w-5 h-5"
-            />
-            Continue with Google
-          </>
-        )}
-      </button>
-
-      <p className="mt-4 text-sm">
-        Already have an account?{' '}
-        <a className="underline" href="/login">Sign in</a>
-      </p>
     </div>
   );
 }

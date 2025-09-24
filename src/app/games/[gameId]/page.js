@@ -42,9 +42,11 @@ export default function GamePage() {
 
   return (
     <ProtectedRoute>
-      <div className="max-w-xl mx-auto bg-white p-6 rounded shadow">
-        <h1 className="text-xl font-semibold mb-3 capitalize">{gameId}</h1>
-        {Game}
+      <div className="min-h-[70vh] flex flex-col items-center px-2 py-8 md:py-16 bg-gradient-to-br from-blue-50 via-yellow-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-lg p-4 md:p-8 mt-4 mb-8">
+          <h1 className="text-xl font-semibold mb-3 capitalize">{gameId}</h1>
+          {Game}
+        </div>
       </div>
     </ProtectedRoute>
   );

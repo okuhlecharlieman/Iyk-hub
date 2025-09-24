@@ -5,6 +5,10 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import { fetchLatestQuote, listApprovedOpportunities } from '../../lib/firebaseHelpers';
 import Link from 'next/link';
 
+import PointsCard from '../../components/PointsCard';
+import LeaderboardPreview from '../../components/LeaderboardPreview';
+import OnlineCount from '../../components/OnlineCount';
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const [quote, setQuote] = useState(null);
@@ -24,8 +28,18 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-2xl font-bold">Welcome{user?.displayName ? `, ${user.displayName}` : ''} 👋</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">
+              Welcome{user?.displayName ? `, ${user.displayName}` : ''} 👋
+            </h1>
+            <OnlineCount />
+          </div>
           <p className="mt-2 text-neutral-600">{quote?.text || 'Have a great day!'}</p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <PointsCard />
+          <LeaderboardPreview weekly />
         </div>
 
         <section className="bg-white p-6 rounded-lg shadow">
@@ -55,10 +69,13 @@ export default function DashboardPage() {
           <div className="grid gap-3 md:grid-cols-3">
             {opps.length === 0 ? <p className="text-neutral-500">No opportunities yet.</p> : null}
             {opps.map((o) => (
-              <a key={o.id} href={o.link} target="_blank" className="border rounded p-4 hover:bg-neutral-50">
+              <a key={o.id} href={o.link} target="_blank" className="border rounded p-4 hover:bg-neutral-50" rel="noreferrer">
                 <p className="font-medium">{o.title}</p>
                 <p className="text-sm text-neutral-600">{o.org}</p>
-                <p className="text-sm mt-1">{o.description?.slice(0, 100)}{o.description?.length > 100 ? '…' : ''}</p>
+                <p className="text-sm mt-1">
+                  {o.description?.slice(0, 100)}
+                  {o.description?.length > 100 ? '…' : ''}
+                </p>
               </a>
             ))}
           </div>

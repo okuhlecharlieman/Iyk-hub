@@ -1,0 +1,9 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /opportunities/{id} {
+      allow read: if true;
+      allow create: if signedIn();
+      allow update, delete: if isAdmin() || (signedIn() && request.auth.uid == resource.data.createdBy);
+    }
+  }
+}

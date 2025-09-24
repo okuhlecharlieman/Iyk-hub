@@ -1,14 +1,11 @@
 // components/games/XOGame.jsx
-//
 // Multiplayer TicTacToe with Firestore sync
-//
 
 "use client";
-
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 export default function XOGame({ gameId }) {
   const { user } = useAuth();
@@ -18,39 +15,45 @@ export default function XOGame({ gameId }) {
   const [players, setPlayers] = useState({ X: "", O: "" });
   const [playerSymbol, setPlayerSymbol] = useState("");
   const [status, setStatus] = useState("Joining game...");
+  const [error, setError] = useState("");
   const gameDocRef = doc(db, "games", gameId);
 
   // Join or create game room
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setError("You must be logged in to play.");
+      return;
+    }
     async function joinGame() {
-      const snap = await getDoc(gameDocRef);
-      if (!snap.exists()) {
-        // Create new game
-        await setDoc(gameDocRef, {
-          board: Array(9).fill(""),
-          currentPlayer: "X",
-          winner: "",
-          players: { X: user.uid, O: "" },
-        });
-        setPlayerSymbol("X");
-        setStatus("You are X. Waiting for O...");
-      } else {
-        const data = snap.data();
-        if (!data.players.O && data.players.X !== user.uid) {
-          // Join as O
-          await updateDoc(gameDocRef, { "players.O": user.uid });
-          setPlayerSymbol("O");
-          setStatus("You are O. Game on!");
-        } else if (data.players.X === user.uid) {
+      try {
+        const snap = await getDoc(gameDocRef);
+        if (!snap.exists()) {
+          await setDoc(gameDocRef, {
+            board: Array(9).fill(""),
+            currentPlayer: "X",
+            winner: "",
+            players: { X: user.uid, O: "" }
+          });
           setPlayerSymbol("X");
-          setStatus("You are X.");
-        } else if (data.players.O === user.uid) {
-          setPlayerSymbol("O");
-          setStatus("You are O.");
+          setStatus("You are X. Waiting for O...");
         } else {
-          setStatus("Room full. Spectating.");
+          const data = snap.data();
+          if (!data.players.O && data.players.X !== user.uid) {
+            await updateDoc(gameDocRef, { "players.O": user.uid });
+            setPlayerSymbol("O");
+            setStatus("You are O. Game on!");
+          } else if (data.players.X === user.uid) {
+            setPlayerSymbol("X");
+            setStatus("You are X.");
+          } else if (data.players.O === user.uid) {
+            setPlayerSymbol("O");
+            setStatus("You are O.");
+          } else {
+            setStatus("Room full. Spectating.");
+          }
         }
+      } catch (e) {
+        setError("Failed to join game: " + e.message);
       }
     }
     joinGame();
@@ -59,6 +62,7 @@ export default function XOGame({ gameId }) {
 
   // Listen for game state
   useEffect(() => {
+    if (!gameId) return;
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
@@ -67,9 +71,9 @@ export default function XOGame({ gameId }) {
         setWinner(data.winner || "");
         setPlayers(data.players || { X: "", O: "" });
       }
-    });
+    }, (e) => setError("Game sync error: " + e.message));
     return () => unsubscribe();
-  }, [gameDocRef]);
+  }, [gameId]);
 
   function calculateWinner(bd) {
     const lines = [
@@ -90,20 +94,30 @@ export default function XOGame({ gameId }) {
     newBoard[idx] = playerSymbol;
     const newWinner = calculateWinner(newBoard);
     const nextPlayer = (playerSymbol === "X") ? "O" : "X";
-    await updateDoc(gameDocRef, {
-      board: newBoard,
-      currentPlayer: newWinner ? "" : nextPlayer,
-      winner: newWinner
-    });
+    try {
+      await updateDoc(gameDocRef, {
+        board: newBoard,
+        currentPlayer: newWinner ? "" : nextPlayer,
+        winner: newWinner
+      });
+    } catch (e) {
+      setError("Move failed: " + e.message);
+    }
   }
 
   async function handleReset() {
-    await updateDoc(gameDocRef, {
-      board: Array(9).fill(""),
-      currentPlayer: "X",
-      winner: ""
-    });
+    try {
+      await updateDoc(gameDocRef, {
+        board: Array(9).fill(""),
+        currentPlayer: "X",
+        winner: ""
+      });
+    } catch (e) {
+      setError("Reset failed: " + e.message);
+    }
   }
+
+  if (error) return <div className="text-red-600">{error}</div>;
 
   return (
     <div>

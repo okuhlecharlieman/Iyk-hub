@@ -1,3 +1,4 @@
+// filepath: c:/Users/Okuhle/Desktop/Code/intwana-hub/src/app/leaderboard/page.js
 'use client';
 import { useEffect, useState } from 'react';
 import { listTopUsers } from '../../lib/firebaseHelpers';
@@ -7,12 +8,13 @@ export default function LeaderboardPage() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('lifetime'); // 'lifetime' or 'weekly'
 
   const load = async () => {
     setLoading(true);
     setError("");
     try {
-      const top = await listTopUsers(20);
+      const top = await listTopUsers(20, filter); // Pass filter to helper
       setUsers(top);
       setError("");
     } catch (err) {
@@ -30,16 +32,35 @@ export default function LeaderboardPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line
-  }, []);
+  }, [filter]);
 
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">Leaderboard</h1>
+      <div className="mb-4 flex gap-2">
+        <button
+          className={`px-3 py-1 rounded ${filter === 'lifetime' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          onClick={() => setFilter('lifetime')}
+        >
+          All Time
+        </button>
+        <button
+          className={`px-3 py-1 rounded ${filter === 'weekly' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+          onClick={() => setFilter('weekly')}
+        >
+          This Week
+        </button>
+        <button
+          className="ml-auto underline text-blue-600"
+          onClick={load}
+        >
+          Refresh
+        </button>
+      </div>
       {loading && <LoadingSpinner />}
       {error && (
         <div className="text-red-600 text-sm mb-4">
           {error}
-          <button onClick={load} className="ml-4 underline text-blue-600">Retry</button>
         </div>
       )}
       {!loading && !error && (
@@ -52,7 +73,7 @@ export default function LeaderboardPage() {
                 <img src={u.photoURL || '/logo.png'} className="w-8 h-8 rounded-full object-cover" alt="avatar" />
                 <span className="font-medium">{u.displayName || 'Intwana'}</span>
               </div>
-              <span className="font-mono">{u.points?.lifetime ?? u.points ?? 0} pts</span>
+              <span className="font-mono">{filter === 'weekly' ? (u.points?.weekly ?? 0) : (u.points?.lifetime ?? u.points ?? 0)} pts</span>
             </li>
           ))}
         </ol>

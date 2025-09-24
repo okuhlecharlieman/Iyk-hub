@@ -47,10 +47,28 @@ export async function awardPoints(uid, amount, reason) {
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(userRef);
     if (!snap.exists()) throw new Error('User not found');
-    tx.update(userRef, { points: increment(amount) });
+    const data = snap.data();
+    const prevPoints = data.points || {};
+    const weekly = (prevPoints.weekly || 0) + amount;
+    const lifetime = (prevPoints.lifetime || 0) + amount;
+    tx.update(userRef, { points: { weekly, lifetime } });
   });
   await logPoints(uid, amount, reason);
 }
+
+export async function migrateUserPoints(uid) {
+  // For migration: convert flat points to { weekly, lifetime }
+  const userRef = doc(db, 'users', uid);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(userRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (typeof data.points === 'number') {
+      tx.update(userRef, { points: { weekly: data.points, lifetime: data.points } });
+    }
+  });
+}
+
 export async function awardDailyLogin(uid) {
   const today = new Date().toISOString().slice(0, 10);
   const logId = `daily-${today}`;
@@ -179,8 +197,9 @@ export async function logGameSession(uid, game, score, duration) {
 }
 
 // Leaderboard
-export async function listTopUsers(limitN = 20) {
-  const qy = query(collection(db, 'users'), orderBy('points', 'desc'), limit(limitN));
+export async function listTopUsers(limitN = 20, filter = 'lifetime') {
+  const field = filter === 'weekly' ? 'points.weekly' : 'points.lifetime';
+  const qy = query(collection(db, 'users'), orderBy(field, 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }

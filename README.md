@@ -43,31 +43,54 @@ No chats, no negativity — just a space for kasi youth to shine.
    ```bash
    git clone https://github.com/okuhlecharlieman/Iyk-hub.git
    cd Iyk-hub
+   ```
 2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-npm install
+3. Create a `.env.local` file in the root with your Firebase config:
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=...
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+   NEXT_PUBLIC_FIREBASE_APP_ID=...
+   NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com
+   ```
 
-
-3. Add Firebase config:
-Create a .env.local file and add:
-
-NEXT_PUBLIC_FIREBASE_API_KEY=your_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-
+4. (For file uploads) Set Firebase Storage CORS:
+   - Create a `cors.json` file:
+     ```json
+     [
+       {
+         "origin": ["http://localhost:3000","https://intwanahub.netlify.app","https://your-vercel-domain.vercel.app"],
+         "method": ["GET","POST","PUT","HEAD"],
+         "responseHeader": ["Authorization","Content-Type","x-goog-meta-*"] ,
+         "maxAgeSeconds": 3600
+       }
+     ]
+     ```
+   - Run:
+     ```bash
+     gcloud auth login
+     gcloud config set project YOUR_PROJECT_ID
+     gsutil cors set cors.json gs://YOUR_BUCKET_NAME
+     ```
 
 4. Run locally:
-
-npm run dev
+   ```bash
+   npm run dev
+   ```
 
 🌍 Deployment
 
 Deployed easily on Vercel:
 
+```bash
 vercel
+```
 
 📸 Screenshots
 Dashboard
@@ -91,4 +114,4 @@ MIT License – free to use and adapt.
 
 👉 You’ll just need to:  
 1. Save your **logo** as `assets/logo.png`.  
-2. Add some **screenshots** of your app (or mockups) into `assets/`.  
+2. Add some **screenshots** of your app (or mockups) into `assets/`.

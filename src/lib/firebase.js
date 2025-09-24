@@ -8,6 +8,7 @@ import {
   persistentMultipleTabManager,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -42,4 +43,5 @@ try {
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+export const rtdb = getDatabase(app);
 export { db };

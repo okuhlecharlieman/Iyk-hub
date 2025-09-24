@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-12 md:py-20 text-center">
@@ -9,9 +11,9 @@ export default function Home() {
         creativity, and find real-world opportunities.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md justify-center">
-        <a href="/games" className="btn-primary rounded px-6 py-3 text-lg w-full sm:w-auto text-center shadow hover:scale-105 transition">Play Games</a>
-        <a href="/opportunities" className="btn-yellow rounded px-6 py-3 text-lg w-full sm:w-auto text-center shadow hover:scale-105 transition">Opportunities</a>
-        <a href="/showcase" className="btn-blue rounded px-6 py-3 text-lg w-full sm:w-auto text-center shadow hover:scale-105 transition">Showcase</a>
+        <Link href="/games" className="btn-primary rounded px-6 py-3 text-lg w-full sm:w-auto text-center shadow hover:scale-105 transition">Play Games</Link>
+        <Link href="/opportunities" className="btn-yellow rounded px-6 py-3 text-lg w-full sm:w-auto text-center shadow hover:scale-105 transition">Opportunities</Link>
+        <Link href="/showcase" className="btn-blue rounded px-6 py-3 text-lg w-full sm:w-auto text-center shadow hover:scale-105 transition">Showcase</Link>
       </div>
     </div>
   );

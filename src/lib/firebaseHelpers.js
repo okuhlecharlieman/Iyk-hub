@@ -65,6 +65,10 @@ export async function awardGamePoints(uid, game, score) {
   const amt = Math.min(10, Math.max(1, Math.round(score || 1)));
   await awardPoints(uid, amt, `Game: ${game}`);
 }
+// Award points for showcase uploads (e.g. art, code, music)
+export async function awardUploadPoints(uid, amount = 5, reason = 'Showcase upload') {
+  await awardPoints(uid, amount, reason);
+}
 
 // Quotes
 export async function fetchLatestQuote() {

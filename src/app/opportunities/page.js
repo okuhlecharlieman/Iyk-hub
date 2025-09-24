@@ -56,10 +56,30 @@ export default function OpportunitiesPage() {
           <h2 className="font-semibold">Approved</h2>
           {approved.length === 0 ? <p className="text-neutral-500">No opportunities yet.</p> : null}
           {approved.map((o)=>(
-            <a key={o.id} href={o.link} target="_blank" className="block bg-white p-4 rounded shadow hover:bg-neutral-50">
-              <p className="font-medium">{o.title} <span className="text-sm text-neutral-500">— {o.org}</span></p>
-              <p className="text-sm mt-1">{o.description}</p>
-            </a>
+            <div key={o.id} className="relative group">
+              <a href={o.link} target="_blank" className="block bg-white p-4 rounded shadow hover:bg-neutral-50">
+                <p className="font-medium">{o.title} <span className="text-sm text-neutral-500">— {o.org}</span></p>
+                <p className="text-sm mt-1">{o.description}</p>
+              </a>
+              {(isAdmin || o.ownerId === user?.uid) && (
+                <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                  <button onClick={async()=>{
+                    // Edit: prompt for new values (simple example)
+                    const newTitle = prompt("Edit title", o.title);
+                    if (newTitle && newTitle !== o.title) {
+                      await submitOpportunity({ ...o, title: newTitle }, o.ownerId || user.uid, o.id, true);
+                      await load();
+                    }
+                  }} className="px-2 py-1 rounded bg-yellow-400 text-black text-xs">Edit</button>
+                  <button onClick={async()=>{
+                    if (confirm("Delete this opportunity?")) {
+                      await rejectOpportunity(o.id, true); // true = delete
+                      await load();
+                    }
+                  }} className="px-2 py-1 rounded bg-red-600 text-white text-xs">Delete</button>
+                </div>
+              )}
+            </div>
           ))}
 
           {isAdmin ? (

@@ -74,13 +74,28 @@ export async function fetchLatestQuote() {
 }
 
 // Opportunities
-export async function submitOpportunity(data, uid) {
-  return addDoc(collection(db, 'opportunities'), {
-    ...data,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-    createdBy: uid || null,
-  });
+export async function submitOpportunity(data, uid, id = null, isEdit = false) {
+  if (isEdit && id) {
+    // Edit existing opportunity
+    const ref = doc(db, 'opportunities', id);
+    // Remove fields that shouldn't be overwritten
+    const { id: _id, createdAt, status, ...rest } = data;
+    await updateDoc(ref, {
+      ...rest,
+      tags: Array.isArray(rest.tags) ? rest.tags : (rest.tags || '').split(',').map(t=>t.trim()).filter(Boolean),
+      updatedAt: serverTimestamp(),
+    });
+    return ref;
+  } else {
+    // New opportunity
+    return addDoc(collection(db, 'opportunities'), {
+      ...data,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      createdBy: uid || null,
+      ownerId: uid || null,
+    });
+  }
 }
 export async function listApprovedOpportunities(limitN = 50) {
   const qy = query(

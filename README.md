@@ -112,6 +112,16 @@ Build a safe, creative hub for township youth — merging gaming, creativity, an
 MIT License – free to use and adapt.
 
 
-👉 You’ll just need to:  
-1. Save your **logo** as `assets/logo.png`.  
-2. Add some **screenshots** of your app (or mockups) into `assets/`.
+## 📸 Screenshots and Images
+
+### Logo
+![Intwana Hub Logo](./assets/logo.png)
+
+### Additional Assets
+![Image 1](./assets/{108CFF45-09A4-4C23-B69D-CF08B3AA52BD}.png)  
+![Image 2](./assets/{29FD198B-5FB5-463E-8819-F13275C31997}.png)  
+![Image 3](./assets/{3C702713-F703-453E-B74D-B6BBF11082F2}.png)  
+![Image 4](./assets/{4A4DE9A8-36CA-475E-A69D-5562372955F1}.png)  
+![Image 5](./assets/{5C7D0CC8-7DCB-4158-9611-4DF9B5D62F81}.png)  
+![Image 6](./assets/{6B54B333-43C5-4D53-B050-5CC35A7EB1BB}.png)  
+

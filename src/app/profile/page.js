@@ -57,7 +57,7 @@ export default function ProfilePage() {
                 <img src={user?.photoURL || '/logo.png'} alt={form.displayName} className="w-32 h-32 rounded-full shadow-md" />
                 <div className="text-center">
                   <div className="text-lg font-semibold">Points</div>
-                  <div className="text-3xl font-bold text-teal-500">{doc?.points || 0}</div>
+                  <div className="text-3xl font-bold text-teal-500">{doc?.points?.lifetime || 0}</div>
                 </div>
               </div>
 

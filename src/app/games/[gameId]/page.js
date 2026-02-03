@@ -31,7 +31,7 @@ export default function GamePage() {
 
     switch (gameId) {
       case 'tictactoe':
-        return <XOGame onEnd={(res) => finishGame(res?.score || 5)} />;
+        return <XOGame gameId={gameId} onEnd={(res) => finishGame(res?.score || 5)} />;
       case 'rps':
         return <RPSGame onEnd={onEnd} />;
       case 'memory':

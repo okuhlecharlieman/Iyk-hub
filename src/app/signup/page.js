@@ -4,7 +4,8 @@ import {
   createUserWithEmailAndPassword, 
   updateProfile, 
   GoogleAuthProvider, 
-  signInWithPopup 
+  signInWithPopup,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { ensureUserDoc } from '../../lib/firebaseHelpers';
@@ -16,21 +17,22 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [err, setErr] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Email signup
   async function onSubmit(e) {
     e.preventDefault();
-    setErr('');
+    setMessage('');
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(cred.user, { displayName });
       await ensureUserDoc(cred.user);
-      router.push('/dashboard');
+      await sendEmailVerification(cred.user);
+      setMessage('A verification email has been sent. Please check your inbox.');
     } catch (e) {
-      setErr(e.message || 'Failed to sign up');
+      setMessage(e.message || 'Failed to sign up');
     } finally {
       setLoading(false);
     }
@@ -38,7 +40,7 @@ export default function SignupPage() {
 
   // Google signup
   async function signUpWithGoogle() {
-    setErr('');
+    setMessage('');
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
@@ -46,7 +48,7 @@ export default function SignupPage() {
       await ensureUserDoc(result.user);
       router.push('/dashboard');
     } catch (e) {
-      setErr(e.message || 'Google sign-in failed');
+      setMessage(e.message || 'Google sign-in failed');
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,7 @@ export default function SignupPage() {
         <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-600 bg-clip-text text-transparent drop-shadow-lg">
           Sign Up
         </h2>
-        {err ? <p className="text-red-600 mb-2">{err}</p> : null}
+        {message ? <p className={`mb-2 ${message.includes('verification') ? 'text-green-600' : 'text-red-600'}`}>{message}</p> : null}
 
         {/* Email signup form */}
         <form onSubmit={onSubmit} className="space-y-3">

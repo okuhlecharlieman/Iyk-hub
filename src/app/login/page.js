@@ -19,6 +19,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      if (!cred.user.emailVerified) {
+        throw new Error('Please verify your email before logging in.');
+      }
       await ensureUserDoc(cred.user);
       router.push('/dashboard');
     } catch (e) {

@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "../../context/AuthContext";
 
-export default function XOGame({ gameId }) {
+export default function XOGame({ gameId, onEnd }) {
   const { user } = useAuth();
   const [board, setBoard] = useState(Array(9).fill(""));
   const [currentPlayer, setCurrentPlayer] = useState("X");
@@ -16,6 +16,7 @@ export default function XOGame({ gameId }) {
   const [playerSymbol, setPlayerSymbol] = useState("");
   const [status, setStatus] = useState("Joining game...");
   const [error, setError] = useState("");
+  const [onEndCalled, setOnEndCalled] = useState(false);
   const gameDocRef = doc(db, "games", gameId);
 
   // Join or create game room
@@ -69,11 +70,33 @@ export default function XOGame({ gameId }) {
         setBoard(data.board);
         setCurrentPlayer(data.currentPlayer);
         setWinner(data.winner || "");
+        if (!data.winner) {
+          setOnEndCalled(false); // Reset when game is reset
+        }
         setPlayers(data.players || { X: "", O: "" });
       }
     }, (e) => setError("Game sync error: " + e.message));
     return () => unsubscribe();
   }, [gameId]);
+
+  // Effect to call onEnd when game is over
+  useEffect(() => {
+    if (winner && onEnd && !onEndCalled) {
+      let finalScore = 0;
+      if (winner === 'draw') {
+        finalScore = 5;
+      } else if (winner === playerSymbol) {
+        finalScore = 10; // win
+      } else {
+        finalScore = 2; // loss
+      }
+      
+      if (playerSymbol) { // only call onEnd for players, not spectators
+        onEnd({ score: finalScore });
+        setOnEndCalled(true);
+      }
+    }
+  }, [winner, onEnd, onEndCalled, playerSymbol]);
 
   function calculateWinner(bd) {
     const lines = [
@@ -123,8 +146,8 @@ export default function XOGame({ gameId }) {
     <div>
       <h2 className="mb-2">Room: {gameId}</h2>
       <p className="mb-2">{status}</p>
-      <p className="mb-2">X: {players.X ? players.X : "Waiting..."}</p>
-      <p className="mb-2">O: {players.O ? players.O : "Waiting..."}</p>
+      <p className="mb-2">X: {players.X ? players.X.substring(0,5) : "Waiting..."}</p>
+      <p className="mb-2">O: {players.O ? players.O.substring(0,5) : "Waiting..."}</p>
       <h3 className="mb-2">Turn: {currentPlayer || "Game Over"}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 80px)", gap: "8px" }}>
         {board.map((cell, idx) => (
@@ -132,6 +155,7 @@ export default function XOGame({ gameId }) {
             key={idx}
             onClick={() => handleClick(idx)}
             style={{ width: 80, height: 80, fontSize: 32 }}
+            className="border rounded disabled:opacity-50"
             disabled={
               winner !== "" ||
               currentPlayer !== playerSymbol ||
@@ -145,7 +169,7 @@ export default function XOGame({ gameId }) {
       </div>
       {winner && (
         <div className="mt-4">
-          <p>{winner === "draw" ? "Draw game!" : `Winner: ${winner}`}</p>
+          <p className="text-xl font-bold">{winner === "draw" ? "Draw game!" : `Winner: ${winner}`}</p>
           {(playerSymbol === "X" || playerSymbol === "O") && (
             <button
               onClick={handleReset}

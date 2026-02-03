@@ -14,12 +14,15 @@ export default function ProfilePage() {
 
   useEffect(()=>{
     async function load() {
-      if (!user) return;
+      if (!user) {
+        setLoading(true);
+        return;
+      };
       setLoading(true);
       const u = await getUserDoc(user.uid);
       setDoc(u);
       setForm({
-        displayName: u?.displayName || user.displayName || '',
+        displayName: u?.displayName || user?.displayName || '',
         bio: u?.bio || '',
         skills: (u?.skills || []).join(', '),
       });
@@ -47,11 +50,11 @@ export default function ProfilePage() {
           <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-600 bg-clip-text text-transparent drop-shadow-lg">
             Profile
           </h2>
-          {loading ? <LoadingSpinner /> : (
+          {loading || !user ? <LoadingSpinner /> : (
             <div className="flex flex-col md:flex-row gap-8">
               {/* Left Column: Profile Picture and Points */}
               <div className="md:w-1/3 flex flex-col items-center space-y-4">
-                <img src={user.photoURL} alt={form.displayName} className="w-32 h-32 rounded-full shadow-md" />
+                <img src={user?.photoURL || '/logo.png'} alt={form.displayName} className="w-32 h-32 rounded-full shadow-md" />
                 <div className="text-center">
                   <div className="text-lg font-semibold">Points</div>
                   <div className="text-3xl font-bold text-teal-500">{doc?.points || 0}</div>

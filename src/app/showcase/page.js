@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
-import { createWallPost, listWallPosts, reactToPost, uploadToStorage, awardUploadPoints } from '../../lib/firebaseHelpers';
+import { createShowcasePost, listShowcasePosts, reactToPost, uploadToStorage, awardUploadPoints } from '../../lib/firebaseHelpers';
 
 export default function ShowcasePage() {
   const { user } = useAuth();
@@ -12,7 +12,7 @@ export default function ShowcasePage() {
   const [err, setErr] = useState('');
 
   async function load() {
-    const list = await listWallPosts(50);
+    const list = await listShowcasePosts(50);
     setPosts(list);
   }
 
@@ -28,9 +28,9 @@ export default function ShowcasePage() {
     try {
       let mediaUrl = null;
       if (form.file) {
-        mediaUrl = await uploadToStorage(form.file, 'wall');
+        mediaUrl = await uploadToStorage(form.file, 'showcase');
       }
-      await createWallPost(
+      await createShowcasePost(
         {
           type: form.type,
           title: form.title,
@@ -60,7 +60,7 @@ export default function ShowcasePage() {
     <ProtectedRoute>
       <div className="min-h-[70vh] flex flex-col items-center px-2 py-8 md:py-16 bg-gradient-to-br from-blue-50 via-yellow-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <h2 className="text-2xl md:text-4xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-600 bg-clip-text text-transparent drop-shadow-lg">
-          Creativity Wall
+          Showcase
         </h2>
         <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-lg p-4 md:p-8 mt-4 mb-8">
           <div className="grid md:grid-cols-3 gap-6">

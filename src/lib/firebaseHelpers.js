@@ -146,8 +146,8 @@ export async function rejectOpportunity(id) {
   await updateDoc(doc(db, 'opportunities', id), { status: 'rejected' });
 }
 
-// Wall
-export async function createWallPost({ type, title, description, mediaUrl, code, language }, uid) {
+// Showcase
+export async function createShowcasePost({ type, title, description, mediaUrl, code, language }, uid) {
   return addDoc(collection(db, 'wallPosts'), {
     uid,
     type,
@@ -161,7 +161,7 @@ export async function createWallPost({ type, title, description, mediaUrl, code,
     createdAt: serverTimestamp(),
   });
 }
-export async function listWallPosts(limitN = 50) {
+export async function listShowcasePosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));

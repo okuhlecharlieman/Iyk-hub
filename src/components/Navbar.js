@@ -17,7 +17,7 @@ export default function Navbar() {
         <nav className="flex items-center gap-4 text-sm">
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/games">Games</Link>
-          <Link href="/showcase">Creativity Wall</Link>
+          <Link href="/showcase">Showcase</Link>
           <Link href="/opportunities">Opportunities</Link>
           <Link href="/leaderboard">Leaderboard</Link>
           {user ? (

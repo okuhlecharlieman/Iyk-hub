@@ -1,27 +1,19 @@
 'use client';
-import Link from 'next/link';
+import GameCard from '../../components/GameCard';
 
-const GAMES = [
-  { id: 'rps', name: 'Rock-Paper-Scissors' },
-  { id: 'tictactoe', name: 'Tic-Tac-Toe' },
-  { id: 'memory', name: 'Memory Match' },
-  { id: 'hangman', name: 'Hangman' },
-  { id: 'quiz', name: 'Quiz' },
-];
+const GAMES = ['rps', 'tictactoe', 'memory', 'hangman', 'quiz'];
 
 export default function GamesPage() {
   return (
-    <div className="min-h-[70vh] flex flex-col items-center px-2 py-8 md:py-16 bg-gradient-to-br from-teal-50 via-yellow-50 to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <h2 className="text-2xl md:text-4xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-600 bg-clip-text text-transparent drop-shadow-lg">
-        Games
-      </h2>
-      <div className="w-full max-w-2xl bg-white dark:bg-gray-900 rounded-xl shadow-lg p-4 md:p-8 mt-4 mb-8">
-        <h1 className="text-2xl font-bold mb-4">Mini Games</h1>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {GAMES.map((g) => (
-            <Link key={g.id} href={`/games/${g.id}`} className="border rounded p-4 hover:bg-neutral-50">
-              {g.name}
-            </Link>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Choose a Game</h1>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Test your skills and earn points!</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {GAMES.map((gameId) => (
+            <GameCard key={gameId} gameId={gameId} />
           ))}
         </div>
       </div>

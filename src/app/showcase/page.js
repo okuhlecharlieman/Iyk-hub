@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { createShowcasePost, listShowcasePosts, reactToPost, uploadToStorage, awardUploadPoints } from '../../lib/firebaseHelpers';
-import ContentCard from '../../components/ContentCard'; // Make sure this path is correct
+import ContentCard from '../../components/ContentCard';
 import { FaPlus } from 'react-icons/fa';
 
 export default function ShowcasePage() {
@@ -12,7 +12,7 @@ export default function ShowcasePage() {
   const [form, setForm] = useState({ type: 'art', title: '', description: '', code: '', language: 'javascript', file: null });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
-  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [isFormVisible, setIsFormVisible] = useState(true);
 
   async function load() {
     const list = await listShowcasePosts(50);

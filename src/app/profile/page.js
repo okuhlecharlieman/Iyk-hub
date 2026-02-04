@@ -2,21 +2,27 @@
 import { useEffect, useState } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
-import { getUserDoc } from '../../lib/firebaseHelpers';
+import { getUserDoc, listUserShowcasePosts } from '../../lib/firebaseHelpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ProfileCard from '../../components/ProfileCard';
 import PointsDisplay from '../../components/PointsDisplay';
+import ContentCard from '../../components/ContentCard';
+import Link from 'next/link';
+import { FaShieldAlt } from 'react-icons/fa';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [doc, setDoc] = useState(null);
+  const [posts, setPosts] = useState([]);
 
   async function load() {
     if (!user) return;
     setLoading(true);
     const u = await getUserDoc(user.uid);
     setDoc(u);
+    const p = await listUserShowcasePosts(user.uid);
+    setPosts(p);
     setLoading(false);
   }
 
@@ -40,6 +46,12 @@ export default function ProfilePage() {
                   />
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{doc?.displayName || 'Anonymous User'}</h2>
                   <p className="text-gray-500 dark:text-gray-400">{user?.email}</p>
+                  {doc?.role === 'admin' && (
+                    <Link href="/admin" className="mt-4 flex items-center gap-2 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                      <FaShieldAlt />
+                      Admin Dashboard
+                    </Link>
+                  )}
                 </div>
                 <PointsDisplay points={doc?.points} />
               </div>
@@ -49,8 +61,13 @@ export default function ProfilePage() {
                 <ProfileCard doc={doc} onUpdate={load} />
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8">
                   <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">My Creations</h3>
-                  <p className="text-gray-500 dark:text-gray-400">This section will display your showcased projects and contributions.</p>
-                  {/* TODO: Fetch and display user's creations */}
+                  {posts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {posts.map(p => <ContentCard key={p.id} p={p} react={() => {}} />)}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">You haven't shared any creations yet. Why not add one to the showcase?</p>
+                  )}
                 </div>
               </div>
             </div>

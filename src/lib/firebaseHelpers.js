@@ -3,7 +3,7 @@ import { auth, db, storage } from './firebase';
 import {
   addDoc, collection, doc, getDoc, getDocs, increment, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,
-  updateDoc, where,
+  updateDoc, where, deleteDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -31,6 +31,15 @@ export async function getUserDoc(uid) {
 }
 export async function updateUserDoc(uid, data) {
   await updateDoc(doc(db, 'users', uid), data);
+}
+export async function listAllUsers() {
+  const qy = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteUser(uid) {
+  await deleteDoc(doc(db, 'users', uid));
 }
 
 // Points
@@ -163,6 +172,16 @@ export async function createShowcasePost({ type, title, description, mediaUrl, c
 }
 export async function listShowcasePosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+export async function listUserShowcasePosts(uid, limitN = 50) {
+  const qy = query(
+    collection(db, 'wallPosts'),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc'),
+    limit(limitN)
+  );
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }

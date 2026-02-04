@@ -15,15 +15,23 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [doc, setDoc] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [error, setError] = useState(null);
 
   async function load() {
     if (!user) return;
     setLoading(true);
-    const u = await getUserDoc(user.uid);
-    setDoc(u);
-    const p = await listUserShowcasePosts(user.uid);
-    setPosts(p);
-    setLoading(false);
+    setError(null);
+    try {
+      const u = await getUserDoc(user.uid);
+      setDoc(u);
+      const p = await listUserShowcasePosts(user.uid);
+      setPosts(p);
+    } catch (err) {
+      console.error("Error loading profile data:", err);
+      setError("There was an error loading your profile. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -34,7 +42,14 @@ export default function ProfilePage() {
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
         <div className="max-w-6xl mx-auto">
-          {loading || !user ? <LoadingSpinner /> : (
+          {loading ? <LoadingSpinner /> : error ? (
+            <div className="text-center text-red-500">
+              <p>{error}</p>
+              <button onClick={load} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                Retry
+              </button>
+            </div>
+          ) : user && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Left Column */}
               <div className="lg:col-span-1 space-y-8">

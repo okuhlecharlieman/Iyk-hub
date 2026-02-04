@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { GiSword, GiTicTacToe, GiCardRandom, GiHangman, GiBrain } from 'react-icons/gi';
+import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain } from 'react-icons/gi';
 
 const GAME_DETAILS = {
-  rps: { name: 'Rock-Paper-Scissors', icon: <GiSword size={48} /> },
+  rps: { name: 'Rock-Paper-Scissors', icon: <GiSwordman size={48} /> },
   tictactoe: { name: 'Tic-Tac-Toe', icon: <GiTicTacToe size={48} /> },
   memory: { name: 'Memory Match', icon: <GiCardRandom size={48} /> },
-  hangman: { name: 'Hangman', icon: <GiHangman size={48} /> },
+  hangman: { name: 'Hangman', icon: <GiHanger size={48} /> },
   quiz: { name: 'Quiz', icon: <GiBrain size={48} /> },
 };
 

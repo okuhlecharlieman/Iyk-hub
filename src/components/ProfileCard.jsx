@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { updateUserDoc } from '../../lib/firebaseHelpers';
+import { useAuth } from '../context/AuthContext';
+import { updateUserDoc } from '../lib/firebaseHelpers';
 import { FaSave, FaCheckCircle } from 'react-icons/fa';
 
 export default function ProfileCard({ doc, onUpdate }) {

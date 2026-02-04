@@ -9,13 +9,13 @@ import { FaArrowRight, FaGamepad, FaBriefcase } from 'react-icons/fa';
 import PointsCard from '../../components/PointsCard';
 import LeaderboardPreview from '../../components/LeaderboardPreview';
 import OnlineCount from '../../components/OnlineCount';
-import { GiSword, GiTicTacToe, GiCardRandom, GiHangman } from 'react-icons/gi';
+import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger } from 'react-icons/gi';
 
 const GAME_ICONS = {
-  rps: <GiSword size={32} />,
+  rps: <GiSwordman size={32} />,
   tictactoe: <GiTicTacToe size={32} />,
   memory: <GiCardRandom size={32} />,
-  hangman: <GiHangman size={32} />,
+  hangman: <GiHanger size={32} />,
 };
 
 export default function DashboardPage() {

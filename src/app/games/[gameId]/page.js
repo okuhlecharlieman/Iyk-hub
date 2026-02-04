@@ -9,15 +9,15 @@ import MemoryGame from '../../../components/games/MemoryGame';
 import HangmanGame from '../../../components/games/HangmanGame';
 import QuizGame from '../../../components/games/QuizGame';
 import { awardGamePoints, logGameSession } from '../../../lib/firebaseHelpers';
-import { GiSword, GiTicTacToe, GiCardRandom, GiHangman, GiBrain } from 'react-icons/gi';
+import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain } from 'react-icons/gi';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
 
 const GAME_DETAILS = {
-  rps: { name: 'Rock-Paper-Scissors', icon: <GiSword size={32} /> },
+  rps: { name: 'Rock-Paper-Scissors', icon: <GiSwordman size={32} /> },
   tictactoe: { name: 'Tic-Tac-Toe', icon: <GiTicTacToe size={32} /> },
   memory: { name: 'Memory Match', icon: <GiCardRandom size={32} /> },
-  hangman: { name: 'Hangman', icon: <GiHangman size={32} /> },
+  hangman: { name: 'Hangman', icon: <GiHanger size={32} /> },
   quiz: { name: 'Quiz', icon: <GiBrain size={32} /> },
 };
 

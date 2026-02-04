@@ -1,9 +1,63 @@
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // --- ADD THIS RULE FOR THE TIC-TAC-TOE GAME ---
+    match /games/{gameId} {
+      allow read, write: if signedIn();
+    }
+    // ---------------------------------------------
+
+    match /users/{uid} {
+      allow read: if true; // Needed for leaderboard
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /pointsLog/{logId} {
+        allow read, create: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    match /wallPosts/{postId} {
+      allow read: if true;
+      allow create, update: if signedIn();
+    }
+
+
+    match /gamesSessions/{id} {
+      allow read, create: if signedIn();
+    }
+
+    match /quotes/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /meta/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /opportunities/{id} {
       allow read: if true;
       allow create: if signedIn();
-      allow update, delete: if isAdmin() || (signedIn() && request.auth.uid == resource.data.createdBy);
+      allow update, delete: if isAdmin() || (signedin() && request.auth.uid == resource.data.createdBy);
+    }
+
+    // Catch-all deny for safety. This must come after all other rules.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

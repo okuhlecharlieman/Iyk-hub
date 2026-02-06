@@ -1,30 +1,27 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import Masonry from 'react-masonry-css';
 import { useAuth } from '../../context/AuthContext';
-import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc } from '../../lib/firebaseHelpers';
-import PostCard from '../../components/showcase/PostCard';
-import NewPostCard from '../../components/showcase/NewPostCard.jsx';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc, togglePostVote } from '../../lib/firebaseHelpers';
+import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
+import NewPostCard from '../../components/showcase/NewPostCard';
+import NewPostModal from '../../components/showcase/NewPostModal';
 import EditPostModal from '../../components/showcase/EditPostModal';
-import Link from 'next/link';
 
 export default function ShowcasePage() {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [authors, setAuthors] = useState({});
   const [loading, setLoading] = useState(true);
-  
-  // State for the modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
+  const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
 
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     setLoading(true);
     try {
       const postList = await listShowcasePosts(100);
       setPosts(postList);
-
-      // Fetch author details for each post
       const authorIds = [...new Set(postList.map(p => p.uid))];
       const authorPromises = authorIds.map(uid => getUserDoc(uid));
       const authorDocs = await Promise.all(authorPromises);
@@ -33,26 +30,25 @@ export default function ShowcasePage() {
         return acc;
       }, {});
       setAuthors(authorMap);
-
     } catch (error) {
       console.error("Error loading showcase posts:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadPosts();
-  }, []);
+  }, [loadPosts]);
 
   const handleDelete = async (postId) => {
-    if (window.confirm("Are you sure you want to delete this post? This cannot be undone.")) {
+    if (window.confirm("Are you sure you want to delete this post?")) {
       try {
         await deleteShowcasePost(postId);
-        await loadPosts(); // Refresh the list
+        await loadPosts();
       } catch (error) {
         console.error("Error deleting post:", error);
-        alert("Failed to delete post. Please try again.");
+        alert("Failed to delete post.");
       }
     }
   };
@@ -60,42 +56,53 @@ export default function ShowcasePage() {
   const handleUpdate = async (postId, data) => {
     try {
       await updateShowcasePost(postId, data);
-      await loadPosts(); // Refresh the list
-      return true; // Indicate success
+      await loadPosts();
+      return true;
     } catch (error) {
       console.error("Error updating post:", error);
-      return false; // Indicate failure
+      return false;
     }
   };
 
-  // Functions to handle opening and closing the modal
+  const handleVote = async (postId) => {
+    if (!user) return alert("You must be logged in to vote.");
+    try {
+      await togglePostVote(postId, user.uid);
+      // Optimistically update UI or reload
+      loadPosts(); 
+    } catch (error) {
+      console.error("Error toggling vote:", error);
+    }
+  };
+
   const openEditModal = (post) => {
     setPostToEdit(post);
     setIsEditModalOpen(true);
   };
 
-  const closeEditModal = () => {
-    setPostToEdit(null);
-    setIsEditModalOpen(false);
+  const breakpointColumnsObj = {
+    default: 3,
+    1100: 2,
+    700: 1
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
-          {user && (
-            <Link href="/profile" className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition-colors">
-              My Profile
-            </Link>
-          )}
+    <div className="min-h-screen px-4 py-12 md:px-8 md:py-16">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Discover the creativity and talent within the Intwana Hub community.</p>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-3 sm:grid-cols-2 grid-cols-1">
-          {user && <NewPostCard onPostCreated={loadPosts} />}
+        <Masonry
+          breakpointCols={breakpointColumnsObj}
+          className="my-masonry-grid"
+          columnClassName="my-masonry-grid_column">
+          
+          {user && <NewPostCard onClick={() => setIsNewPostModalOpen(true)} />}
           
           {loading ? (
-            <div className="lg:col-span-3 flex justify-center items-center"><LoadingSpinner /></div>
+            Array.from({ length: 6 }).map((_, i) => <PostCardSkeleton key={i} />)
           ) : (
             posts.map(post => (
               <PostCard 
@@ -103,18 +110,24 @@ export default function ShowcasePage() {
                 post={post} 
                 author={authors[post.uid]} 
                 isOwner={user && user.uid === post.uid}
-                onEdit={() => openEditModal(post)} // Pass the edit handler
-                onDelete={() => handleDelete(post.id)} // Pass the delete handler
+                onEdit={() => openEditModal(post)}
+                onDelete={() => handleDelete(post.id)}
+                onVote={() => handleVote(post.id)}
               />
             ))
           )}
-        </div>
+        </Masonry>
       </div>
 
-      {/* Edit Post Modal Render */}
+      <NewPostModal 
+        isOpen={isNewPostModalOpen} 
+        onClose={() => setIsNewPostModalOpen(false)} 
+        onPostCreated={loadPosts} 
+      />
+
       <EditPostModal
         isOpen={isEditModalOpen}
-        onClose={closeEditModal}
+        onClose={() => setPostToEdit(null)}
         post={postToEdit}
         onUpdate={handleUpdate}
       />

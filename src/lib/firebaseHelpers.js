@@ -48,12 +48,26 @@ export async function listTopUsers(limitN = 10, filter = 'lifetime') {
 }
 
 // Showcase
-export async function createShowcasePost(data) {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated');
-    const postData = { ...data, authorId: user.uid, createdAt: serverTimestamp() };
-    const postRef = await addDoc(collection(db, 'wallPosts'), postData);
-    return postRef.id;
+export async function createShowcasePost(data, mediaFile) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+  
+  let mediaUrl = null;
+  if (mediaFile) {
+    mediaUrl = await uploadToStorage(mediaFile, `showcase/${user.uid}`);
+  }
+
+  const postData = { 
+    ...data, 
+    uid: user.uid,
+    votes: 0,
+    voters: [],
+    mediaUrl,
+    createdAt: serverTimestamp(), 
+    updatedAt: serverTimestamp(),
+  };
+  const postRef = await addDoc(collection(db, 'wallPosts'), postData);
+  return postRef.id;
 }
 
 export async function listShowcasePosts(limitN = 50) {
@@ -63,7 +77,7 @@ export async function listShowcasePosts(limitN = 50) {
 }
 
 export async function listUserShowcasePosts(uid, limitN = 50) {
-    const qy = query(collection(db, 'wallPosts'), where('authorId', '==', uid), orderBy('createdAt', 'desc'), limit(limitN));
+    const qy = query(collection(db, 'wallPosts'), where('uid', '==', uid), orderBy('createdAt', 'desc'), limit(limitN));
     const snap = await getDocs(qy);
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
@@ -77,11 +91,80 @@ export async function updateShowcasePost(postId, data) {
     await updateDoc(postRef, { ...data, updatedAt: serverTimestamp() });
 }
 
+export async function togglePostVote(postId, uid) {
+  const postRef = doc(db, "wallPosts", postId);
+  return runTransaction(db, async (transaction) => {
+    const postDoc = await transaction.get(postRef);
+    if (!postDoc.exists()) {
+      throw "Post does not exist!";
+    }
+
+    const data = postDoc.data();
+    const voters = data.voters || [];
+    let newVotes = data.votes || 0;
+
+    if (voters.includes(uid)) {
+      // User is unvoting
+      transaction.update(postRef, { 
+        voters: voters.filter(voterId => voterId !== uid),
+        votes: newVotes - 1,
+      });
+    } else {
+      // User is voting
+      transaction.update(postRef, { 
+        voters: [...voters, uid],
+        votes: newVotes + 1,
+      });
+    }
+  });
+}
+
 // Opportunities
+export async function createOpportunity(data) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const oppData = {
+    ...data,
+    ownerId: user.uid,
+    status: 'pending', // Or 'approved' if you want to bypass approval for some users
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const docRef = await addDoc(collection(db, 'opportunities'), oppData);
+  return docRef.id;
+}
+
+export async function updateOpportunity(opportunityId, data) {
+  const docRef = doc(db, 'opportunities', opportunityId);
+  await updateDoc(docRef, { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteOpportunity(opportunityId) {
+  await deleteDoc(doc(db, 'opportunities', opportunityId));
+}
+
 export async function listApprovedOpportunities(limitN = 50) {
   const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listAllOpportunities(limitN = 50) {
+  const qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'), limit(limitN));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+
+export async function approveOpportunity(opportunityId) {
+  const docRef = doc(db, 'opportunities', opportunityId);
+  await updateDoc(docRef, { status: 'approved', updatedAt: serverTimestamp() });
+}
+
+export async function rejectOpportunity(opportunityId) {
+  const docRef = doc(db, 'opportunities', opportunityId);
+  await updateDoc(docRef, { status: 'rejected', updatedAt: serverTimestamp() });
 }
 
 // Quotes
@@ -98,6 +181,7 @@ export async function fetchLatestQuote() {
 
 // Storage
 export async function uploadToStorage(file, prefix = 'uploads') {
+  if(!file) return null;
   const fileRef = ref(storage, `${prefix}/${Date.now()}-${file.name}`);
   await uploadBytes(fileRef, file);
   return getDownloadURL(fileRef);

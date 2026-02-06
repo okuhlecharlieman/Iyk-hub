@@ -97,15 +97,15 @@ export default function ShowcasePage() {
         <Masonry
           breakpointCols={breakpointColumnsObj}
           className="my-masonry-grid"
-          columnClassName="my-masonry-grid_column">
+          columnClassName="my-masonry-grid_column px-4">
           
-          {user && <NewPostCard onClick={() => setIsNewPostModalOpen(true)} />}
+          {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}
           
           {loading ? (
-            Array.from({ length: 6 }).map((_, i) => <PostCardSkeleton key={i} />)
+            Array.from({ length: 6 }).map((_, i) => <div className="mb-8" key={i}><PostCardSkeleton /></div>)
           ) : (
             posts.map(post => (
-              <div key={post.id} className="mb-4">
+              <div className="mb-8" key={post.id}>
                 <PostCard 
                   post={post} 
                   author={authors[post.uid]} 

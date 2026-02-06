@@ -59,7 +59,7 @@ export default function DashboardPage() {
               {/* Quick Games */}
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3"><FaGamepad /> Quick Games</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3"><FaGamepad size={24} /> Quick Games</h2>
                   <Link className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400" href="/games">See all <FaArrowRight className="inline" /></Link>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -81,7 +81,7 @@ export default function DashboardPage() {
               {/* Opportunities */}
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3"><FaBriefcase /> Opportunities</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-3"><FaBriefcase size={24} /> Opportunities</h2>
                   <Link className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400" href="/opportunities">View board <FaArrowRight className="inline" /></Link>
                 </div>
                 <div className="space-y-4">

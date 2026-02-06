@@ -5,7 +5,7 @@ import Footer from '../components/Footer';
 import { AuthProvider } from '../context/AuthContext';
 import Presence from '../components/Presence';
 import { Providers } from './providers';
-import ThemeSwitcher from '../components/ThemeSwitcher';
+
 
 export const metadata = {
   title: 'Intwana Hub',
@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
         <Providers>
           <AuthProvider>
             <Presence />
-            <ThemeSwitcher />
+         
             <Navbar />
             <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
             <Footer />

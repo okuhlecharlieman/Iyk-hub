@@ -1,3 +1,4 @@
+'use client';
 import { FaTrophy } from 'react-icons/fa';
 
 const PodiumPlace = ({ user, rank, filter }) => {
@@ -30,31 +31,24 @@ const PodiumPlace = ({ user, rank, filter }) => {
 };
 
 export default function Podium({ users, filter }) {
-  const topThree = users.slice(0, 3);
-  // Ensure there are always 3 items for the podium, even if empty
-  const podiumUsers = [
-    users.find(u => u.rank === 2),
-    users.find(u => u.rank === 1),
-    users.find(u => u.rank === 3),
-  ];
-
-  // Handle cases where some ranks might be missing
-  if (users.length < 3) {
-    if (!podiumUsers[0]) podiumUsers[0] = null; // 2nd
-    if (!podiumUsers[1]) podiumUsers[1] = null; // 1st
-    if (!podiumUsers[2]) podiumUsers[2] = null; // 3rd
+    // users prop is a sorted array of the top 3 users. users[0] is #1.
+    // We arrange them for visual podium order: 2nd, 1st, 3rd.
+    const podiumUsers = [
+      users.length > 1 ? users[1] : null, // 2nd place
+      users.length > 0 ? users[0] : null, // 1st place
+      users.length > 2 ? users[2] : null, // 3rd place
+    ];
+  
+    return (
+      <div className="flex items-end justify-center h-56 bg-gradient-to-t from-gray-100 to-white dark:from-gray-800 dark:to-gray-900 rounded-b-lg shadow-inner gap-1">
+        {podiumUsers.map((user, index) => {
+          const rank = [2, 1, 3][index];
+          // Render a placeholder if a user for that rank doesn't exist
+          if (!user) {
+            return <div key={`placeholder-${rank}`} className={`w-1/3 h-${[40, 48, 32][index]} bg-gray-200 dark:bg-gray-700/50 rounded-t-xl`}></div>;
+          }
+          return <PodiumPlace key={user.id} user={user} rank={rank} filter={filter} />;
+        })}
+      </div>
+    );
   }
-
-  return (
-    <div className="flex items-end justify-center h-56 bg-gradient-to-t from-gray-100 to-white dark:from-gray-800 dark:to-gray-900 rounded-b-lg shadow-inner gap-1">
-      {podiumUsers.map((user, index) => {
-        const rank = [2, 1, 3][index];
-        // Render a placeholder if a user for that rank doesn't exist
-        if (!user) {
-          return <div key={`placeholder-${rank}`} className={`w-1/3 h-${[40, 48, 32][index]} bg-gray-200 dark:bg-gray-700/50 rounded-t-xl`}></div>;
-        }
-        return <PodiumPlace key={user.id} user={user} rank={rank} filter={filter} />;
-      })}
-    </div>
-  );
-}

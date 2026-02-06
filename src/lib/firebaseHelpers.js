@@ -35,6 +35,14 @@ export async function getUserDoc(uid) {
 }
 
 // Showcase
+export async function createShowcasePost(data) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User not authenticated');
+    const postData = { ...data, authorId: user.uid, createdAt: serverTimestamp() };
+    const postRef = await addDoc(collection(db, 'wallPosts'), postData);
+    return postRef.id;
+}
+
 export async function listShowcasePosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);

@@ -40,6 +40,13 @@ export async function updateUserDoc(uid, data) {
     await updateDoc(userRef, data);
 }
 
+export async function listTopUsers(limitN = 10, filter = 'lifetime') {
+  const orderByField = `points.${filter}`;
+  const qy = query(collection(db, 'users'), orderBy(orderByField, 'desc'), limit(limitN));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 // Showcase
 export async function createShowcasePost(data) {
     const user = auth.currentUser;
@@ -68,6 +75,24 @@ export async function deleteShowcasePost(postId) {
 export async function updateShowcasePost(postId, data) {
     const postRef = doc(db, 'wallPosts', postId);
     await updateDoc(postRef, { ...data, updatedAt: serverTimestamp() });
+}
+
+// Opportunities
+export async function listApprovedOpportunities(limitN = 50) {
+  const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Quotes
+export async function fetchLatestQuote() {
+  const qy = query(collection(db, 'quotes'), orderBy('createdAt', 'desc'), limit(1));
+  const snap = await getDocs(qy);
+  if (snap.empty) {
+    return null;
+  }
+  const quoteDoc = snap.docs[0];
+  return { id: quoteDoc.id, ...quoteDoc.data() };
 }
 
 

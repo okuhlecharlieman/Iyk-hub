@@ -1,87 +1,97 @@
 import Link from 'next/link';
-import { FaCode, FaMusic, FaPaintBrush, FaThumbsUp, FaComment, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaCode, FaMusic, FaPaintBrush, FaThumbsUp, FaEdit, FaTrash } from 'react-icons/fa';
 import { FiExternalLink } from 'react-icons/fi';
+import { useAuth } from '../../context/AuthContext';
 
 const typeMetadata = {
-  code: { icon: <FaCode />, color: '#3b82f6' }, // Blue
-  music: { icon: <FaMusic />, color: '#10b981' }, // Emerald
-  art: { icon: <FaPaintBrush />, color: '#8b5cf6' }, // Violet
+  code: { icon: <FaCode />, color: 'text-blue-500' },
+  music: { icon: <FaMusic />, color: 'text-emerald-500' },
+  art: { icon: <FaPaintBrush />, color: 'text-violet-500' },
 };
 
 export const PostCardSkeleton = () => (
-    <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl overflow-hidden animate-pulse">
+    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700">
         <div className="h-48 bg-gray-200 dark:bg-gray-700"></div>
-        <div className="p-4 sm:p-5">
-            <div className="flex items-center mb-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 mr-3"></div>
+        <div className="p-5">
+            <div className="flex items-center mb-4">
+                <div className="w-11 h-11 rounded-full bg-gray-300 dark:bg-gray-600 mr-3"></div>
                 <div>
-                    <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                    <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded mt-1"></div>
+                    <div className="h-4 w-28 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                    <div className="h-3 w-20 bg-gray-300 dark:bg-gray-600 rounded mt-2"></div>
                 </div>
             </div>
-            <div className="h-5 w-4/5 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
-            <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
-            <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mt-1"></div>
+            <div className="h-5 w-4/5 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
+            <div className="h-4 w-full bg-gray-300 dark:bg-gray-600 rounded"></div>
+            <div className="h-4 w-3/4 bg-gray-300 dark:bg-gray-600 rounded mt-1.5"></div>
+             <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <div className="h-6 w-12 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                <div className="h-8 w-20 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            </div>
         </div>
     </div>
 );
 
+
 export default function PostCard({ post, author, isOwner, onEdit, onDelete, onVote }) {
-  const { type, title, description, mediaUrl, link, createdAt, uid, votes } = post;
+  const { user: currentUser } = useAuth();
+  const { type, title, description, mediaUrl, link, createdAt, votes } = post;
   const metadata = typeMetadata[type] || {};
+  const voteCount = votes?.length || 0;
+  const userHasVoted = currentUser && votes?.includes(currentUser.uid);
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col">
-      {/* Media Section */}
+    <div className="bg-white dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col h-full">
       {mediaUrl && (
-        <div className="relative w-full aspect-video overflow-hidden">
-          {type === 'art' && <img src={mediaUrl} alt={title} className="w-full h-full object-cover" />}
-          {type === 'music' && <audio controls src={mediaUrl} className="w-full absolute bottom-0">Your browser does not support audio.</audio>}
+        <div className="relative w-full aspect-video overflow-hidden group">
+          {type === 'art' && <img src={mediaUrl} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />}
+          {type === 'music' && (
+            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                 <audio controls src={mediaUrl} className="w-full">Your browser does not support audio.</audio>
+            </div>
+          )}
         </div>
       )}
 
-      <div className="p-4 sm:p-5 flex-grow flex flex-col">
-        {/* Author & Type Section */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center">
-            {author?.photoURL && (
-                <img src={author.photoURL} alt={author.displayName} className="w-11 h-11 rounded-full mr-3 object-cover border-2 border-gray-100 dark:border-gray-700" />
+      <div className="p-5 flex-grow flex flex-col">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            {author?.photoURL ? (
+                <img src={author.photoURL} alt={author.displayName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700" />
+            ) : (
+                <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-700" />
             )}
             <div>
-              <p className="font-bold text-gray-800 dark:text-white">{author?.displayName || 'User'}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(createdAt?.seconds * 1000).toLocaleDateString()}</p>
+              <p className="font-bold text-gray-800 dark:text-gray-100 leading-tight">{author?.displayName || 'Anonymous User'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{createdAt ? new Date(createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</p>
             </div>
           </div>
-          <div style={{ color: metadata.color }} className="text-xl p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <div className={`text-xl p-3 bg-gray-100 dark:bg-gray-900/50 rounded-lg ${metadata.color}`}>
             {metadata.icon || null}
           </div>
         </div>
 
-        {/* Content Section */}
-        <div className="flex-grow">
-            <h3 className="font-bold text-xl mb-1 text-gray-900 dark:text-gray-100">{title}</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">{description}</p>
+        <div className="flex-grow mb-4">
+            <h3 className="font-bold text-lg leading-snug text-gray-900 dark:text-white mb-2">{title}</h3>
+            <p className="text-gray-600 dark:text-gray-300 text-sm">{description.substring(0, 100)}{description.length > 100 && '...'}</p>
         </div>
 
-        {/* Link Section */}
         {link && (
-            <a href={link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-500 dark:text-blue-400 hover:underline mb-3">
-                <FiExternalLink /> View Project
+            <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium mb-4 group">
+                <FiExternalLink className="group-hover:translate-x-1 transition-transform"/> <span>View Project</span>
             </a>
         )}
 
-        {/* Actions Section */}
-        <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 mt-auto pt-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center space-x-4">
-            <button onClick={onVote} className="flex items-center space-x-2 hover:text-blue-500 transition-colors group">
-                <FaThumbsUp className={`group-hover:text-blue-500 ${votes > 0 ? 'text-blue-600' : ''}`} /> 
-                <span className={`font-semibold ${votes > 0 ? 'text-blue-600' : ''}`}>{votes || 0}</span>
+        <div className="flex items-center justify-between text-gray-500 dark:text-gray-400 mt-auto pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-4">
+            <button onClick={onVote} className={`flex items-center gap-2 transition-colors duration-200 group ${userHasVoted ? 'text-blue-600 dark:text-blue-400' : 'hover:text-blue-500'}`}>
+                <FaThumbsUp /> 
+                <span className={`font-semibold text-sm`}>{voteCount}</span>
             </button>
           </div>
           {isOwner && (
-            <div className="flex items-center space-x-1">
-              <button onClick={onEdit} className="hover:text-blue-500 p-2 rounded-full transition-colors"><FaEdit /></button>
-              <button onClick={onDelete} className="hover:text-red-500 p-2 rounded-full transition-colors"><FaTrash /></button>
+            <div className="flex items-center gap-1">
+              <button onClick={onEdit} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-blue-500 dark:hover:bg-gray-700 transition-colors"><FaEdit /></button>
+              <button onClick={onDelete} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-red-500 dark:hover:bg-gray-700 transition-colors"><FaTrash /></button>
             </div>
           )}
         </div>

@@ -87,11 +87,11 @@ export default function ShowcasePage() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-12 md:px-8 md:py-16">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 sm:px-6 lg:px-8 py-16 md:py-24">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Discover the creativity and talent within the Intwana Hub community.</p>
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">Community Showcase</h1>
+          <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-500 dark:text-gray-400">Discover the creativity and talent within the Intwana Hub community.</p>
         </div>
 
         <Masonry
@@ -105,15 +105,16 @@ export default function ShowcasePage() {
             Array.from({ length: 6 }).map((_, i) => <PostCardSkeleton key={i} />)
           ) : (
             posts.map(post => (
-              <PostCard 
-                key={post.id} 
-                post={post} 
-                author={authors[post.uid]} 
-                isOwner={user && user.uid === post.uid}
-                onEdit={() => openEditModal(post)}
-                onDelete={() => handleDelete(post.id)}
-                onVote={() => handleVote(post.id)}
-              />
+              <div key={post.id} className="mb-4">
+                <PostCard 
+                  post={post} 
+                  author={authors[post.uid]} 
+                  isOwner={user && user.uid === post.uid}
+                  onEdit={() => openEditModal(post)}
+                  onDelete={() => handleDelete(post.id)}
+                  onVote={() => handleVote(post.id)}
+                />
+              </div>
             ))
           )}
         </Masonry>

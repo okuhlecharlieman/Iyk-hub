@@ -7,14 +7,13 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
 
-
 export default function AdminPage() {
-    const { user } = useAuth();
+    const { user, userProfile } = useAuth(); // Assuming userProfile has isAdmin flag
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0 });
 
     useEffect(() => {
-        if (user) {
+        if (userProfile?.isAdmin) {
             async function loadStats() {
                 setLoading(true);
                 try {
@@ -28,15 +27,14 @@ export default function AdminPage() {
                 setLoading(false);
             }
             loadStats();
+        } else if (user) {
+            // If user is logged in but not an admin
+            setLoading(false);
         }
-    }, [user]);
-
-    if (loading) {
-        return <div className="flex justify-center items-center min-h-screen"><LoadingSpinner /></div>;
-    }
+    }, [user, userProfile]);
 
     return (
-        <ProtectedRoute>
+        <ProtectedRoute adminOnly={true}>
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8">
                 <div className="max-w-7xl mx-auto">
                     <div className="mb-8">

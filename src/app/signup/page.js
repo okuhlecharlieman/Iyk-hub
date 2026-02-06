@@ -55,56 +55,57 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-12 md:py-20 bg-gradient-to-br from-yellow-50 via-blue-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-lg p-6 md:p-10">
-        <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-600 bg-clip-text text-transparent drop-shadow-lg">
-          Sign Up
+    <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-12 md:py-20">
+      <div className="w-full max-w-md bg-white/50 dark:bg-gray-800/50 rounded-2xl shadow-lg p-6 md:p-10 border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-500 bg-clip-text text-transparent drop-shadow-sm">
+          Create Your Account
         </h2>
-        {message ? <p className={`mb-2 ${message.includes('verification') ? 'text-green-600' : 'text-red-600'}`}>{message}</p> : null}
+        {message ? <p className={`mb-4 text-center text-sm ${message.includes('verification') ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{message}</p> : null}
 
         {/* Email signup form */}
-        <form onSubmit={onSubmit} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-4">
           <input
-            className="w-full border p-2 rounded"
+            className="w-full p-3 rounded-lg bg-gray-100/80 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all"
             placeholder="Display name"
             value={displayName}
             onChange={(e)=>setDisplayName(e.target.value)}
           />
           <input
-            className="w-full border p-2 rounded"
+            className="w-full p-3 rounded-lg bg-gray-100/80 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all"
             placeholder="Email"
+            type="email"
             value={email}
             onChange={(e)=>setEmail(e.target.value)}
           />
           <input
-            className="w-full border p-2 rounded"
+            className="w-full p-3 rounded-lg bg-gray-100/80 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all"
             placeholder="Password"
             type="password"
             value={password}
             onChange={(e)=>setPassword(e.target.value)}
           />
           <button 
-            className="w-full bg-neutral-900 text-white rounded py-2" 
+            className="w-full btn-primary rounded-lg py-3" 
             disabled={loading}
           >
-            {loading ? <LoadingSpinner /> : 'Sign up'}
+            {loading ? <LoadingSpinner /> : 'Create Account'}
           </button>
         </form>
 
         {/* Divider */}
         <div className="flex items-center my-4">
-          <hr className="flex-grow border-gray-300" />
-          <span className="px-2 text-gray-500 text-sm">or</span>
-          <hr className="flex-grow border-gray-300" />
+          <hr className="flex-grow border-gray-300 dark:border-gray-600" />
+          <span className="px-3 text-gray-500 dark:text-gray-400 text-sm">OR</span>
+          <hr className="flex-grow border-gray-300 dark:border-gray-600" />
         </div>
 
         {/* Google signup button */}
         <button
           onClick={signUpWithGoogle}
           disabled={loading}
-          className="w-full border border-gray-300 flex items-center justify-center gap-2 py-2 rounded hover:bg-gray-50"
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg py-3 flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700/70 transition-colors"
         >
-          {loading ? <LoadingSpinner /> : (
+          {loading && !message ? <LoadingSpinner /> : (
             <>
               <img 
                 src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
@@ -116,9 +117,9 @@ export default function SignupPage() {
           )}
         </button>
 
-        <p className="mt-4 text-sm">
+        <p className="mt-6 text-sm text-center text-gray-600 dark:text-gray-400">
           Already have an account?{' '}
-          <a className="underline" href="/login">Sign in</a>
+          <a className="underline hover:text-blue-500" href="/login">Sign in</a>
         </p>
       </div>
     </div>

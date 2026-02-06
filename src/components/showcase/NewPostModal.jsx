@@ -64,7 +64,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
             <select 
                 value={type} 
                 onChange={e => setType(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
             >
                 <option value="art">Art</option>
                 <option value="code">Code</option>
@@ -79,7 +79,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
             placeholder="My Awesome Project"
           />
         </div>
@@ -91,7 +91,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
             rows="3"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
             placeholder="A short description of what makes it special."
           />
         </div>
@@ -103,7 +103,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
             id="link"
             value={link}
             onChange={(e) => setLink(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
             placeholder="https://github.com/my-project"
           />
         </div>
@@ -114,18 +114,18 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
             type="file"
             id="media"
             onChange={(e) => setMedia(e.target.files[0])}
-            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/50 dark:file:text-blue-300 dark:hover:file:bg-blue-900"
+            className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-200/70 dark:hover:file:bg-blue-900 transition"
           />
            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upload an image for art, or an audio file for music.</p>
         </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+        {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
         
         <div className="flex justify-end pt-4 space-x-2">
           <button
             type="button"
             onClick={onClose}
-            className="btn-secondary py-2 px-4 rounded-lg"
+            className="btn-secondary py-2 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition"
           >
             Cancel
           </button>

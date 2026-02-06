@@ -7,12 +7,8 @@ const typeIcons = {
   art: <FaPaintBrush />,
 };
 
-export default function PostCard({ post, author, isOwner, isAdmin, onEdit, onDelete }) {
+export default function PostCard({ post, author, isOwner, onEdit, onDelete }) {
   const { type, title, description, mediaUrl, createdAt, uid } = post;
-
-  // An admin can delete any post, but only the owner can edit.
-  const canDelete = isOwner || isAdmin;
-  const canEdit = isOwner;
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden transition-transform duration-300 hover:scale-105">
@@ -49,14 +45,10 @@ export default function PostCard({ post, author, isOwner, isAdmin, onEdit, onDel
             <button className="flex items-center space-x-1 hover:text-blue-500"><FaThumbsUp /> <span>{post.reactions?.['👍'] || 0}</span></button>
             <button className="flex items-center space-x-1 hover:text-green-500"><FaComment /> <span>{/* Comment count */}</span></button>
           </div>
-          {(canEdit || canDelete) && (
+          {isOwner && (
             <div className="flex items-center space-x-2">
-              {canEdit && (
-                  <button onClick={onEdit} className="hover:text-blue-500 p-2 rounded-full transition-colors"><FaEdit /></button>
-              )}
-              {canDelete && (
-                  <button onClick={onDelete} className="hover:text-red-500 p-2 rounded-full transition-colors"><FaTrash /></button>
-              )}
+              <button onClick={onEdit} className="hover:text-blue-500 p-2 rounded-full transition-colors"><FaEdit /></button>
+              <button onClick={onDelete} className="hover:text-red-500 p-2 rounded-full transition-colors"><FaTrash /></button>
             </div>
           )}
         </div>

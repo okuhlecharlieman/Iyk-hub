@@ -13,20 +13,20 @@ export default function ShowcasePage() {
   const [posts, setPosts] = useState([]);
   const [authors, setAuthors] = useState({});
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
+  
   // State for the modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [postToEdit, setPostToEdit] = useState(null);
 
   const loadPosts = async () => {
-    // No setLoading(true) here to allow background refresh
+    setLoading(true);
     try {
       const postList = await listShowcasePosts(100);
       setPosts(postList);
 
+      // Fetch author details for each post
       const authorIds = [...new Set(postList.map(p => p.uid))];
-      const authorPromises = authorIds.map(uid => getUserDoc(uid).catch(() => null)); // Prevent single failure from breaking all
+      const authorPromises = authorIds.map(uid => getUserDoc(uid));
       const authorDocs = await Promise.all(authorPromises);
       const authorMap = authorDocs.reduce((acc, doc) => {
         if (doc) acc[doc.id] = doc;
@@ -42,16 +42,8 @@ export default function ShowcasePage() {
   };
 
   useEffect(() => {
-    setLoading(true);
     loadPosts();
-    if (user) {
-        getUserDoc(user.uid).then(userDoc => {
-            if (userDoc && userDoc.role === 'admin') {
-                setIsAdmin(true);
-            }
-        });
-    }
-  }, [user]);
+  }, []);
 
   const handleDelete = async (postId) => {
     if (window.confirm("Are you sure you want to delete this post? This cannot be undone.")) {
@@ -76,6 +68,7 @@ export default function ShowcasePage() {
     }
   };
 
+  // Functions to handle opening and closing the modal
   const openEditModal = (post) => {
     setPostToEdit(post);
     setIsEditModalOpen(true);
@@ -110,15 +103,15 @@ export default function ShowcasePage() {
                 post={post} 
                 author={authors[post.uid]} 
                 isOwner={user && user.uid === post.uid}
-                isAdmin={isAdmin} // Pass admin status
-                onEdit={() => openEditModal(post)} 
-                onDelete={() => handleDelete(post.id)} 
+                onEdit={() => openEditModal(post)} // Pass the edit handler
+                onDelete={() => handleDelete(post.id)} // Pass the delete handler
               />
             ))
           )}
         </div>
       </div>
 
+      {/* Edit Post Modal Render */}
       <EditPostModal
         isOpen={isEditModalOpen}
         onClose={closeEditModal}

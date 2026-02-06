@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc } from '../../lib/firebaseHelpers';
 import PostCard from '../../components/showcase/PostCard';
-import NewPostCard from '../../components/showcase/NewPostCard';
+import NewPostCard from '../../components/showcase/NewPostCard.jsx';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import EditPostModal from '../../components/showcase/EditPostModal';
 import Link from 'next/link';

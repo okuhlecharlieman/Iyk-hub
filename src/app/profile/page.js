@@ -74,15 +74,21 @@ export default function ProfilePage() {
               <LoadingSpinner />
             </div>
           ) : error ? (
-            <div className="text-center text-red-500 bg-red-100 dark:bg-red-900/50 p-4 rounded-lg">{error}</div>
+            <div className="text-center text-red-500 bg-red-100 dark:bg-red-900/50 p-4 rounded-lg">
+              <p className="mb-3">{error}</p>
+              <div className="flex justify-center">
+                <button onClick={loadProfile} className="btn-primary">Retry</button>
+              </div>
+            </div>
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
               <div className="flex flex-col items-center text-center">
                 <div className="relative">
                   <img 
                     src={doc?.photoURL || user?.photoURL || '/logo.png'} 
-                    alt={doc?.displayName || 'User'} 
+                    alt={doc?.displayName || user?.email?.split('@')[0] || 'User'} 
                     className="w-32 h-32 rounded-full ring-4 ring-blue-500 dark:ring-blue-600 shadow-lg"
+                    onError={(e)=>{ e.target.src='/logo.png'; }}
                   />
                 </div>
                 

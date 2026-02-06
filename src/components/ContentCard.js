@@ -1,3 +1,4 @@
+"use client";
 import { FaRegHeart, FaRegComment, FaCode, FaMusic, FaPaintBrush, FaRegUserCircle } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { getUserDoc } from '../lib/firebaseHelpers';

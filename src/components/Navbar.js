@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import ThemeSwitcher from './ThemeSwitcher';
-import { FaBars, FaTimes, FaUserCircle } from 'react-icons/fa';
+import { FaBars, FaTimes } from 'react-icons/fa';
 
 const NavLink = ({ href, children }) => {
   const pathname = usePathname();
@@ -18,6 +18,17 @@ const NavLink = ({ href, children }) => {
     </Link>
   );
 };
+
+const MobileNavLink = ({ href, children, onClick }) => {
+    const pathname = usePathname();
+    const isActive = pathname === href;
+  
+    return (
+      <Link href={href} onClick={onClick} className={`block px-3 py-2 rounded-md text-base font-medium ${isActive ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+          {children}
+      </Link>
+    );
+  };
 
 export default function Navbar() {
   const { user, loading } = useAuth();
@@ -79,11 +90,14 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            {navLinks.map(link => <NavLink key={link.href} href={link.href}>{link.label}</NavLink>)}
+            {navLinks.map(link => <MobileNavLink key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)}>{link.label}</MobileNavLink>)}
+            <div className="px-3 py-2">
+                <ThemeSwitcher />
+            </div>
             <div className="border-t border-gray-200 dark:border-gray-600 pt-4 mt-4">
               {!loading && user ? (
                 <div className="flex items-center gap-3 px-3">
-                  <Link href="/profile">
+                  <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                     <img src={user.photoURL || ''} className="h-10 w-10 rounded-full object-cover" alt="profile" />
                   </Link>
                   <div>
@@ -93,8 +107,8 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                   <Link href="/login" className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Login</Link>
-                   <Link href="/signup" className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700">Sign Up</Link>
+                   <Link href="/login" onClick={() => setIsMenuOpen(false)} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Login</Link>
+                   <Link href="/signup" onClick={() => setIsMenuOpen(false)} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-white bg-blue-600 hover:bg-blue-700">Sign Up</Link>
                 </div>
               )}
             </div>

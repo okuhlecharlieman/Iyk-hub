@@ -174,6 +174,16 @@ export async function createShowcasePost({ type, title, description, mediaUrl, c
     createdAt: serverTimestamp(),
   });
 }
+
+export async function updateShowcasePost(postId, data) {
+    const postRef = doc(db, 'wallPosts', postId);
+    await updateDoc(postRef, { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteShowcasePost(postId) {
+    await deleteDoc(doc(db, 'wallPosts', postId));
+}
+
 export async function listShowcasePosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);

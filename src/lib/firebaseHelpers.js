@@ -3,7 +3,7 @@ import { auth, db, storage } from './firebase';
 import {
   addDoc, collection, doc, getDoc, getDocs, increment, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,
-  updateDoc, where,
+  updateDoc, where, deleteDoc,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -32,6 +32,15 @@ export async function getUserDoc(uid) {
 export async function updateUserDoc(uid, data) {
   await updateDoc(doc(db, 'users', uid), data);
 }
+export async function listAllUsers() {
+  const qy = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteUser(uid) {
+  await deleteDoc(doc(db, 'users', uid));
+}
 
 // Points
 async function logPoints(uid, amount, reason, customId) {
@@ -47,10 +56,28 @@ export async function awardPoints(uid, amount, reason) {
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(userRef);
     if (!snap.exists()) throw new Error('User not found');
-    tx.update(userRef, { points: increment(amount) });
+    const data = snap.data();
+    const prevPoints = data.points || {};
+    const weekly = (prevPoints.weekly || 0) + amount;
+    const lifetime = (prevPoints.lifetime || 0) + amount;
+    tx.update(userRef, { points: { weekly, lifetime } });
   });
   await logPoints(uid, amount, reason);
 }
+
+export async function migrateUserPoints(uid) {
+  // For migration: convert flat points to { weekly, lifetime }
+  const userRef = doc(db, 'users', uid);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(userRef);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    if (typeof data.points === 'number') {
+      tx.update(userRef, { points: { weekly: data.points, lifetime: data.points } });
+    }
+  });
+}
+
 export async function awardDailyLogin(uid) {
   const today = new Date().toISOString().slice(0, 10);
   const logId = `daily-${today}`;
@@ -65,6 +92,10 @@ export async function awardGamePoints(uid, game, score) {
   const amt = Math.min(10, Math.max(1, Math.round(score || 1)));
   await awardPoints(uid, amt, `Game: ${game}`);
 }
+// Award points for showcase uploads (e.g. art, code, music)
+export async function awardUploadPoints(uid, amount = 5, reason = 'Showcase upload') {
+  await awardPoints(uid, amount, reason);
+}
 
 // Quotes
 export async function fetchLatestQuote() {
@@ -74,13 +105,28 @@ export async function fetchLatestQuote() {
 }
 
 // Opportunities
-export async function submitOpportunity(data, uid) {
-  return addDoc(collection(db, 'opportunities'), {
-    ...data,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-    createdBy: uid || null,
-  });
+export async function submitOpportunity(data, uid, id = null, isEdit = false) {
+  if (isEdit && id) {
+    // Edit existing opportunity
+    const ref = doc(db, 'opportunities', id);
+    // Remove fields that shouldn't be overwritten
+    const { id: _id, createdAt, status, ...rest } = data;
+    await updateDoc(ref, {
+      ...rest,
+      tags: Array.isArray(rest.tags) ? rest.tags : (rest.tags || '').split(',').map(t=>t.trim()).filter(Boolean),
+      updatedAt: serverTimestamp(),
+    });
+    return ref;
+  } else {
+    // New opportunity
+    return addDoc(collection(db, 'opportunities'), {
+      ...data,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      createdBy: uid || null,
+      ownerId: uid || null,
+    });
+  }
 }
 export async function listApprovedOpportunities(limitN = 50) {
   const qy = query(
@@ -109,8 +155,8 @@ export async function rejectOpportunity(id) {
   await updateDoc(doc(db, 'opportunities', id), { status: 'rejected' });
 }
 
-// Wall
-export async function createWallPost({ type, title, description, mediaUrl, code, language }, uid) {
+// Showcase
+export async function createShowcasePost({ type, title, description, mediaUrl, code, language }, uid) {
   return addDoc(collection(db, 'wallPosts'), {
     uid,
     type,
@@ -124,8 +170,18 @@ export async function createWallPost({ type, title, description, mediaUrl, code,
     createdAt: serverTimestamp(),
   });
 }
-export async function listWallPosts(limitN = 50) {
+export async function listShowcasePosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+export async function listUserShowcasePosts(uid, limitN = 50) {
+  const qy = query(
+    collection(db, 'wallPosts'),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc'),
+    limit(limitN)
+  );
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
@@ -160,8 +216,9 @@ export async function logGameSession(uid, game, score, duration) {
 }
 
 // Leaderboard
-export async function listTopUsers(limitN = 20) {
-  const qy = query(collection(db, 'users'), orderBy('points', 'desc'), limit(limitN));
+export async function listTopUsers(limitN = 20, filter = 'lifetime') {
+  const field = filter === 'weekly' ? 'points.weekly' : 'points.lifetime';
+  const qy = query(collection(db, 'users'), orderBy(field, 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }

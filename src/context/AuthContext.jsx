@@ -1,9 +1,8 @@
-// src/context/AuthContext.jsx
 'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ensureUserDoc, awardDailyLogin } from '../lib/firebaseHelpers';
+import { ensureUserDoc } from '../lib/firebaseHelpers';
 
 const AuthContext = createContext({ user: null, loading: true });
 
@@ -17,7 +16,6 @@ export function AuthProvider({ children }) {
       setLoading(false);
       if (u) {
         try { await ensureUserDoc(u); } catch (e) { console.warn('ensureUserDoc failed', e); }
-        try { await awardDailyLogin(u.uid); } catch (e) { /* ignore */ }
       }
     });
     return () => unsub();

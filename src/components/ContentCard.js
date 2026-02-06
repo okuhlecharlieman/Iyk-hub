@@ -1,3 +1,4 @@
+"use client";
 import { FaRegHeart, FaRegComment, FaCode, FaMusic, FaPaintBrush, FaRegUserCircle } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
 import { getUserDoc } from '../lib/firebaseHelpers';
@@ -8,10 +9,9 @@ const typeIcons = {
   art: <FaPaintBrush />,
   code: <FaCode />,
   music: <FaMusic />,
-  // other types...
 };
 
-export default function ContentCard({ p, react }) {
+export default function ContentCard({ p, react, noactions }) {
   const [author, setAuthor] = useState(null);
   const [err, setErr] = useState('');
 
@@ -60,17 +60,24 @@ export default function ContentCard({ p, react }) {
         {p.type === 'art' && p.mediaUrl && <img src={p.mediaUrl} alt={p.title} className="rounded-lg w-full" />}
         {p.type === 'music' && p.mediaUrl && <audio controls src={p.mediaUrl} className="w-full">Your browser does not support the audio element.</audio>}
       </div>
-      <div className="bg-gray-50 dark:bg-gray-700 px-5 py-3 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-        <div className="flex gap-4">
-          <button onClick={() => react(p.id, '❤️')} className="flex items-center gap-1 hover:text-red-500">
-            <FaRegHeart /> {p.reactions?.['❤️'] || 0}
-          </button>
-          <button className="flex items-center gap-1 hover:text-blue-500">
-            <FaRegComment /> 0
-          </button>
+      {!noactions && (
+        <div className="bg-gray-50 dark:bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex gap-2">
+                <button 
+                    onClick={() => react(p.id, '❤️')} 
+                    className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-600/50 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200"
+                >
+                    <FaRegHeart /> 
+                    <span>{p.reactions?.['❤️'] || 0}</span>
+                </button>
+                <button className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-600/50 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
+                    <FaRegComment /> 
+                    <span>0</span>
+                </button>
+            </div>
+            <p className="text-xs text-gray-500">{p.createdAt?.toDate().toLocaleDateString()}</p>
         </div>
-        <p>{p.createdAt?.toDate().toLocaleDateString()}</p>
-      </div>
+      )}
       {err && <p className="text-red-500 p-4">{err}</p>}
     </div>
   );

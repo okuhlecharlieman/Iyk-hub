@@ -24,14 +24,16 @@ export default function DashboardPage() {
   const [opps, setOpps] = useState([]);
 
   useEffect(() => {
-    async function load() {
-      const q = await fetchLatestQuote();
-      setQuote(q);
-      const list = await listApprovedOpportunities(3);
-      setOpps(list);
+    if (user) {
+      async function load() {
+        const q = await fetchLatestQuote();
+        setQuote(q);
+        const list = await listApprovedOpportunities(3);
+        setOpps(list);
+      }
+      load();
     }
-    load();
-  }, []);
+  }, [user]);
 
   return (
     <ProtectedRoute>

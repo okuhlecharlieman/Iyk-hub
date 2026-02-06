@@ -34,6 +34,12 @@ export async function getUserDoc(uid) {
   return snap.exists() ? { id: uid, ...snap.data() } : null;
 }
 
+export async function updateUserDoc(uid, data) {
+    if (!uid) return;
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, data);
+}
+
 // Showcase
 export async function createShowcasePost(data) {
     const user = auth.currentUser;
@@ -47,6 +53,12 @@ export async function listShowcasePosts(limitN = 50) {
   const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listUserShowcasePosts(uid, limitN = 50) {
+    const qy = query(collection(db, 'wallPosts'), where('authorId', '==', uid), orderBy('createdAt', 'desc'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function deleteShowcasePost(postId) {

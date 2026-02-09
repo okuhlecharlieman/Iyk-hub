@@ -81,7 +81,8 @@ export default function ShowcasePage() {
   };
 
   const breakpointColumnsObj = {
-    default: 3,
+    default: 4,
+    1500: 3,
     1100: 2,
     700: 1
   };

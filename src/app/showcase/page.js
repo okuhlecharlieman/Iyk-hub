@@ -94,31 +94,32 @@ export default function ShowcasePage() {
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">Community Showcase</h1>
           <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-500 dark:text-gray-400">Discover the creativity and talent within the Intwana Hub community.</p>
         </div>
-
-        <Masonry
-          breakpointCols={breakpointColumnsObj}
-          className="my-masonry-grid w-full"
-          columnClassName="my-masonry-grid_column px-4">
-          
-          {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}
-          
-          {loading ? (
-            Array.from({ length: 6 }).map((_, i) => <div className="mb-8" key={i}><PostCardSkeleton /></div>)
-          ) : (
-            posts.map(post => (
-              <div className="mb-8" key={post.id}>
-                <PostCard 
-                  post={post} 
-                  author={authors[post.uid]} 
-                  isOwner={user && user.uid === post.uid}
-                  onEdit={() => openEditModal(post)}
-                  onDelete={() => handleDelete(post.id)}
-                  onVote={() => handleVote(post.id)}
-                />
-              </div>
-            ))
-          )}
-        </Masonry>
+        <div className="flex justify-center">
+          <Masonry
+            breakpointCols={breakpointColumnsObj}
+            className="my-masonry-grid w-full"
+            columnClassName="my-masonry-grid_column px-4">
+            
+            {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}
+            
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => <div className="mb-8" key={i}><PostCardSkeleton /></div>)
+            ) : (
+              posts.map(post => (
+                <div className="mb-8" key={post.id}>
+                  <PostCard 
+                    post={post} 
+                    author={authors[post.uid]} 
+                    isOwner={user && user.uid === post.uid}
+                    onEdit={() => openEditModal(post)}
+                    onDelete={() => handleDelete(post.id)}
+                    onVote={() => handleVote(post.id)}
+                  />
+                </div>
+              ))
+            )}
+          </Masonry>
+        </div>
       </div>
 
       <NewPostModal 

@@ -48,8 +48,9 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
         onPostCreated();
       }
     } catch (err) {
-      setError('Failed to create post. Please try again.');
-      console.error(err);
+      const errorMessage = err.message || 'An unexpected error occurred.';
+      setError(`Failed to create post: ${errorMessage}`);
+      console.error("Error creating showcase post:", err);
     } finally {
       setLoading(false);
     }

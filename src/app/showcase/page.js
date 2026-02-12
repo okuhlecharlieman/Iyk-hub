@@ -97,7 +97,7 @@ export default function ShowcasePage() {
 
         <Masonry
           breakpointCols={breakpointColumnsObj}
-          className="my-masonry-grid"
+          className="my-masonry-grid mx-auto"
           columnClassName="my-masonry-grid_column px-4">
           
           {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}

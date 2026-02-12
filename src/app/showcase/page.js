@@ -88,8 +88,8 @@ export default function ShowcasePage() {
   };
 
   return (
-    <div className="min-h-screen px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen w-full px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <div className="w-full mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">Community Showcase</h1>
           <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-500 dark:text-gray-400">Discover the creativity and talent within the Intwana Hub community.</p>
@@ -97,7 +97,7 @@ export default function ShowcasePage() {
 
         <Masonry
           breakpointCols={breakpointColumnsObj}
-          className="my-masonry-grid mx-auto"
+          className="my-masonry-grid w-full"
           columnClassName="my-masonry-grid_column px-4">
           
           {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}

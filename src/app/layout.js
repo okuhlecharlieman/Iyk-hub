@@ -15,13 +15,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-50">
+      <body className="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100">
         <Providers>
           <AuthProvider>
             <Presence />
          
             <Navbar />
-            <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+            <main>{children}</main>
             <Footer />
           </AuthProvider>
         </Providers>

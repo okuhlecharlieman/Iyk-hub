@@ -48,7 +48,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           <div className="flex items-center">
             <Link href={user ? '/dashboard' : '/'} className="flex items-center gap-2 font-bold text-xl text-gray-800 dark:text-white">
-              <img src="/logo.svg" className="h-10 w-10" alt="Intwana Hub Logo" />
+              <img src="/logo.png" className="h-10 w-10" alt="Intwana Hub Logo" />
               <span className="hidden sm:inline">Intwana Hub</span>
             </Link>
           </div>

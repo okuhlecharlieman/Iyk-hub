@@ -42,7 +42,7 @@ export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
             id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
           />
         </div>
         <div>
@@ -54,21 +54,21 @@ export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
             rows="4"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
           ></textarea>
         </div>
-        <div className="flex justify-end pt-4">
-          <button
+        <div className="flex justify-end pt-4 space-x-2">
+           <button
             type="button"
             onClick={onClose}
-            className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-md transition-colors mr-2"
+            className="btn-secondary py-2 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-md transition-colors flex items-center justify-center disabled:opacity-50"
+            className="btn-primary py-2 px-4 rounded-lg flex items-center justify-center disabled:opacity-50"
           >
             {isLoading ? <LoadingSpinner size="sm" /> : 'Update Post'}
           </button>

@@ -84,7 +84,7 @@ export default function Navbar() {
                                         </Link>
                                     )}
                                 </Menu.Item>
-                                {user.uid === 'X0Svef3tYpY6aHqVWt0iPJr2C7A3' && (
+                                {user && user.uid === 'X0Svef3tYpY6aHqVWt0iPJr2C7A3' && (
                                     <Menu.Item>
                                         {({ active }) => (
                                             <Link href="/admin" className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex rounded-md items-center w-full px-2 py-2 text-sm text-gray-900 dark:text-gray-200`}>
@@ -139,7 +139,7 @@ export default function Navbar() {
       >
           <div className="px-2 pt-2 pb-6 space-y-1 sm:px-3">
             {navLinks.map(link => <MobileNavLink key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)}>{link.label}</MobileNavLink>)}
-            {user.uid === 'X0Svef3tYpY6aHqVWt0iPJr2C7A3' && <MobileNavLink href="/admin" onClick={() => setIsMenuOpen(false)}>Admin</MobileNavLink>}
+            {user && user.uid === 'X0Svef3tYpY6aHqVWt0iPJr2C7A3' && <MobileNavLink href="/admin" onClick={() => setIsMenuOpen(false)}>Admin</MobileNavLink>}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-3">
               {!loading && user ? (
                 <div className="px-2">

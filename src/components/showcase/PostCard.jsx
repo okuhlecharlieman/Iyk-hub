@@ -34,10 +34,10 @@ export const PostCardSkeleton = () => (
 
 export default function PostCard({ post, author, isOwner, onEdit, onDelete, onVote }) {
   const { user: currentUser } = useAuth();
-  const { type, title, description, mediaUrl, link, createdAt, votes } = post;
+  const { type, title, description, mediaUrl, link, createdAt, votes, voters } = post;
   const metadata = typeMetadata[type] || {};
-  const voteCount = votes?.length || 0;
-  const userHasVoted = currentUser && votes?.includes(currentUser.uid);
+  const voteCount = votes || 0;
+  const userHasVoted = currentUser && voters?.includes(currentUser.uid);
 
   return (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col h-full backdrop-blur-sm">
@@ -72,7 +72,7 @@ export default function PostCard({ post, author, isOwner, onEdit, onDelete, onVo
 
         <div className="flex-grow mb-4">
             <h3 className="font-bold text-lg leading-snug text-gray-900 dark:text-white mb-2">{title}</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm">{description.substring(0, 100)}{description.length > 100 && '...'}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm">{description?.substring(0, 100)}{description && description.length > 100 && '...'}</p>
         </div>
 
         {link && (

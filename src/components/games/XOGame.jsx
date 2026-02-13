@@ -12,7 +12,7 @@ export default function XOGame({ gameId, onEnd }) {
   const [board, setBoard] = useState(Array(9).fill(""));
   const [currentPlayer, setCurrentPlayer] = useState("X");
   const [winner, setWinner] = useState("");
-  const [players, setPlayers] = useState({ X: "", O: "" });
+  const [players, setPlayers] = useState({ X: null, O: null });
   const [playerSymbol, setPlayerSymbol] = useState("");
   const [status, setStatus] = useState("Joining game...");
   const [error, setError] = useState("");
@@ -33,20 +33,20 @@ export default function XOGame({ gameId, onEnd }) {
             board: Array(9).fill(""),
             currentPlayer: "X",
             winner: "",
-            players: { X: user.uid, O: "" }
+            players: { X: { uid: user.uid, displayName: user.displayName }, O: null }
           });
           setPlayerSymbol("X");
           setStatus("You are X. Waiting for O...");
         } else {
           const data = snap.data();
-          if (!data.players.O && data.players.X !== user.uid) {
-            await updateDoc(gameDocRef, { "players.O": user.uid });
+          if (!data.players.O && data.players.X?.uid !== user.uid) {
+            await updateDoc(gameDocRef, { "players.O": { uid: user.uid, displayName: user.displayName } });
             setPlayerSymbol("O");
             setStatus("You are O. Game on!");
-          } else if (data.players.X === user.uid) {
+          } else if (data.players.X?.uid === user.uid) {
             setPlayerSymbol("X");
             setStatus("You are X.");
-          } else if (data.players.O === user.uid) {
+          } else if (data.players.O?.uid === user.uid) {
             setPlayerSymbol("O");
             setStatus("You are O.");
           } else {
@@ -73,7 +73,7 @@ export default function XOGame({ gameId, onEnd }) {
         if (!data.winner) {
           setOnEndCalled(false); // Reset when game is reset
         }
-        setPlayers(data.players || { X: "", O: "" });
+        setPlayers(data.players || { X: null, O: null });
       }
     }, (e) => setError("Game sync error: " + e.message));
     return () => unsubscribe();
@@ -146,8 +146,8 @@ export default function XOGame({ gameId, onEnd }) {
     <div>
       <h2 className="mb-2">Room: {gameId}</h2>
       <p className="mb-2">{status}</p>
-      <p className="mb-2">X: {players.X ? players.X.substring(0,5) : "Waiting..."}</p>
-      <p className="mb-2">O: {players.O ? players.O.substring(0,5) : "Waiting..."}</p>
+      <p className="mb-2">X: {players.X ? players.X.displayName : "Waiting..."}</p>
+      <p className="mb-2">O: {players.O ? players.O.displayName : "Waiting..."}</p>
       <h3 className="mb-2">Turn: {currentPlayer || "Game Over"}</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 80px)", gap: "8px" }}>
         {board.map((cell, idx) => (

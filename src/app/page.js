@@ -4,8 +4,8 @@ import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebaseHelp
 import ContentCard from '../components/ContentCard';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush } from 'react-icons/fa';
 
-// Re-evaluate the page every 5 minutes
-export const revalidate = 300; 
+// Force dynamic rendering to avoid Firebase permission errors at build time
+export const dynamic = 'force-dynamic'; 
 
 // Helper to create a consistent section layout
 const FeatureSection = ({ title, icon, children, href }) => (

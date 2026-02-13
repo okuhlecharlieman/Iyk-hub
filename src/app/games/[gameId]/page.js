@@ -11,6 +11,8 @@ import QuizGame from '../../../components/games/QuizGame';
 import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain } from 'react-icons/gi';
 import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
+import { db } from '../../../lib/firebase';
+import { doc, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const GAME_DETAILS = {
   rps: { name: 'Rock-Paper-Scissors', icon: <GiSwordman size={32} /> },
@@ -28,10 +30,24 @@ export default function GamePage() {
   async function finishGame(finalScore = 1, duration = 0) {
     if (!user) return;
     try {
-      // Points and session logging are temporarily disabled to fix the build.
-      console.log(`Game finished: ${gameId}, Score: ${finalScore}, Duration: ${duration}ms, User: ${user.uid}`);
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        points: increment(finalScore),
+      });
+
+      const sessionsCollection = collection(db, 'sessions');
+      await addDoc(sessionsCollection, {
+        userId: user.uid,
+        gameId: gameId,
+        baseGameId: baseGameId,
+        score: finalScore,
+        duration: duration,
+        completedAt: serverTimestamp(),
+      });
+      
+      console.log(`Game session logged for user ${user.uid}. Score: ${finalScore}`);
     } catch (error) {
-      console.error("Error in finishGame (logging only):", error);
+      console.error("Error updating points or logging session:", error);
     }
   }
 
@@ -40,7 +56,7 @@ export default function GamePage() {
 
     switch (baseGameId) {
       case 'tictactoe': return <XOGame gameId={gameId} onEnd={(res) => finishGame(res?.score || 5)} />;
-      case 'rps': return <RPSGame onEnd={onEnd} />;
+      case 'rps': return <RPSGame gameId={gameId} onEnd={onEnd} />;
       case 'memory': return <MemoryGame onEnd={onEnd} />;
       case 'hangman': return <HangmanGame onEnd={onEnd} />;
       case 'quiz': return <QuizGame onEnd={onEnd} />;

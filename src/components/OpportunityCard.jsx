@@ -9,7 +9,7 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   };
-  const statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.slic(1) : 'Pending';
+  const statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.slice(1) : 'Pending';
 
   return (
     <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between min-h-[220px] border border-gray-200 dark:border-gray-700">

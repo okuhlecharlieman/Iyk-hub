@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
-import { listUsers } from '../../../lib/firebaseHelpers';
+import { listAllUsers } from '../../../lib/firebaseHelpers';
 
 export default function AdminUsersPage() {
   const { user, userProfile } = useAuth(); // Destructure user and userProfile
@@ -16,7 +16,7 @@ export default function AdminUsersPage() {
     async function loadUsers() {
       setLoading(true);
       try {
-        const userList = await listUsers();
+        const userList = await listAllUsers();
         setUsers(userList);
       } catch (error) { 
         console.error("Failed to load users:", error);
@@ -60,7 +60,7 @@ export default function AdminUsersPage() {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.uid}>
+                  <tr key={user.id}>
                     <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 w-10 h-10">

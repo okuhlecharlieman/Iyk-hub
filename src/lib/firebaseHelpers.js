@@ -3,7 +3,7 @@ import { auth, db, storage } from './firebase';
 import {
   addDoc, collection, doc, getDoc, getDocs, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,
-  updateDoc, where, deleteDoc,
+  updateDoc, where, deleteDoc, onSnapshot
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -144,16 +144,25 @@ export async function deleteOpportunity(opportunityId) {
   await deleteDoc(doc(db, 'opportunities', opportunityId));
 }
 
-export async function listApprovedOpportunities(limitN = 50) {
-  const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-}
+export function onOpportunitiesUpdate(isAdmin, callback, onError) {
+  let qy;
+  if (isAdmin) {
+    // Admins see all opportunities
+    qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
+  } else {
+    // Regular users only see approved opportunities
+    qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'));
+  }
 
-export async function listAllOpportunities(limitN = 50) {
-  const qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const unsubscribe = onSnapshot(qy, (querySnapshot) => {
+    const opportunities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(opportunities);
+  }, (error) => {
+    console.error("Error in onOpportunitiesUpdate listener:", error);
+    if (onError) onError(error);
+  });
+
+  return unsubscribe; // Return the unsubscribe function to be called on cleanup
 }
 
 

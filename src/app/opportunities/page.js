@@ -2,7 +2,15 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
-import { getUserDoc, listAllOpportunities, listApprovedOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, approveOpportunity, rejectOpportunity } from '../../lib/firebaseHelpers';
+import {
+  getUserDoc,
+  createOpportunity,
+  updateOpportunity,
+  deleteOpportunity,
+  approveOpportunity,
+  rejectOpportunity,
+  onOpportunitiesUpdate // Import the new real-time listener
+} from '../../lib/firebaseHelpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import OpportunityCard from '../../components/OpportunityCard';
 import OpportunityForm from '../../components/OpportunityForm';
@@ -19,43 +27,47 @@ export default function OpportunitiesPage() {
   const [editingOpp, setEditingOpp] = useState(null);
   const [activeTab, setActiveTab] = useState(TABS.ALL);
 
-  const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
-
-  const loadOpportunities = useCallback(async () => {
-    setLoading(true);
-    try {
-      const opps = isAdmin 
-        ? await listAllOpportunities() 
-        : await listApprovedOpportunities();
-      setOpportunities(opps);
-    } catch (error) {
-      console.error("Error loading opportunities:", error);
-    }
-    setLoading(false);
-  }, [isAdmin]);
+  const isAdmin = useMemo(() => userProfile?.isAdmin, [userProfile]);
 
   useEffect(() => {
     if (user) {
       getUserDoc(user.uid).then(setUserProfile);
-      loadOpportunities();
     }
-  }, [user, loadOpportunities]);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    setLoading(true);
+    // Set up the real-time listener
+    const unsubscribe = onOpportunitiesUpdate(isAdmin, (opps) => {
+      setOpportunities(opps);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching opportunities:", error);
+      setLoading(false);
+    });
+
+    // Cleanup listener on component unmount
+    return () => unsubscribe();
+  }, [user, isAdmin]);
 
   const handleFormSubmit = async (data) => {
     try {
         const tags = typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : [];
-        const submissionData = { ...data, tags };
+        let submissionData = { ...data, tags };
 
         if (editingOpp) {
             await updateOpportunity(editingOpp.id, submissionData);
             alert('Opportunity updated successfully!');
         } else {
+            submissionData = { ...submissionData, ownerId: user.uid };
             await createOpportunity(submissionData);
             alert('Opportunity submitted for review!');
         }
         setIsFormModalOpen(false);
         setEditingOpp(null);
-        loadOpportunities();
+        // No need to call loadOpportunities, real-time listener will handle it
     } catch (error) {
         console.error("Error submitting form:", error);
         alert('There was an error. Please try again.');
@@ -71,7 +83,7 @@ export default function OpportunitiesPage() {
     if (window.confirm("Are you sure you want to delete this opportunity?")) {
       try {
         await deleteOpportunity(id);
-        loadOpportunities();
+        // No need to call loadOpportunities, real-time listener will handle it
       } catch (error) {
         console.error("Error deleting:", error);
       }
@@ -79,11 +91,11 @@ export default function OpportunitiesPage() {
   };
 
   const handleApprove = async (id) => {
-    try { await approveOpportunity(id); loadOpportunities(); } catch (e) { console.error(e); }
+    try { await approveOpportunity(id); } catch (e) { console.error(e); }
   };
 
   const handleReject = async (id) => {
-    try { await rejectOpportunity(id); loadOpportunities(); } catch (e) { console.error(e); }
+    try { await rejectOpportunity(id); } catch (e) { console.error(e); }
   };
 
   const filteredOpps = useMemo(() => {

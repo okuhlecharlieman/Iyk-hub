@@ -9,7 +9,7 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
     pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   };
-  const statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Pending';
+  const statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.slic(1) : 'Pending';
 
   return (
     <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between min-h-[220px] border border-gray-200 dark:border-gray-700">
@@ -48,7 +48,7 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
                         )}
                     </>
                 )}
-                {canManage && !isPending && (
+                {canManage && (
                     <>
                         <button onClick={() => onEdit(o)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-700/50 hover:text-blue-600 dark:hover:text-blue-300 transition-colors px-3 py-1.5 rounded-md"><FaEdit /> Edit</button>
                         <button onClick={() => onDelete(o.id)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-700/50 hover:text-red-600 dark:hover:text-red-300 transition-colors px-3 py-1.5 rounded-md"><FaTrash /> Delete</button>

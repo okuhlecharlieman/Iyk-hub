@@ -176,7 +176,7 @@ export default function MemoryGame({ gameId, onEnd }) {
       if (status === 'playing') return currentPlayer === playerSymbol ? "Your turn" : `${players[currentPlayer]?.displayName}'s turn`;
       if (status === 'result') {
           if (winner === 'draw') return "It's a draw!";
-          return `${winner} wins!";
+          return `${winner} wins!`;
       }
       return "";
   }

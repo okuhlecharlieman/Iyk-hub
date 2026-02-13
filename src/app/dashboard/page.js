@@ -1,4 +1,10 @@
 'use client';
+// This line is the key fix for the Vercel deployment.
+// It tells Next.js not to pre-render this page at build time.
+// Instead, it will be rendered dynamically on the server when a user requests it,
+// ensuring that user-specific data is fetched only when a user is logged in.
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
@@ -24,17 +30,12 @@ export default function DashboardPage() {
   const [opps, setOpps] = useState([]);
 
   useEffect(() => {
-    // Ensure this runs only in the browser, not during the build process
-    if (user && typeof window !== 'undefined') {
+    if (user) {
       async function load() {
-        try {
-          const q = await fetchLatestQuote();
-          setQuote(q);
-          const list = await getApprovedOpportunities(3);
-          setOpps(list);
-        } catch (error) {
-          console.error("Error loading dashboard data:", error);
-        }
+        const q = await fetchLatestQuote();
+        setQuote(q);
+        const list = await getApprovedOpportunities(3);
+        setOpps(list);
       }
       load();
     }

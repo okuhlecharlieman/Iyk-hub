@@ -48,7 +48,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
                 <div className="text-left mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <h3 className="font-semibold text-gray-800 dark:text-white mb-2">How to Fix This</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Please log out and log back in with an administrator account, such as <strong>okuhlecharlieman72@gmail.com</strong>.</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Please log out and log back in with an administrator account.</p>
                 </div>
 
                 <button onClick={() => router.push('/dashboard')} className="mt-6 w-full btn-primary">Return to Dashboard</button>

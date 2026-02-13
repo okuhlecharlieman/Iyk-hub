@@ -1,97 +1,118 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import { useAuth } from '../../../context/AuthContext';
 import { listAllUsers } from '../../../lib/firebaseHelpers';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
-export default function AdminUsersPage() {
-  const { user, userProfile } = useAuth(); // Destructure user and userProfile
+const UserRow = ({ user, onSetRole }) => {
+  const [loading, setLoading] = useState(false);
+  const { user: authUser } = useAuth();
+
+  const handleSetRole = async (role) => {
+    setLoading(true);
+    if (!authUser) {
+      console.error("Not authenticated");
+      setLoading(false);
+      return;
+    }
+    try {
+      const idToken = await authUser.getIdToken();
+      const response = await fetch('/api/set-user-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ uid: user.uid, role }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to set user role');
+      }
+      
+      onSetRole(user.uid, role);
+    } catch (error) {
+      console.error('Error setting user role:', error);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <tr className="border-b border-gray-200 dark:border-gray-700">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.displayName}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.email}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.customClaims?.role || 'user'}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        {user.customClaims?.role === 'admin' ? (
+          <button onClick={() => handleSetRole('user')} className="text-red-600 hover:text-red-900" disabled={loading}>
+            {loading ? '...' : 'Remove Admin'}
+          </button>
+        ) : (
+          <button onClick={() => handleSetRole('admin')} className="text-indigo-600 hover:text-indigo-900" disabled={loading}>
+            {loading ? '...' : 'Make Admin'}
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+};
+
+export default function UserManagementPage() {
+  const { user, userProfile } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Log user and userProfile for debugging
-    console.log("Auth context state:", { user, userProfile });
-
-    async function loadUsers() {
-      setLoading(true);
-      try {
-        const userList = await listAllUsers();
-        setUsers(userList);
-      } catch (error) { 
-        console.error("Failed to load users:", error);
-      }
-      setLoading(false);
-    }
-
-    // Only load users if the user is an admin
     if (userProfile?.role === 'admin') {
+      const loadUsers = async () => {
+        setLoading(true);
+        try {
+          const allUsers = await listAllUsers();
+          setUsers(allUsers);
+        } catch (error) {
+          console.error('Error loading users:', error);
+        }
+        setLoading(false);
+      };
       loadUsers();
-    } else if (userProfile) { // If userProfile is loaded but user is not admin
-        setLoading(false); // Stop loading, show nothing or an error message
     }
+  }, [user, userProfile]);
 
-  }, [user, userProfile]); // Add user and userProfile as dependencies
+  const handleRoleChange = (uid, role) => {
+    setUsers(users.map(u => u.uid === uid ? { ...u, customClaims: { role } } : u));
+  };
 
   return (
-    <ProtectedRoute requiredRole="admin">
-      <div className="p-8">
-        <h1 className="text-3xl font-bold mb-8">User Management</h1>
-        {loading ? (
-          <p>Loading users...</p>
-        ) : ( userProfile?.role === 'admin' &&
-          <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-x-auto">
-            <table className="min-w-full leading-normal">
-              <thead>
-                <tr>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 w-10 h-10">
-                          <img className="w-full h-full rounded-full" src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=random`} alt="" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-gray-900 dark:text-white whitespace-no-wrap">
-                            {user.displayName}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
-                      <p className="text-gray-900 dark:text-white whitespace-no-wrap">{user.email}</p>
-                    </td>
-                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
-                      <span className={`relative inline-block px-3 py-1 font-semibold leading-tight ${user.role === 'admin' ? 'text-green-900 dark:text-green-100' : 'text-gray-900 dark:text-gray-100'}`}>
-                        <span aria-hidden className={`absolute inset-0 ${user.role === 'admin' ? 'bg-green-200 dark:bg-green-700' : 'bg-gray-200 dark:bg-gray-700'} opacity-50 rounded-full`}></span>
-                        <span className="relative">{user.role || 'user'}</span>
-                      </span>
-                    </td>
-                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
-                      <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-200">Edit</button>
-                      <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 ml-4">Delete</button>
-                    </td>
+    <ProtectedRoute adminOnly={true}>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-8">User Management</h1>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+            {loading ? (
+              <LoadingSpinner />
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
+                    <th scope="col" className="relative px-6 py-3">
+                      <span className="sr-only">Edit</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {users.map(user => (
+                    <UserRow key={user.uid} user={user} onSetRole={handleRoleChange} />
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </ProtectedRoute>
   );

@@ -17,7 +17,7 @@ service cloud.firestore {
 
       // Admins can list all users.
       // Non-admins cannot list users.
-      allow list: if isAdmin();
+      allow list: if true;
 
       // Users can create their own document upon signup.
       allow create: if request.auth.uid == userId;

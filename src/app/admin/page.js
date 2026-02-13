@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
 
 export default function AdminPage() {
-    const { user, userProfile } = useAuth(); // userProfile contains the user's role
+    const { user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0 });
 
@@ -28,7 +28,6 @@ export default function AdminPage() {
             }
             loadStats();
         } else if (user) {
-            // If user is logged in but not an admin
             setLoading(false);
         }
     }, [user, userProfile]);
@@ -52,7 +51,7 @@ export default function AdminPage() {
                         <h2 className="text-2xl font-bold mb-4">Management</h2>
                         <div className="flex flex-col space-y-4">
                             <Link href="/admin/opportunities" className="btn-secondary">Manage Opportunities</Link>
-                            {/* Add links to other admin sections here */}
+                            <Link href="/admin/users" className="btn-secondary">Manage Users</Link>
                         </div>
                     </div>
                 </div>

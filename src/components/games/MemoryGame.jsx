@@ -16,12 +16,14 @@ export default function MemoryGame({ gameId, onEnd }) {
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null); // 'player1' or 'player2'
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const gameDocRef = doc(db, 'games', gameId);
 
   useEffect(() => {
     if (!user) {
       setError("You must be logged in to play.");
+      setLoading(false);
       return;
     }
 
@@ -58,6 +60,7 @@ export default function MemoryGame({ gameId, onEnd }) {
         }
       } catch (e) {
         setError("Failed to join game: " + e.message);
+        setLoading(false);
       }
     };
 
@@ -68,10 +71,14 @@ export default function MemoryGame({ gameId, onEnd }) {
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
       if (snapshot.exists()) {
         setGameState(snapshot.data());
+        setLoading(false);
       } else {
-        setError("Game not found.");
+        // Game not found yet, wait for joinGame to create it.
       }
-    }, (e) => setError("Game sync error: " + e.message));
+    }, (e) => {
+      setError("Game sync error: " + e.message);
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, [gameDocRef]);
 
@@ -164,8 +171,9 @@ export default function MemoryGame({ gameId, onEnd }) {
       });
   }
 
+  if (loading) return <p>Loading game...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
-  if (!gameState) return <p>Loading game...</p>;
+  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
 
   const { players, status, currentPlayer, winner, cards } = gameState;
   const you = players?.[playerSymbol];

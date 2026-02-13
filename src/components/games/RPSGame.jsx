@@ -18,12 +18,14 @@ export default function RPSGame({ gameId, onEnd }) {
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
   const gameDocRef = doc(db, "games", gameId);
 
   // Join or create game room
   useEffect(() => {
     if (!user) {
       setError("You must be logged in to play.");
+      setLoading(false);
       return;
     }
 
@@ -58,6 +60,7 @@ export default function RPSGame({ gameId, onEnd }) {
         }
       } catch (e) {
         setError("Failed to join game: " + e.message);
+        setLoading(false);
       }
     }
     joinGame();
@@ -69,6 +72,7 @@ export default function RPSGame({ gameId, onEnd }) {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setGameState(data);
+        setLoading(false);
 
         // Determine winner when both have chosen
         if (data.status === 'playing' && data.players.player1?.choice && data.players.player2?.choice) {
@@ -100,8 +104,13 @@ export default function RPSGame({ gameId, onEnd }) {
             });
         }
 
+      } else {
+        // Game not yet created
       }
-    }, (e) => setError("Game sync error: " + e.message));
+    }, (e) => {
+        setError("Game sync error: " + e.message)
+        setLoading(false);
+    });
     return () => unsubscribe();
   }, [gameDocRef]);
 
@@ -142,9 +151,9 @@ export default function RPSGame({ gameId, onEnd }) {
       router.push('/games');
   };
 
-
+  if (loading) return <div>Loading game...</div>;
   if (error) return <div className="text-red-600">{error}</div>;
-  if (!gameState) return <div>Loading game...</div>;
+  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
   
   const { players, status, result } = gameState;
   const you = players[playerSymbol];

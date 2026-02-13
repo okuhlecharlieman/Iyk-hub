@@ -27,12 +27,14 @@ export default function QuizGame({ gameId, onEnd }) {
   const [gameState, setGameState] = useState(null);
   const [playerRole, setPlayerRole] = useState(null); // 'player1' or 'player2'
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const gameDocRef = doc(db, 'games', gameId);
 
   useEffect(() => {
     if (!user) {
       setError('You must be logged in to play.');
+      setLoading(false);
       return;
     }
 
@@ -69,6 +71,7 @@ export default function QuizGame({ gameId, onEnd }) {
         }
       } catch (e) {
         setError('Failed to join game: ' + e.message);
+        setLoading(false);
       }
     };
 
@@ -80,14 +83,18 @@ export default function QuizGame({ gameId, onEnd }) {
       if (snapshot.exists()) {
         const data = snapshot.data();
         setGameState(data);
+        setLoading(false);
         // If both players have answered, process the result
         if (data.status === 'playing' && data.players.player1?.answer && data.players.player2?.answer) {
           processAnswers(data);
         }
       } else {
-        setError('Game not found.');
+        // Game not found yet, wait for joinGame to create it
       }
-    }, (e) => setError('Game sync error: ' + e.message));
+    }, (e) => {
+      setError('Game sync error: ' + e.message);
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, [gameDocRef]);
 
@@ -151,8 +158,9 @@ export default function QuizGame({ gameId, onEnd }) {
     });
   }
 
+  if (loading) return <p>Loading quiz...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
-  if (!gameState) return <p>Loading quiz...</p>;
+  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
 
   const { players, status, currentQuestionIndex, questions, winner } = gameState;
   const you = players?.[playerRole];

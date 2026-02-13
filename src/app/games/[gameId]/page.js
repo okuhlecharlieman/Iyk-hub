@@ -32,7 +32,8 @@ export default function GamePage() {
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
-        points: increment(finalScore),
+        'points.lifetime': increment(finalScore),
+        'points.weekly': increment(finalScore),
       });
 
       const sessionsCollection = collection(db, 'sessions');

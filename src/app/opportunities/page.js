@@ -28,21 +28,26 @@ export default function OpportunitiesPage() {
   const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
 
   useEffect(() => {
-    if (!user) return;
+    // Ensure this runs only in the browser and when a user is present
+    if (user && typeof window !== 'undefined') {
+      setLoading(true);
+      // Set up the real-time listener
+      const unsubscribe = onOpportunitiesUpdate(isAdmin, user, (opps) => {
+        setOpportunities(opps);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching opportunities:", error);
+        setLoading(false);
+      });
 
-    setLoading(true);
-    // Set up the real-time listener, now passing the user object
-    const unsubscribe = onOpportunitiesUpdate(isAdmin, user, (opps) => {
-      setOpportunities(opps);
+      // Cleanup listener on component unmount
+      return () => unsubscribe();
+    } else if (!user) {
+      // If there's no user, stop loading and show nothing.
       setLoading(false);
-    }, (error) => {
-      console.error("Error fetching opportunities:", error);
-      setLoading(false);
-    });
-
-    // Cleanup listener on component unmount
-    return () => unsubscribe();
+    }
   }, [user, isAdmin]);
+
 
   const handleFormSubmit = async (data) => {
     try {

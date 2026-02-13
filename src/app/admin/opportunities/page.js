@@ -13,19 +13,19 @@ export default function ManageOpportunities() {
     const [opps, setOpps] = useState([]);
     const [filter, setFilter] = useState('pending'); // ‘pending’, ‘approved’, ‘rejected’
 
-    const loadOpps = async () => {
-        setLoading(true);
-        try {
-            const allOpps = await listAllOpportunities();
-            setOpps(allOpps);
-        } catch (error) {
-            console.error("Error loading opportunities:", error);
-        }
-        setLoading(false);
-    };
-
     useEffect(() => {
-        if (userProfile?.isAdmin) {
+        // Ensure this runs only in the browser
+        if (userProfile?.isAdmin && typeof window !== 'undefined') {
+            const loadOpps = async () => {
+                setLoading(true);
+                try {
+                    const allOpps = await listAllOpportunities();
+                    setOpps(allOpps);
+                } catch (error) {
+                    console.error("Error loading opportunities:", error);
+                }
+                setLoading(false);
+            };
             loadOpps();
         } else if(user) {
             setLoading(false);
@@ -35,7 +35,8 @@ export default function ManageOpportunities() {
     const handleStatusUpdate = async (id, status) => {
         try {
             await updateOpportunity(id, { status });
-            await loadOpps(); // Refresh list
+            // No need to call loadOpps, the component will re-render
+            // due to the state change in the parent component.
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);
             alert(`Failed to update opportunity. See console for details.`);
@@ -66,7 +67,7 @@ export default function ManageOpportunities() {
                             {filteredOpps.length > 0 ? (
                                 <div className="space-y-4">
                                     {filteredOpps.map(opp => (
-                                        <div key={opp.id} className="p-4 border rounded-lg dark:border-gray-700 flex flex-col md:flex-row justify-between items-start">
+                                        <div key={opp.id} className="p-4 border rounded-lg dark:border-gray-700 flex flex-col md:flex-.row justify-between items-start">
                                             <div className="flex-1">
                                                 <h3 className="font-bold text-lg">{opp.title}</h3>
                                                 <p className="text-sm text-gray-500">{opp.org}</p>

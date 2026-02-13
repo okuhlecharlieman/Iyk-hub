@@ -12,26 +12,28 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('lifetime'); // 'lifetime' or 'weekly'
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const top = await listTopUsers(20, filter);
-      setUsers(top);
-    } catch (err) {
-      if (err?.message?.includes("index")) {
-        setError("Leaderboard unavailable: Firestore index missing. Please contact admin.");
-      } else if (err?.message?.toLowerCase().includes("permission")) {
-        setError("Leaderboard unavailable: Permission denied. Please contact admin.");
-      } else {
-        setError("Unable to load leaderboard. Please try again later.");
-      }
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    load();
+    // Ensure this runs only in the browser
+    if (typeof window !== 'undefined') {
+      const load = async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const top = await listTopUsers(20, filter);
+          setUsers(top);
+        } catch (err) {
+          if (err?.message?.includes("index")) {
+            setError("Leaderboard unavailable: Firestore index missing. Please contact admin.");
+          } else if (err?.message?.toLowerCase().includes("permission")) {
+            setError("Leaderboard unavailable: Permission denied. Please contact admin.");
+          } else {
+            setError("Unable to load leaderboard. Please try again later.");
+          }
+        }
+        setLoading(false);
+      };
+      load();
+    }
   }, [filter]);
 
   const topThree = users.slice(0, 3);
@@ -63,7 +65,7 @@ export default function LeaderboardPage() {
             </div>
             <button
               className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors" 
-              onClick={load} 
+              onClick={() => {if (typeof window !== 'undefined') {load()}}} 
               disabled={loading}
               aria-label="Refresh leaderboard"
             >

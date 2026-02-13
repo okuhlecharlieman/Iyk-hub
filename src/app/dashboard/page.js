@@ -24,12 +24,17 @@ export default function DashboardPage() {
   const [opps, setOpps] = useState([]);
 
   useEffect(() => {
-    if (user) {
+    // Ensure this runs only in the browser, not during the build process
+    if (user && typeof window !== 'undefined') {
       async function load() {
-        const q = await fetchLatestQuote();
-        setQuote(q);
-        const list = await getApprovedOpportunities(3);
-        setOpps(list);
+        try {
+          const q = await fetchLatestQuote();
+          setQuote(q);
+          const list = await getApprovedOpportunities(3);
+          setOpps(list);
+        } catch (error) {
+          console.error("Error loading dashboard data:", error);
+        }
       }
       load();
     }

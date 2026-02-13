@@ -1,7 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { auth } from "firebase-admin";
-import { initializeFirebaseAdmin } from "@/lib/firebase/admin";
+import { initializeFirebaseAdmin } from "../../../lib/firebase/admin";
 
 export async function POST(req) {
   await initializeFirebaseAdmin();

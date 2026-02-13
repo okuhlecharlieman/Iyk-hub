@@ -19,26 +19,40 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
     if (adminOnly && !userProfile?.isAdmin) {
       // Non-admin trying to access admin page
-      // Redirect or show an access denied message
-      // For now, redirecting to dashboard
-      router.replace('/dashboard');
+      // We don't redirect here; we let the render logic show the detailed access denied message.
     }
 
   }, [loading, user, userProfile, adminOnly, router]);
 
-  if (loading || !user || (adminOnly && !userProfile?.isAdmin)) {
+  if (loading || !user) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-center px-4">
-            { (adminOnly && user && !userProfile?.isAdmin) ? (
-                <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md">
-                    <FaExclamationTriangle className="text-5xl text-red-500 mb-4 mx-auto" />
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Access Denied</h1>
-                    <p className="text-gray-600 dark:text-gray-300 mt-2">You do not have permission to view this page.</p>
-                    <button onClick={() => router.push('/dashboard')} className="mt-6 btn-primary">Return to Dashboard</button>
+            <LoadingSpinner />
+        </div>
+    );
+  }
+
+  if (adminOnly && !userProfile?.isAdmin) {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-center px-4">
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full">
+                <FaExclamationTriangle className="text-5xl text-red-500 mb-4 mx-auto" />
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Access Denied</h1>
+                <p className="text-gray-600 dark:text-gray-300 mt-2">You do not have the required admin privileges to view this page.</p>
+                
+                <div className="text-left mt-6 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Account Status</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Logged in as: <strong>{user.email}</strong></p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Admin Flag (`isAdmin`): <strong>{userProfile?.isAdmin ? 'True' : 'False or Not Set'}</strong></p>
                 </div>
-            ) : (
-                <LoadingSpinner />
-            )}
+
+                <div className="text-left mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <h3 className="font-semibold text-gray-800 dark:text-white mb-2">How to Fix This</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Please log out and log back in with an administrator account, such as <strong>okuhlecharlieman72@gmail.com</strong>.</p>
+                </div>
+
+                <button onClick={() => router.push('/dashboard')} className="mt-6 w-full btn-primary">Return to Dashboard</button>
+            </div>
         </div>
     );
   }

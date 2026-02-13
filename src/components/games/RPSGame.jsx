@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
@@ -13,6 +14,7 @@ const choices = [
 
 export default function RPSGame({ gameId, onEnd }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [error, setError] = useState("");
@@ -137,7 +139,7 @@ export default function RPSGame({ gameId, onEnd }) {
           const playerScore = gameState.players[playerSymbol].score;
           onEnd(playerScore);
       }
-      // Maybe navigate away or show a final summary
+      router.push('/games');
   };
 
 

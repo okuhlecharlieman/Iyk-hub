@@ -5,18 +5,33 @@ import ProtectedRoute from '../../../components/ProtectedRoute';
 import { listUsers } from '../../../lib/firebaseHelpers';
 
 export default function AdminUsersPage() {
+  const { user, userProfile } = useAuth(); // Destructure user and userProfile
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Log user and userProfile for debugging
+    console.log("Auth context state:", { user, userProfile });
+
     async function loadUsers() {
       setLoading(true);
-      const userList = await listUsers();
-      setUsers(userList);
+      try {
+        const userList = await listUsers();
+        setUsers(userList);
+      } catch (error) { 
+        console.error("Failed to load users:", error);
+      }
       setLoading(false);
     }
-    loadUsers();
-  }, []);
+
+    // Only load users if the user is an admin
+    if (userProfile?.role === 'admin') {
+      loadUsers();
+    } else if (userProfile) { // If userProfile is loaded but user is not admin
+        setLoading(false); // Stop loading, show nothing or an error message
+    }
+
+  }, [user, userProfile]); // Add user and userProfile as dependencies
 
   return (
     <ProtectedRoute requiredRole="admin">
@@ -24,7 +39,7 @@ export default function AdminUsersPage() {
         <h1 className="text-3xl font-bold mb-8">User Management</h1>
         {loading ? (
           <p>Loading users...</p>
-        ) : (
+        ) : ( userProfile?.role === 'admin' &&
           <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-x-auto">
             <table className="min-w-full leading-normal">
               <thead>

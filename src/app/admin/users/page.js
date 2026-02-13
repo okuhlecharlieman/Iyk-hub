@@ -1,98 +1,83 @@
 'use client';
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
-import LoadingSpinner from '../../../components/LoadingSpinner';
-import { FaShieldAlt, FaUser, FaEnvelope, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-
-// THIS IS THE FIX. It tells Next.js not to pre-render this page at build time.
-export const dynamic = 'force-dynamic';
+import AdminRoute from '../../../components/AdminRoute';
+import { listUsers } from '../../../lib/firebaseHelpers';
 
 export default function AdminUsersPage() {
-    const { user, userProfile } = useAuth();
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (userProfile?.isAdmin) {
-            fetch('/api/list-users')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        setUsers(data.users);
-                    } else {
-                        setError(data.error || 'Failed to fetch users.');
-                    }
-                    setLoading(false);
-                })
-                .catch(err => {
-                    console.error("Error fetching users:", err);
-                    setError('An unexpected error occurred.');
-                    setLoading(false);
-                });
-        }
-    }, [userProfile]);
-
-    if (!userProfile) {
-        return (
-            <ProtectedRoute adminOnly={true}>
-                <div className="min-h-screen flex items-center justify-center">
-                    <LoadingSpinner />
-                </div>
-            </ProtectedRoute>
-        );
+  useEffect(() => {
+    async function loadUsers() {
+      setLoading(true);
+      const userList = await listUsers();
+      setUsers(userList);
+      setLoading(false);
     }
+    loadUsers();
+  }, []);
 
-    return (
-        <ProtectedRoute adminOnly={true}>
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-6">User Management</h1>
-                    {loading && <LoadingSpinner />}
-                    {error && <p className="text-red-500 bg-red-100 dark:bg-red-900 p-4 rounded-lg">Error: {error}</p>}
-                    {!loading && !error && (
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead className="bg-gray-50 dark:bg-gray-700">
-                                        <tr>
-                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
-                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
-                                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                        {users.map(u => (
-                                            <tr key={u.id}>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex items-center">
-                                                        <div className="flex-shrink-0 h-10 w-10">
-                                                            <img className="h-10 w-10 rounded-full" src={u.photoURL || `https://avatar.vercel.sh/${u.id}.png`} alt="" />
-                                                        </div>
-                                                        <div className="ml-4">
-                                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{u.displayName || 'No Name'}</div>
-                                                            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1"><FaEnvelope /> {u.email}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${u.isAdmin ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                                                        {u.isAdmin ? <FaShieldAlt className="mr-1"/> : <FaUser className="mr-1"/>} {u.isAdmin ? 'Admin' : 'User'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                    <div className="flex items-center gap-1"><FaClock /> {new Date(u.createdAt?._seconds * 1000).toLocaleDateString()}</div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+  return (
+    <AdminRoute>
+      <div className="p-8">
+        <h1 className="text-3xl font-bold mb-8">User Management</h1>
+        {loading ? (
+          <p>Loading users...</p>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-x-auto">
+            <table className="min-w-full leading-normal">
+              <thead>
+                <tr>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    User
+                  </th>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-5 py-3 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.uid}>
+                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 w-10 h-10">
+                          <img className="w-full h-full rounded-full" src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=random`} alt="" />
                         </div>
-                    )}
-                </div>
-            </div>
-        </ProtectedRoute>
-    );
+                        <div className="ml-3">
+                          <p className="text-gray-900 dark:text-white whitespace-no-wrap">
+                            {user.displayName}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                      <p className="text-gray-900 dark:text-white whitespace-no-wrap">{user.email}</p>
+                    </td>
+                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                      <span className={`relative inline-block px-3 py-1 font-semibold leading-tight ${user.role === 'admin' ? 'text-green-900 dark:text-green-100' : 'text-gray-900 dark:text-gray-100'}`}>
+                        <span aria-hidden className={`absolute inset-0 ${user.role === 'admin' ? 'bg-green-200 dark:bg-green-700' : 'bg-gray-200 dark:bg-gray-700'} opacity-50 rounded-full`}></span>
+                        <span className="relative">{user.role || 'user'}</span>
+                      </span>
+                    </td>
+                    <td className="px-5 py-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                      <button className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-200">Edit</button>
+                      <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 ml-4">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </AdminRoute>
+  );
 }

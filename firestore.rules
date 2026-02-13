@@ -14,11 +14,9 @@ service cloud.firestore {
 
     // --- User Rules ---
     match /users/{uid} {
-      // Admins can list all users for the dashboard.
-      allow list: if isAdmin();
-      // Signed-in users can get individual profiles (for leaderboards).
-      allow get: if signedIn();
-      // Users can create/update their own doc. Admins can also update.
+      // Allow public read access for leaderboards.
+      allow get, list: if true;
+      // Users can create their own doc. Admins can also update.
       allow create: if isOwner(uid);
       allow update: if isOwner(uid) || isAdmin();
       // Only admins can delete users.

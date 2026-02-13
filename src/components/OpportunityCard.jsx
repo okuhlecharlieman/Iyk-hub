@@ -2,6 +2,7 @@ import { FaEdit, FaTrash, FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icon
 
 export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit, onDelete, onApprove, onReject }) {
   const canManage = isAdmin || o.ownerId === user?.uid;
+  const isPending = o.status === 'pending' || !o.status; // Treat missing status as pending for admins
 
   return (
     <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between min-h-[220px] border border-gray-200 dark:border-gray-700">
@@ -22,12 +23,12 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
           ))}
         </div>
         <div className="pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-end gap-2">
-            {o.status === 'pending' && isAdmin ? (
+            {isPending && isAdmin ? (
             <>
                 <button onClick={() => onApprove(o.id)} className="flex items-center gap-2 text-sm text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-md shadow-sm transition-colors"><FaCheck /> Approve</button>
                 <button onClick={() => onReject(o.id)} className="flex items-center gap-2 text-sm text-white bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-md shadow-sm transition-colors"><FaTimes /> Reject</button>
             </>
-            ) : canManage && o.status !== 'pending' ? (
+            ) : canManage && !isPending ? (
             <>
                 <button onClick={() => onEdit(o)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-700/50 hover:text-blue-600 dark:hover:text-blue-300 transition-colors px-3 py-1.5 rounded-md"><FaEdit /> Edit</button>
                 <button onClick={() => onDelete(o.id)} className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-red-100 dark:hover:bg-red-700/50 hover:text-red-600 dark:hover:text-red-300 transition-colors px-3 py-1.5 rounded-md"><FaTrash /> Delete</button>

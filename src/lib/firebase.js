@@ -1,5 +1,5 @@
 // src/lib/firebase.js
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
@@ -30,15 +30,24 @@ if (typeof window !== 'undefined') {
   }
 }
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Use persistent cache to make SDK more resilient
 let db;
-try {
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-  });
-} catch (e) {
+
+// This is the critical part. We only try to initialize the persistent
+// cache on the client-side. On the server (during build), we just get the standard
+// firestore instance which will use in-memory cache and won't cause permission errors.
+if (typeof window !== 'undefined') {
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch (e) {
+    console.error("Could not initialize persistent Firestore cache. Falling back.", e);
+    db = getFirestore(app);
+  }
+} else {
+  // For server-side rendering (e.g., during the build), use the standard getFirestore.
   db = getFirestore(app);
 }
 

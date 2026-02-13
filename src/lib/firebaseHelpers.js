@@ -55,6 +55,12 @@ export async function listTopUsers(limitN = 10, filter = 'lifetime') {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+// Admin function to get all users
+export async function listAllUsers() {
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 // Showcase
 export async function createShowcasePost(data, mediaFile) {
   const user = auth.currentUser;
@@ -128,6 +134,14 @@ export async function togglePostVote(postId, uid) {
 }
 
 // Opportunities
+
+// Admin function to get all opportunities
+export async function listAllOpportunities() {
+    const qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 export async function createOpportunity(data) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');

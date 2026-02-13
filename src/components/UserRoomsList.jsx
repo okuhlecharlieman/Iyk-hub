@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { db } from '../../lib/firebase';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { FaPlay, FaTrash } from 'react-icons/fa';

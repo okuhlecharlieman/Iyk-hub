@@ -57,9 +57,9 @@ export default function GamePage() {
     switch (baseGameId) {
       case 'tictactoe': return <XOGame gameId={gameId} onEnd={(res) => finishGame(res?.score || 5)} />;
       case 'rps': return <RPSGame gameId={gameId} onEnd={onEnd} />;
-      case 'memory': return <MemoryGame onEnd={onEnd} />;
-      case 'hangman': return <HangmanGame onEnd={onEnd} />;
-      case 'quiz': return <QuizGame onEnd={onEnd} />;
+      case 'memory': return <MemoryGame gameId={gameId} onEnd={onEnd} />;
+      case 'hangman': return <HangmanGame gameId={gameId} onEnd={onEnd} />;
+      case 'quiz': return <QuizGame gameId={gameId} onEnd={onEnd} />;
       default: return null;
     }
   }, [gameId, user, baseGameId]);

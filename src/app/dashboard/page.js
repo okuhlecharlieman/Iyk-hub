@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { fetchLatestQuote, listApprovedOpportunities } from '../../lib/firebaseHelpers';
+import { fetchLatestQuote, getApprovedOpportunities } from '../../lib/firebaseHelpers';
 import Link from 'next/link';
 import { FaArrowRight, FaGamepad, FaBriefcase } from 'react-icons/fa';
 
@@ -28,7 +28,7 @@ export default function DashboardPage() {
       async function load() {
         const q = await fetchLatestQuote();
         setQuote(q);
-        const list = await listApprovedOpportunities(3);
+        const list = await getApprovedOpportunities(3);
         setOpps(list);
       }
       load();

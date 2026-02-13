@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
-import { listAllOpportunities, updateOpportunityStatus } from '../../../lib/firebaseHelpers';
+import { listAllOpportunities, updateOpportunity } from '../../../lib/firebaseHelpers';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
@@ -34,7 +34,7 @@ export default function ManageOpportunities() {
 
     const handleStatusUpdate = async (id, status) => {
         try {
-            await updateOpportunityStatus(id, status);
+            await updateOpportunity(id, { status });
             await loadOpps(); // Refresh list
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);

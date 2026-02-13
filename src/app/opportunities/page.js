@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import {
-  getUserDoc,
   createOpportunity,
   updateOpportunity,
   deleteOpportunity,
@@ -19,8 +18,7 @@ import Modal from '../../components/Modal';
 const TABS = { ALL: 'All', PENDING: 'Pending' };
 
 export default function OpportunitiesPage() {
-  const { user } = useAuth();
-  const [userProfile, setUserProfile] = useState(null);
+  const { user, userProfile } = useAuth(); // Get userProfile from AuthContext
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -28,12 +26,6 @@ export default function OpportunitiesPage() {
   const [activeTab, setActiveTab] = useState(TABS.ALL);
 
   const isAdmin = useMemo(() => userProfile?.isAdmin, [userProfile]);
-
-  useEffect(() => {
-    if (user) {
-      getUserDoc(user.uid).then(setUserProfile);
-    }
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -129,11 +121,11 @@ export default function OpportunitiesPage() {
           {loading ? <LoadingSpinner /> : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredOpps.map(o => (
-                <OpportunityCard 
-                  key={o.id} 
-                  opportunity={o} 
-                  isAdmin={isAdmin} 
-                  user={user} 
+                <OpportunityCard
+                  key={o.id}
+                  opportunity={o}
+                  isAdmin={isAdmin}
+                  user={user}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                   onApprove={handleApprove}

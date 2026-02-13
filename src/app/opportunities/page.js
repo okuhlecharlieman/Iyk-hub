@@ -31,8 +31,8 @@ export default function OpportunitiesPage() {
     if (!user) return;
 
     setLoading(true);
-    // Set up the real-time listener
-    const unsubscribe = onOpportunitiesUpdate(isAdmin, (opps) => {
+    // Set up the real-time listener, now passing the user object
+    const unsubscribe = onOpportunitiesUpdate(isAdmin, user, (opps) => {
       setOpportunities(opps);
       setLoading(false);
     }, (error) => {
@@ -59,7 +59,6 @@ export default function OpportunitiesPage() {
         }
         setIsFormModalOpen(false);
         setEditingOpp(null);
-        // No need to call loadOpportunities, real-time listener will handle it
     } catch (error) {
         console.error("Error submitting form:", error);
         alert('There was an error. Please try again.');
@@ -75,7 +74,6 @@ export default function OpportunitiesPage() {
     if (window.confirm("Are you sure you want to delete this opportunity?")) {
       try {
         await deleteOpportunity(id);
-        // No need to call loadOpportunities, real-time listener will handle it
       } catch (error) {
         console.error("Error deleting:", error);
       }

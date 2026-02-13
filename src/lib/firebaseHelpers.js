@@ -160,16 +160,23 @@ export async function getApprovedOpportunities(limitN = 50) {
 }
 
 // Client-side real-time listener
-export function onOpportunitiesUpdate(isAdmin, callback, onError) {
+export function onOpportunitiesUpdate(isAdmin, user, callback, onError) {
   let qy;
   if (isAdmin) {
     qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
   } else {
-    qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'));
+    qy = query(
+      collection(db, 'opportunities'),
+      where('status', 'in', ['approved', 'pending']),
+      orderBy('createdAt', 'desc')
+    );
   }
 
   const unsubscribe = onSnapshot(qy, (querySnapshot) => {
-    const opportunities = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const opportunities = querySnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(opp => isAdmin || opp.status === 'approved' || opp.ownerId === user?.uid);
+
     callback(opportunities);
   }, (error) => {
     console.error("Error in onOpportunitiesUpdate listener:", error);

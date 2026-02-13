@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import AdminRoute from '../../../components/AdminRoute';
+import ProtectedRoute from '../../../components/ProtectedRoute';
 import { listUsers } from '../../../lib/firebaseHelpers';
 
 export default function AdminUsersPage() {
@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
   }, []);
 
   return (
-    <AdminRoute>
+    <ProtectedRoute requiredRole="admin">
       <div className="p-8">
         <h1 className="text-3xl font-bold mb-8">User Management</h1>
         {loading ? (
@@ -78,6 +78,6 @@ export default function AdminUsersPage() {
           </div>
         )}
       </div>
-    </AdminRoute>
+    </ProtectedRoute>
   );
 }

@@ -1,6 +1,6 @@
 
 import Link from 'next/link';
-import { listApprovedOpportunities, listShowcasePosts } from '../lib/firebaseHelpers';
+import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebaseHelpers';
 import ContentCard from '../components/ContentCard';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush } from 'react-icons/fa';
 
@@ -25,7 +25,7 @@ const FeatureSection = ({ title, icon, children, href }) => (
 
 export default async function Home() {
   const [opps, posts] = await Promise.all([
-    listApprovedOpportunities(3),
+    getApprovedOpportunities(3),
     listShowcasePosts(3),
   ]);
 

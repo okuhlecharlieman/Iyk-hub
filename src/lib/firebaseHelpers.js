@@ -144,13 +144,19 @@ export async function deleteOpportunity(opportunityId) {
   await deleteDoc(doc(db, 'opportunities', opportunityId));
 }
 
+// Server-side function for fetching approved opportunities
+export async function getApprovedOpportunities(limitN = 50) {
+  const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Client-side real-time listener
 export function onOpportunitiesUpdate(isAdmin, callback, onError) {
   let qy;
   if (isAdmin) {
-    // Admins see all opportunities
     qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
   } else {
-    // Regular users only see approved opportunities
     qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'));
   }
 
@@ -162,7 +168,7 @@ export function onOpportunitiesUpdate(isAdmin, callback, onError) {
     if (onError) onError(error);
   });
 
-  return unsubscribe; // Return the unsubscribe function to be called on cleanup
+  return unsubscribe;
 }
 
 

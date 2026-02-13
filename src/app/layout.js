@@ -3,6 +3,9 @@ import './globals.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { AuthProvider } from '../context/AuthContext';
+import Presence from '../components/Presence';
+import { Providers } from './providers';
+
 
 export const metadata = {
   title: 'Intwana Hub',
@@ -12,12 +15,16 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-neutral-50 text-neutral-900">
-        <AuthProvider>
-          <Navbar />
-          <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
-          <Footer />
-        </AuthProvider>
+      <body className="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100">
+        <Providers>
+          <AuthProvider>
+            <Presence />
+         
+            <Navbar />
+            <main>{children}</main>
+            <Footer />
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

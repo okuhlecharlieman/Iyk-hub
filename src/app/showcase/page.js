@@ -1,122 +1,139 @@
 'use client';
-import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { useEffect, useState, useCallback } from 'react';
+import Masonry from 'react-masonry-css';
 import { useAuth } from '../../context/AuthContext';
-import { createWallPost, listWallPosts, reactToPost, uploadToStorage, awardUploadPoints } from '../../lib/firebaseHelpers';
+import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc, togglePostVote } from '../../lib/firebaseHelpers';
+import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
+import NewPostCard from '../../components/showcase/NewPostCard';
+import NewPostModal from '../../components/showcase/NewPostModal';
+import EditPostModal from '../../components/showcase/EditPostModal';
 
 export default function ShowcasePage() {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
-  const [form, setForm] = useState({ type: 'art', title: '', description: '', code: '', language: 'javascript', file: null });
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
+  const [authors, setAuthors] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [postToEdit, setPostToEdit] = useState(null);
+  const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
 
-  async function load() {
-    const list = await listWallPosts(50);
-    setPosts(list);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function submit(e) {
-    e.preventDefault();
-    if (!user) return;
+  const loadPosts = useCallback(async () => {
     setLoading(true);
-    setErr('');
     try {
-      let mediaUrl = null;
-      if (form.file) {
-        mediaUrl = await uploadToStorage(form.file, 'wall');
-      }
-      await createWallPost(
-        {
-          type: form.type,
-          title: form.title,
-          description: form.description,
-          mediaUrl,
-          code: form.type === 'code' ? form.code : null,
-          language: form.type === 'code' ? form.language : null,
-        },
-        user.uid
-      );
-      await awardUploadPoints(user.uid);
-      setForm({ type: 'art', title: '', description: '', code: '', language: 'javascript', file: null });
-      await load();
-    } catch (e) {
-      setErr(e.message || 'Upload failed');
+      const postList = await listShowcasePosts(100);
+      setPosts(postList);
+      const authorIds = [...new Set(postList.map(p => p.uid))];
+      const authorPromises = authorIds.map(uid => getUserDoc(uid));
+      const authorDocs = await Promise.all(authorPromises);
+      const authorMap = authorDocs.reduce((acc, doc) => {
+        if (doc) acc[doc.id] = doc;
+        return acc;
+      }, {});
+      setAuthors(authorMap);
+    } catch (error) {
+      console.error("Error loading showcase posts:", error);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function react(id, emoji) {
-    await reactToPost(id, emoji);
-    await load();
-  }
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  const handleDelete = async (postId) => {
+    if (window.confirm("Are you sure you want to delete this post?")) {
+      try {
+        await deleteShowcasePost(postId);
+        await loadPosts();
+      } catch (error) {
+        console.error("Error deleting post:", error);
+        alert("Failed to delete post.");
+      }
+    }
+  };
+
+  const handleUpdate = async (postId, data) => {
+    try {
+      await updateShowcasePost(postId, data);
+      await loadPosts();
+      return true;
+    } catch (error) {
+      console.error("Error updating post:", error);
+      return false;
+    }
+  };
+
+  const handleVote = async (postId) => {
+    if (!user) return alert("You must be logged in to vote.");
+    try {
+      await togglePostVote(postId, user.uid);
+      // Optimistically update UI or reload
+      loadPosts(); 
+    } catch (error) {
+      console.error("Error toggling vote:", error);
+    }
+  };
+
+  const openEditModal = (post) => {
+    setPostToEdit(post);
+    setIsEditModalOpen(true);
+  };
+
+  const breakpointColumnsObj = {
+    default: 4,
+    1500: 3,
+    1100: 2,
+    700: 1
+  };
 
   return (
-    <ProtectedRoute>
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 bg-white p-4 rounded shadow">
-          <h2 className="font-semibold mb-3">Share your creation</h2>
-          {err ? <p className="text-red-600 mb-2">{err}</p> : null}
-          <form onSubmit={submit} className="space-y-3">
-            <select className="w-full border p-2 rounded" value={form.type} onChange={(e)=>setForm({...form, type: e.target.value})}>
-              <option value="art">Art / Image</option>
-              <option value="music">Music / Audio</option>
-              <option value="code">Code</option>
-              <option value="poem">Poem / Text</option>
-            </select>
-            <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} />
-            <textarea className="w-full border p-2 rounded" placeholder="Description" rows={3} value={form.description} onChange={(e)=>setForm({...form, description: e.target.value})} />
-            {form.type === 'code' ? (
-              <>
-                <select className="w-full border p-2 rounded" value={form.language} onChange={(e)=>setForm({...form, language: e.target.value})}>
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="html">HTML</option>
-                </select>
-                <textarea className="w-full border p-2 rounded font-mono" rows={6} placeholder="// your code here" value={form.code} onChange={(e)=>setForm({...form, code: e.target.value})} />
-              </>
-            ) : (
-              <input type="file" accept={form.type === 'music' ? 'audio/*' : 'image/*'} onChange={(e)=>setForm({...form, file: e.target.files?.[0] || null})} />
-            )}
-            <button className="w-full bg-neutral-900 text-white rounded py-2" disabled={loading}>
-              {loading ? 'Uploading…' : 'Post'}
-            </button>
-          </form>
+    <div className="min-h-screen w-full px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      <div className="w-full mx-auto">
+        <div className="text-center mb-16">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">Community Showcase</h1>
+          <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-500 dark:text-gray-400">Discover the creativity and talent within the Intwana Hub community.</p>
         </div>
-
-        <div className="md:col-span-2 space-y-4">
-          {posts.length === 0 ? <p className="text-neutral-500">No posts yet. Be the first!</p> : null}
-          {posts.map((p)=>(
-            <div key={p.id} className="bg-white p-4 rounded shadow">
-              <p className="text-sm text-neutral-500 mb-1">{p.type?.toUpperCase()}</p>
-              <h3 className="font-semibold">{p.title}</h3>
-              {p.mediaUrl ? (
-                p.type === 'music' ? (
-                  <audio className="w-full mt-2" src={p.mediaUrl} controls />
-                ) : (
-                  <img className="mt-2 max-h-64 object-contain" src={p.mediaUrl} alt={p.title} />
-                )
-              ) : null}
-              {p.code ? (
-                <pre className="bg-neutral-900 text-white p-3 rounded mt-2 overflow-auto text-sm"><code>{p.code}</code></pre>
-              ) : null}
-              {p.description ? <p className="mt-2 text-neutral-700">{p.description}</p> : null}
-              <div className="flex gap-3 mt-3">
-                {['❤️','🎉','👍'].map((e)=>(
-                  <button key={e} onClick={()=>react(p.id, e)} className="border rounded px-3 py-1">
-                    {e} {(p.reactions && p.reactions[e]) || 0}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="flex justify-center">
+          <Masonry
+            breakpointCols={breakpointColumnsObj}
+            className="my-masonry-grid w-full"
+            columnClassName="my-masonry-grid_column px-4">
+            
+            {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}
+            
+            {loading ? (
+              Array.from({ length: 6 }).map((_, i) => <div className="mb-8" key={i}><PostCardSkeleton /></div>)
+            ) : (
+              posts.map(post => (
+                <div className="mb-8" key={post.id}>
+                  <PostCard 
+                    post={post} 
+                    author={authors[post.uid]} 
+                    isOwner={user && user.uid === post.uid}
+                    onEdit={() => openEditModal(post)}
+                    onDelete={() => handleDelete(post.id)}
+                    onVote={() => handleVote(post.id)}
+                  />
+                </div>
+              ))
+            )}
+          </Masonry>
         </div>
       </div>
-    </ProtectedRoute>
+
+      <NewPostModal 
+        isOpen={isNewPostModalOpen} 
+        onClose={() => setIsNewPostModalOpen(false)} 
+        onPostCreated={loadPosts} 
+      />
+
+      <EditPostModal
+        isOpen={isEditModalOpen}
+        onClose={() => setPostToEdit(null)}
+        post={postToEdit}
+        onUpdate={handleUpdate}
+      />
+    </div>
   );
 }

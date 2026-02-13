@@ -1,5 +1,5 @@
 // src/lib/firebase.js
-import { initializeApp, getApps } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import {
   getFirestore,
@@ -8,10 +8,12 @@ import {
   persistentMultipleTabManager,
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
@@ -28,18 +30,28 @@ if (typeof window !== 'undefined') {
   }
 }
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Use persistent cache to make SDK more resilient
 let db;
-try {
-  db = initializeFirestore(app, {
-    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-  });
-} catch (e) {
+
+// This is the critical part. We only try to initialize the persistent
+// cache on the client-side. On the server (during build), we just get the standard
+// firestore instance which will use in-memory cache and won't cause permission errors.
+if (typeof window !== 'undefined') {
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch (e) {
+    console.error("Could not initialize persistent Firestore cache. Falling back.", e);
+    db = getFirestore(app);
+  }
+} else {
+  // For server-side rendering (e.g., during the build), use the standard getFirestore.
   db = getFirestore(app);
 }
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+export const rtdb = getDatabase(app);
 export { db };

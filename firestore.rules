@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // --- User Rules ---
+    match /users/{uid} {
+      // Admins can list all users for the dashboard.
+      allow list: if isAdmin();
+      // Signed-in users can get individual profiles (for leaderboards).
+      allow get: if signedIn();
+      // Users can create/update their own doc. Admins can also update.
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      // Only admins can delete users.
+      allow delete: if isAdmin();
+
+      match /pointsLog/{logId} {
+        allow read, create: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // --- Opportunity Rules ---
+    match /opportunities/{id} {
+        // Admins have full read/write access to all opportunities.
+        allow read, write: if isAdmin();
+
+        // --- Rules for non-admins below ---
+
+        // Allow non-admins to create opportunities.
+        allow create: if signedIn();
+
+        // Allow non-admins to read opportunities that are approved OR that they own.
+        // Note: This supports fetching single documents (get) and simple queries (e.g., where('status', '==', 'approved')).
+        allow read: if signedIn() && (resource.data.status == 'approved' || request.auth.uid == resource.data.ownerId);
+
+        // Allow non-admins to update or delete only their own opportunities.
+        allow update, delete: if request.auth.uid == resource.data.ownerId;
+    }
+
+    // --- Other App Rules ---
+    match /games/{gameId} { allow read, write: if signedIn(); }
+    match /wallPosts/{postId} { allow read: if true; allow create, update: if signedIn(); }
+    match /gamesSessions/{id} { allow read, create: if signedIn(); }
+    match /quotes/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /meta/{docId} { allow read: if true; allow write: if isAdmin(); }
+  }
+}

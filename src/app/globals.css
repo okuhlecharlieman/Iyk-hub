@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --brand-yellow: #ffd166;
@@ -6,5 +8,104 @@
   --brand-blue: #0b5567;
   --accent-red: #ff6b6b;
 }
-body { @apply bg-white text-slate-800; }
-.dark body { @apply bg-slate-900 text-slate-100; }
+body {
+  background: linear-gradient(135deg, #fffbe6 0%, #e0f7fa 50%, #e0f2f1 100%);
+  color: #1e293b;
+}
+.dark body {
+  background: linear-gradient(135deg, #0f172a 0%, #0b5567 100%);
+  color: #f1f5f9;
+}
+
+/* Navbar */
+header {
+  background: linear-gradient(90deg, #ffd166 0%, #e0f7fa 100%);
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.04);
+}
+
+/* Footer */
+footer {
+  background: linear-gradient(90deg, #e0f7fa 0%, #ffd166 100%);
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Card styles */
+.bg-white, .rounded-lg, .shadow {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.07);
+  border-radius: 1rem;
+}
+
+/* Buttons */
+button, .btn {
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.bg-neutral-900, .btn-primary {
+  background: linear-gradient(90deg, var(--brand-blue), var(--brand-teal));
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px 0 rgba(11,85,103,0.08);
+}
+.bg-blue-600, .btn-blue {
+  background: linear-gradient(90deg, #2563eb, #00b5ad);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px 0 rgba(37,99,235,0.08);
+}
+.bg-yellow-400, .btn-yellow {
+  background: linear-gradient(90deg, #ffd166, #ffe066);
+  color: #0b5567;
+  font-weight: 600;
+  box-shadow: 0 2px 8px 0 rgba(255,209,102,0.08);
+}
+.bg-red-600, .btn-red {
+  background: linear-gradient(90deg, #ff6b6b, #ffb6b6);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px 0 rgba(255,107,107,0.08);
+}
+
+/* Inputs */
+input, textarea, select {
+  border: 2px solid #bae6fd;
+  border-radius: 0.5rem;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: #00b5ad;
+  box-shadow: 0 0 0 2px #99f6e4;
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+  font-weight: bold;
+  color: #0b5567;
+}
+
+/* Links */
+a, .underline {
+  color: #00b5ad;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+a:hover, .underline:hover {
+  color: #2563eb;
+}
+
+/* Emoji buttons */
+button.text-xl {
+  transition: transform 0.15s, background 0.15s;
+  border-radius: 9999px;
+  padding: 0.25rem 0.5rem;
+}
+button.text-xl:hover {
+  transform: scale(1.25);
+  background: #fffbe6;
+}
+
+/* Misc */
+.shadow {
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.07);
+}

@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
       return;
     }
 
-    if (adminOnly && !userProfile?.isAdmin) {
+    if (adminOnly && userProfile?.role !== 'admin') {
       // Non-admin trying to access admin page
       // We don't redirect here; we let the render logic show the detailed access denied message.
     }
@@ -32,7 +32,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
 
-  if (adminOnly && !userProfile?.isAdmin) {
+  if (adminOnly && userProfile?.role !== 'admin') {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-center px-4">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full">
@@ -43,7 +43,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
                 <div className="text-left mt-6 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                   <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Account Status</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">Logged in as: <strong>{user.email}</strong></p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Admin Flag (`isAdmin`): <strong>{userProfile?.isAdmin ? 'True' : 'False or Not Set'}</strong></p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Account Role: <strong>{userProfile?.role || 'Not Set'}</strong></p>
                 </div>
 
                 <div className="text-left mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">

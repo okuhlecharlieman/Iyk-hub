@@ -25,7 +25,7 @@ export default function OpportunitiesPage() {
   const [editingOpp, setEditingOpp] = useState(null);
   const [activeTab, setActiveTab] = useState(TABS.ALL);
 
-  const isAdmin = useMemo(() => userProfile?.isAdmin, [userProfile]);
+  const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
 
   useEffect(() => {
     if (!user) return;

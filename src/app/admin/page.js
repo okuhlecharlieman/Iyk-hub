@@ -8,12 +8,12 @@ import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
 
 export default function AdminPage() {
-    const { user, userProfile } = useAuth(); // Assuming userProfile has isAdmin flag
+    const { user, userProfile } = useAuth(); // userProfile contains the user's role
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0 });
 
     useEffect(() => {
-        if (userProfile?.isAdmin) {
+        if (userProfile?.role === 'admin') {
             async function loadStats() {
                 setLoading(true);
                 try {

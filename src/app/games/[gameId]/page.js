@@ -23,6 +23,7 @@ const GAME_DETAILS = {
 export default function GamePage() {
   const { gameId } = useParams();
   const { user } = useAuth();
+  const baseGameId = gameId.split('-')[0];
 
   async function finishGame(finalScore = 1, duration = 0) {
     if (!user) return;
@@ -37,7 +38,7 @@ export default function GamePage() {
   const GameComponent = useMemo(() => {
     const onEnd = (score) => finishGame(score);
 
-    switch (gameId) {
+    switch (baseGameId) {
       case 'tictactoe': return <XOGame gameId={gameId} onEnd={(res) => finishGame(res?.score || 5)} />;
       case 'rps': return <RPSGame onEnd={onEnd} />;
       case 'memory': return <MemoryGame onEnd={onEnd} />;
@@ -45,9 +46,9 @@ export default function GamePage() {
       case 'quiz': return <QuizGame onEnd={onEnd} />;
       default: return null;
     }
-  }, [gameId, user]);
+  }, [gameId, user, baseGameId]);
 
-  const gameDetails = GAME_DETAILS[gameId];
+  const gameDetails = GAME_DETAILS[baseGameId];
 
   return (
     <ProtectedRoute>

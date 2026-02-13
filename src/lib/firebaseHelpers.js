@@ -22,7 +22,7 @@ export async function ensureUserDoc(user) {
       points: { weekly: 0, lifetime: 0 },
       bio: '',
       skills: [],
-      role: 'user',
+      role: 'user', // Default role for new users
       createdAt: serverTimestamp(),
     });
   }
@@ -31,7 +31,15 @@ export async function ensureUserDoc(user) {
 export async function getUserDoc(uid) {
   if (!uid) return null;
   const snap = await getDoc(doc(db, 'users', uid));
-  return snap.exists() ? { id: uid, ...snap.data() } : null;
+  if (snap.exists()) {
+    const data = snap.data();
+    return {
+      id: uid,
+      ...data,
+      isAdmin: data.role === 'admin', // Derive isAdmin from the role field
+    };
+  }
+  return null;
 }
 
 export async function updateUserDoc(uid, data) {
@@ -51,19 +59,19 @@ export async function listTopUsers(limitN = 10, filter = 'lifetime') {
 export async function createShowcasePost(data, mediaFile) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
-  
+
   let mediaUrl = null;
   if (mediaFile) {
     mediaUrl = await uploadToStorage(mediaFile, `showcase/${user.uid}`);
   }
 
-  const postData = { 
-    ...data, 
+  const postData = {
+    ...data,
     uid: user.uid,
     votes: 0,
     voters: [],
     mediaUrl,
-    createdAt: serverTimestamp(), 
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
   const postRef = await addDoc(collection(db, 'wallPosts'), postData);
@@ -105,13 +113,13 @@ export async function togglePostVote(postId, uid) {
 
     if (voters.includes(uid)) {
       // User is unvoting
-      transaction.update(postRef, { 
+      transaction.update(postRef, {
         voters: voters.filter(voterId => voterId !== uid),
         votes: newVotes - 1,
       });
     } else {
       // User is voting
-      transaction.update(postRef, { 
+      transaction.update(postRef, {
         voters: [...voters, uid],
         votes: newVotes + 1,
       });

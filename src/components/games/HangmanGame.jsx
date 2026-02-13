@@ -12,12 +12,14 @@ export default function HangmanGame({ gameId, onEnd }) {
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const gameDocRef = doc(db, 'games', gameId);
 
   // Game setup
   useEffect(() => {
     if (!user) {
       setError("You must be logged in to play.");
+      setLoading(false);
       return;
     }
 
@@ -55,6 +57,7 @@ export default function HangmanGame({ gameId, onEnd }) {
         }
       } catch (e) {
         setError("Failed to join game: " + e.message);
+        setLoading(false);
       }
     };
 
@@ -68,10 +71,14 @@ export default function HangmanGame({ gameId, onEnd }) {
         const data = snapshot.data();
         setGameState(data);
         checkGameEnd(data);
+        setLoading(false);
       } else {
-        setError("Game not found.");
+        // Game not found yet, wait for joinGame to create it.
       }
-    }, (e) => setError("Game sync error: " + e.message));
+    }, (e) => {
+      setError("Game sync error: " + e.message)
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, [gameDocRef]);
 
@@ -133,8 +140,9 @@ export default function HangmanGame({ gameId, onEnd }) {
     });
   }
 
+  if (loading) return <p>Loading game...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
-  if (!gameState) return <p>Loading game...</p>;
+  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
 
   const { word, guessedLetters, players, status, currentPlayer, winner, loser } = gameState;
   const you = players?.[playerSymbol];

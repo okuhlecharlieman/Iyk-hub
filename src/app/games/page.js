@@ -1,5 +1,6 @@
 'use client';
 import GameCard from '../../components/GameCard';
+import UserRoomsList from '../../components/UserRoomsList';
 
 const GAMES = ['rps', 'tictactoe', 'memory', 'hangman', 'quiz'];
 
@@ -11,6 +12,7 @@ export default function GamesPage() {
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Intwana Games</h1>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Test your skills, challenge friends, and earn points!</p>
         </div>
+        <UserRoomsList />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {GAMES.map((gameId) => (
             <GameCard key={gameId} gameId={gameId} />

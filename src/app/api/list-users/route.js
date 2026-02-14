@@ -63,6 +63,7 @@ export async function GET(request) {
         email: user.email || authUser?.email || 'N/A',
         displayName: user.displayName || authUser?.displayName,
         photoURL: user.photoURL || authUser?.photoURL,
+        authExists: !!authUser,
       };
     });
 

@@ -22,19 +22,27 @@ const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">{user.email || '—'}</td>
         <td className="px-4 py-3">
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-            {role}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+              {role}
+            </span>
+            {!user.authExists && (
+              <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">no auth</span>
+            )}
+          </div>
         </td>
         <td className="px-4 py-3 text-sm">
           {role !== 'admin' ? (
-            <button disabled={isProcessing} onClick={() => setConfirmOpen(true)} className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50">
+            <button disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)} className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50">
               Make admin
             </button>
           ) : (
-            <button disabled={isProcessing} onClick={() => setConfirmOpen(true)} className="px-3 py-1 rounded-md bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50">
+            <button disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)} className="px-3 py-1 rounded-md bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50">
               Revoke
             </button>
+          )}
+          {!user.authExists && (
+            <div className="text-xs text-gray-500 mt-1">User has no Auth account — cannot set custom claims.</div>
           )}
         </td>
       </tr>
@@ -43,7 +51,7 @@ const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
           <button onClick={() => setConfirmOpen(false)} className="px-4 py-2 rounded-md bg-gray-100 text-gray-700">Cancel</button>
-          <button onClick={async () => { setConfirmOpen(false); await onRequestRoleChange(user.uid, role === 'admin' ? 'user' : 'admin'); }} className="px-4 py-2 rounded-md bg-blue-600 text-white">Confirm</button>
+          <button disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestRoleChange(user.uid, role === 'admin' ? 'user' : 'admin'); }} className="px-4 py-2 rounded-md bg-blue-600 text-white">Confirm</button>
         </div>
       </Modal>
     </>

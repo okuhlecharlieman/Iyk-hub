@@ -58,10 +58,14 @@ export async function listTopUsers(limitN = 10, filter = 'lifetime') {
   return json.users;
 }
 
-// Admin function to get all users
+// Admin function to get all users (server-composed — includes whether the user exists in Auth)
 export async function listAllUsers() {
-  const snap = await getDocs(collection(db, 'users'));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const res = await fetch('/api/list-users');
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.error || json?.message || 'Failed to fetch users');
+  }
+  return json.users; // objects include `id` and `authExists`
 }
 
 // Showcase

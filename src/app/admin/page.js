@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
+import { listAllUsers, listAllOpportunities } from '../../lib/firebase/helpers';
 
 export default function AdminPage() {
     const { user, userProfile } = useAuth();
@@ -16,18 +17,18 @@ export default function AdminPage() {
             async function loadStats() {
                 setLoading(true);
                 try {
-                    const [usersRes, oppsRes] = await Promise.all([
-                        fetch('/api/admin/users'),
-                        fetch('/api/admin/opportunities')
+                    // Use client helpers (they already handle server fallbacks).
+                    const [users, opps] = await Promise.all([
+                      listAllUsers(),
+                      listAllOpportunities()
                     ]);
-                    const users = await usersRes.json();
-                    const opps = await oppsRes.json();
 
-                    const pending = opps.filter(o => o.status === 'pending').length;
-                    const approved = opps.filter(o => o.status === 'approved').length;
-                    setStats({ users: users.length, pending, approved });
+                    const pending = Array.isArray(opps) ? opps.filter(o => o.status === 'pending').length : 0;
+                    const approved = Array.isArray(opps) ? opps.filter(o => o.status === 'approved').length : 0;
+                    setStats({ users: Array.isArray(users) ? users.length : 0, pending, approved });
                 } catch (error) {
                     console.error("Error loading admin stats:", error);
+                    setStats({ users: 0, pending: 0, approved: 0 });
                 }
                 setLoading(false);
             }

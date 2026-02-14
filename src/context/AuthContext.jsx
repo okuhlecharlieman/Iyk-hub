@@ -26,6 +26,15 @@ export function AuthProvider({ children }) {
           if (snap.exists()) {
             const data = snap.data();
             setUserProfile({ id: snap.id, ...data, isAdmin: data.role === 'admin' });
+
+            // Force-refresh the ID token for the signed-in user so server-side
+            // checks relying on custom claims observe the change immediately.
+            if (currentUser && typeof currentUser.getIdToken === 'function') {
+              currentUser.getIdToken(true).catch((err) => {
+                console.warn('Failed to refresh ID token after profile change:', err?.message || err);
+              });
+            }
+
           } else {
             setUserProfile(null);
           }

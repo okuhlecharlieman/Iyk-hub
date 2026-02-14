@@ -1,4 +1,4 @@
-import { auth, db, storage } from './firebase';
+import { auth, db, storage } from './../firebase';
 import {
   addDoc, collection, doc, getDoc, getDocs, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,

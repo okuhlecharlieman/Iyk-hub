@@ -9,7 +9,7 @@ import {
   approveOpportunity,
   rejectOpportunity,
   onOpportunitiesUpdate // Import the new real-time listener
-} from '../../lib/firebaseHelpers';
+} from '../../lib/firebase/helpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import OpportunityCard from '../../components/OpportunityCard';
 import OpportunityForm from '../../components/OpportunityForm';

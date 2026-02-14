@@ -6,6 +6,7 @@ import LoadingSpinner from '../../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
 import { auth } from '../../../lib/firebase';
+import { updateOpportunity as clientUpdateOpportunity, approveOpportunity as clientApproveOpportunity, rejectOpportunity as clientRejectOpportunity } from '../../../lib/firebase/helpers';
 
 export default function ManageOpportunities() {
     const { user, userProfile } = useAuth();
@@ -78,8 +79,26 @@ export default function ManageOpportunities() {
 
             const json = await res.json();
             if (!res.ok) {
-              showNotification('error', json.error || json.message || 'Failed to update opportunity');
-              return;
+              // If server-side admin API is unavailable or unauthorized, fall back
+              // to client-side Firestore update (relies on Firestore security rules).
+              showNotification('error', json.error || json.message || 'Failed to update opportunity via admin API — trying client fallback');
+
+              try {
+                if (status === 'approved') {
+                  await clientApproveOpportunity(id);
+                } else if (status === 'rejected') {
+                  await clientRejectOpportunity(id);
+                } else {
+                  await clientUpdateOpportunity(id, { status });
+                }
+                await loadOpps();
+                showNotification('success', `Updated "${json.title || id}" to ${status} (client fallback)`);
+                return;
+              } catch (fallbackErr) {
+                console.error('Client-side fallback failed:', fallbackErr);
+                showNotification('error', 'Both admin API and client fallback failed');
+                return;
+              }
             }
 
             await loadOpps(); // Refresh the list after updating

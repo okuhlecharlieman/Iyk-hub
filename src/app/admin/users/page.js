@@ -6,20 +6,49 @@ import { listAllUsers } from '../../../lib/firebase/helpers';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 
 const UserRow = ({ user, onSetRole }) => {
-  const [loading, setLoading] = useState(false);
-  const { user: authUser } = useAuth();
+  const [processing, setProcessing] = useState(false);
+  const role = user.role || 'user';
 
-  const handleSetRole = async (role) => {
-    setLoading(true);
-    if (!authUser) {
-      console.error("Not authenticated");
-      setLoading(false);
-      return;
+  const handleClick = async (newRole) => {
+    setProcessing(true);
+    try {
+      await onSetRole(user.uid, newRole);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update role: ' + (err.message || 'Unknown error'));
+    } finally {
+      setProcessing(false);
     }
-    // ... (rest of the function)
   };
 
-  // ... (rest of the component)
+  return (
+    <tr>
+      <td className="px-4 py-3 flex items-center gap-3">
+        <img src={user.photoURL || '/logo.png'} className="w-8 h-8 rounded-full" alt={user.displayName || 'avatar'} />
+        <div className="min-w-0">
+          <div className="font-semibold text-sm truncate">{user.displayName || user.email || user.uid}</div>
+          <div className="text-xs text-gray-500 truncate">{user.uid}</div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-600">{user.email || '—'}</td>
+      <td className="px-4 py-3">
+        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+          {role}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-sm">
+        {role !== 'admin' ? (
+          <button disabled={processing} onClick={() => handleClick('admin')} className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50">
+            Make admin
+          </button>
+        ) : (
+          <button disabled={processing} onClick={() => handleClick('user')} className="px-3 py-1 rounded-md bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50">
+            Revoke
+          </button>
+        )}
+      </td>
+    </tr>
+  );
 };
 
 export default function AdminUsersPage() {
@@ -33,9 +62,37 @@ export default function AdminUsersPage() {
     }
   }, [userProfile]);
 
-  const handleSetRole = (uid, role) => {
-    // Implement the logic to set user role here
-    console.log(`Setting role for ${uid} to ${role}`);
+  const handleSetRole = async (uid, role) => {
+    if (!user) {
+      alert('Not authenticated');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const idToken = await user.getIdToken(true);
+      const res = await fetch('/api/set-user-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ uid, role }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || json.message || 'Failed to set role');
+
+      // Refresh the list so role changes are visible in the UI
+      const updated = await listAllUsers();
+      setUsers(updated);
+      alert(json.message || 'Role updated');
+    } catch (err) {
+      console.error('Error setting role:', err);
+      alert('Error setting role: ' + (err.message || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {

@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
 import { auth } from '../../../lib/firebase';
 import { updateOpportunity as clientUpdateOpportunity, approveOpportunity as clientApproveOpportunity, rejectOpportunity as clientRejectOpportunity } from '../../../lib/firebase/helpers';
+import Button from '../../../components/ui/Button';
+import Toast from '../../../components/ui/Toast';
+import Skeleton from '../../../components/ui/Skeleton';
 
 export default function ManageOpportunities() {
     const { user, userProfile } = useAuth();
@@ -120,6 +123,12 @@ export default function ManageOpportunities() {
                         <Link href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline">← Back to Admin Dashboard</Link>
                     </div>
 
+                    {notification && (
+                      <div className="mb-4 max-w-xl">
+                        <Toast type={notification.type} message={notification.message} onClose={() => setNotification(null)} />
+                      </div>
+                    )}
+
                     <div className="flex justify-center mb-6 border-b border-gray-200 dark:border-gray-700">
                         <button onClick={() => setFilter('pending')} className={`tab-button ${filter === 'pending' ? 'active' : ''}`}>Pending</button>
                         <button onClick={() => setFilter('approved')} className={`tab-button ${filter === 'approved' ? 'active' : ''}`}>Approved</button>
@@ -127,7 +136,7 @@ export default function ManageOpportunities() {
                     </div>
 
                     {loading ? (
-                        <div className="flex justify-center items-center py-20"><LoadingSpinner /></div>
+                        <div className="container mx-auto px-4 py-8"><Skeleton count={3} variant="card" /></div>
                     ) : (
                         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
                             {filteredOpps.length > 0 ? (
@@ -143,12 +152,12 @@ export default function ManageOpportunities() {
                                             <div className="flex items-center space-x-2 mt-4 md:mt-0">
                                                 {filter === 'pending' && (
                                                     <>
-                                                        <button onClick={() => handleStatusUpdate(opp.id, 'approved')} className="btn-primary"><FaCheck /></button>
-                                                        <button onClick={() => handleStatusUpdate(opp.id, 'rejected')} className="btn-secondary"><FaTimes /></button>
+                                                        <Button size="sm" variant="primary" ariaLabel={`Approve ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'approved')}><FaCheck /></Button>
+                                                        <Button size="sm" variant="danger" ariaLabel={`Reject ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'rejected')}><FaTimes /></Button>
                                                     </>
                                                 )}
                                                 {filter !== 'pending' && (
-                                                    <button onClick={() => handleStatusUpdate(opp.id, 'pending')} className="btn-secondary">Reset to Pending</button>
+                                                    <Button size="sm" variant="secondary" ariaLabel={`Reset ${opp.title} to pending`} onClick={() => handleStatusUpdate(opp.id, 'pending')}>Reset to Pending</Button>
                                                 )}
                                             </div>
                                         </div>

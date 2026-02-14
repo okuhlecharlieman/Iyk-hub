@@ -3,8 +3,11 @@ import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
 import { useAuth } from '../../../context/AuthContext';
-import { listAllUsers } from '../../../lib/firebase/helpers';
+import { listAllUsers, onUsersUpdate } from '../../../lib/firebase/helpers';
 import LoadingSpinner from '../../../components/LoadingSpinner';
+import Button from '../../../components/ui/Button';
+import Toast from '../../../components/ui/Toast';
+import Skeleton from '../../../components/ui/Skeleton';
 
 const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -33,13 +36,13 @@ const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
         </td>
         <td className="px-4 py-3 text-sm">
           {role !== 'admin' ? (
-            <button disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)} className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50">
+            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)}>
               Make admin
-            </button>
+            </Button>
           ) : (
-            <button disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)} className="px-3 py-1 rounded-md bg-red-600 text-white text-sm hover:bg-red-700 disabled:opacity-50">
+            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)}>
               Revoke
-            </button>
+            </Button>
           )}
           {!user.authExists && (
             <div className="text-xs text-gray-500 mt-1">User has no Auth account — cannot set custom claims.</div>
@@ -50,8 +53,8 @@ const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
       <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Confirm role change">
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
-          <button onClick={() => setConfirmOpen(false)} className="px-4 py-2 rounded-md bg-gray-100 text-gray-700">Cancel</button>
-          <button disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestRoleChange(user.uid, role === 'admin' ? 'user' : 'admin'); }} className="px-4 py-2 rounded-md bg-blue-600 text-white">Confirm</button>
+          <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestRoleChange(user.uid, role === 'admin' ? 'user' : 'admin'); }}>Confirm</Button>
         </div>
       </Modal>
     </>
@@ -65,9 +68,35 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (userProfile?.role === 'admin') {
-      listAllUsers()
-        .then((list) => setUsers(list.map(u => ({ uid: u.id, ...u }))))
-        .finally(() => setLoading(false));
+      let unsubscribe;
+
+      (async () => {
+        setLoading(true);
+        try {
+          const initial = await listAllUsers();
+          if (Array.isArray(initial)) {
+            setUsers(initial.map(u => ({ uid: u.id, ...u })));
+          } else {
+            setUsers([]);
+          }
+        } catch (err) {
+          console.error('Failed to load users:', err);
+          setUsers([]);
+        } finally {
+          setLoading(false);
+        }
+
+        // Listen to real-time updates from the `users` collection so role
+        // changes show up instantly in the admin UI (no manual refresh).
+        unsubscribe = onUsersUpdate((docs) => {
+          setUsers((prev) => {
+            const authMap = new Map(prev.map(p => [p.uid, p.authExists]));
+            return docs.map(d => ({ uid: d.id, ...d, authExists: authMap.get(d.id) ?? d.authExists ?? false }));
+          });
+        }, (err) => console.error('onUsersUpdate error:', err));
+      })();
+
+      return () => unsubscribe && unsubscribe();
     }
   }, [userProfile]);
 
@@ -118,8 +147,10 @@ export default function AdminUsersPage() {
       setUsers(updated.map(u => ({ uid: u.id, ...u })));
 
       // Prefer server-provided displayName in notification
-      const name = json.targetDisplayName || updated.find(u => u.id === uid)?.displayName || uid;
-      showNotification('success', `Successfully set role to ${role} for user ${name}`);
+      const name = json.targetDisplayName || (Array.isArray(updated) ? updated.find(u => u.id === uid)?.displayName : null) || uid;
+      const baseMsg = `Successfully set role to ${role} for user ${name}.`;
+      const extra = user.uid === uid ? 'Your session has been refreshed.' : 'They may need to sign out and sign in to pick up updated Auth claims.';
+      showNotification('success', `${baseMsg} ${extra}`);
 
       // If the changed user is the currently signed-in user, refresh profile token/profile locally
       if (user.uid === uid) {
@@ -135,7 +166,11 @@ export default function AdminUsersPage() {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Skeleton count={6} variant="table" />
+      </div>
+    );
   }
 
   if (userProfile?.role !== 'admin') {
@@ -146,10 +181,10 @@ export default function AdminUsersPage() {
     <ProtectedRoute>
       <div className="container mx-auto px-4 py-8">
         {notification && (
-          <div className={`mb-4 max-w-xl mx-auto rounded-md p-3 text-sm shadow ${notification.type === 'success' ? 'bg-green-50 text-green-800 border border-green-100' : 'bg-red-50 text-red-800 border border-red-100'}`}>
-            {notification.message}
+          <div className="mb-4 max-w-xl mx-auto">
+            <Toast type={notification.type} message={notification.message} onClose={() => setNotification(null)} />
           </div>
-        )}
+        )} 
 
         <h1 className="text-3xl font-bold mb-4">Admin: All Users</h1>
         <div className="bg-white shadow-md rounded-lg overflow-x-auto">

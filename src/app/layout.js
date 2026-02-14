@@ -19,9 +19,9 @@ export default function RootLayout({ children }) {
         <Providers>
           <AuthProvider>
             <Presence />
-         
+            <a href="#content" className="skip-link">Skip to content</a>
             <Navbar />
-            <main>{children}</main>
+            <main id="content">{children}</main>
             <Footer />
           </AuthProvider>
         </Providers>

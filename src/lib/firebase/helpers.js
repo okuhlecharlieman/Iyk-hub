@@ -207,6 +207,19 @@ export function onOpportunitiesUpdate(isAdmin, user, callback, onError) {
   return unsubscribe;
 }
 
+// Client-side real-time listener for users collection (admin UI)
+export function onUsersUpdate(callback, onError) {
+  const qy = query(collection(db, 'users'));
+  const unsubscribe = onSnapshot(qy, (querySnapshot) => {
+    const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    callback(users);
+  }, (error) => {
+    console.error('Error in onUsersUpdate listener:', error);
+    if (onError) onError(error);
+  });
+
+  return unsubscribe;
+}
 
 export async function approveOpportunity(opportunityId) {
   const docRef = doc(db, 'opportunities', opportunityId);

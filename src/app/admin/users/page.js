@@ -57,7 +57,9 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (userProfile?.role === 'admin') {
-      listAllUsers().then(setUsers).finally(() => setLoading(false));
+      listAllUsers()
+        .then((list) => setUsers(list.map(u => ({ uid: u.id, ...u }))))
+        .finally(() => setLoading(false));
     }
   }, [userProfile]);
 
@@ -72,6 +74,16 @@ export default function AdminUsersPage() {
   const handleSetRole = async (uid, role) => {
     if (!user) {
       showNotification('error', 'Not authenticated');
+      return;
+    }
+
+    if (!uid) {
+      showNotification('error', 'Unable to determine user id for role change');
+      return;
+    }
+
+    if (!['admin', 'user'].includes(role)) {
+      showNotification('error', 'Invalid role');
       return;
     }
 
@@ -95,7 +107,7 @@ export default function AdminUsersPage() {
 
       // Refresh the list so role changes are visible in the UI
       const updated = await listAllUsers();
-      setUsers(updated);
+      setUsers(updated.map(u => ({ uid: u.id, ...u })));
       showNotification('success', json.message || 'Role updated');
     } catch (err) {
       console.error('Error setting role:', err);

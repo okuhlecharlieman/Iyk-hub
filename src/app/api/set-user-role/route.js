@@ -55,8 +55,12 @@ export async function POST(req) {
 
     return NextResponse.json({ message: `Successfully set role to ${role} for user ${uid}` });
   } catch (error) {
-    console.error('Error setting user role:', error);
-    // Provide actionable message without leaking internal details
+    console.error('Error setting user role:', error?.message || error);
+    // If the error looks like a service-account / init error, return it so deploy/env can be fixed quickly.
+    const msg = (error && String(error.message || error)).slice(0, 1000);
+    if (msg.includes('FIREBASE_SERVICE_ACCOUNT_KEY') || msg.toLowerCase().includes('failed to initialize')) {
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
     return NextResponse.json({ error: 'Unable to change role. Check server logs or ensure FIREBASE_SERVICE_ACCOUNT_KEY is configured.' }, { status: 500 });
   }
 }

@@ -8,23 +8,34 @@ export const initializeFirebaseAdmin = async () => {
     return;
   }
 
-  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccount) {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) {
     throw new Error('Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable.');
+  }
+
+  // Validate JSON and required fields early to give actionable errors.
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    console.error('Invalid FIREBASE_SERVICE_ACCOUNT_KEY JSON:', err.message);
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY contains invalid JSON: ' + err.message);
+  }
+
+  if (!parsed.private_key || !parsed.client_email) {
+    console.error('FIREBASE_SERVICE_ACCOUNT_KEY missing required fields.');
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing required fields (private_key / client_email).');
   }
 
   try {
     await admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(serviceAccount)),
+      credential: admin.credential.cert(parsed),
     });
-    console.log("Firebase Admin SDK initialized successfully.");
+    console.log('Firebase Admin SDK initialized successfully.');
   } catch (error) {
-    console.error("Error initializing Firebase Admin SDK:", error);
-    // Hide sensitive details in production
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error("Failed to initialize Firebase Admin SDK. Check server logs for details.");
-    }
-    throw error;
+    console.error('Error initializing Firebase Admin SDK:', error?.message || error);
+    // Surface the real message for faster debugging (safe for developers).
+    throw new Error('Failed to initialize Firebase Admin SDK: ' + (error?.message || 'unknown error'));
   }
 };
 

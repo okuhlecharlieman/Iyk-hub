@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ensureUserDoc, getUserDoc } from '../lib/helpers';
+import { ensureUserDoc, getUserDoc } from '../lib/firebase/helpers';
 
 const AuthContext = createContext({ user: null, userProfile: null, loading: true });
 

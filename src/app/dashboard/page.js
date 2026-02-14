@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { fetchLatestQuote, getApprovedOpportunities } from '../../lib/helpers';
+import { fetchLatestQuote, getApprovedOpportunities } from '../../lib/firebase/helpers';
 import Link from 'next/link';
 import { FaArrowRight, FaGamepad, FaBriefcase } from 'react-icons/fa';
 

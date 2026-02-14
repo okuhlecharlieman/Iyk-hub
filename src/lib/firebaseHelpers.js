@@ -7,7 +7,33 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-// NOTE: This file should ONLY contain client-side safe Firebase functions.
+// Helper to check if we are on the server
+const isServer = typeof window === 'undefined';
+
+// Helper to get the admin firestore instance, only called on the server.
+const getAdminFirestore = async () => {
+  // Dynamically import to keep client-side bundle small
+  const { initializeFirebaseAdmin } = await import('./firebase/admin');
+  await initializeFirebaseAdmin();
+  const admin = await import('firebase-admin');
+  return admin.firestore();
+};
+
+// Converts Firestore Timestamps to a JSON-serializable format
+const serializeFirestoreData = (doc) => {
+    const data = doc.data();
+    const id = doc.id;
+    const serializedData = { id };
+    for (const [key, value] of Object.entries(data)) {
+        if (value && typeof value.toDate === 'function') {
+            // Convert Firestore Timestamp to ISO string
+            serializedData[key] = value.toDate().toISOString();
+        } else {
+            serializedData[key] = value;
+        }
+    }
+    return serializedData;
+};
 
 // Users
 export async function ensureUserDoc(user) {
@@ -22,7 +48,7 @@ export async function ensureUserDoc(user) {
       points: { weekly: 0, lifetime: 0 },
       bio: '',
       skills: [],
-      role: 'user', // Default role for new users
+      role: 'user',
       createdAt: serverTimestamp(),
     });
   }
@@ -36,7 +62,7 @@ export async function getUserDoc(uid) {
     return {
       id: uid,
       ...data,
-      isAdmin: data.role === 'admin', // Derive isAdmin from the role field
+      isAdmin: data.role === 'admin',
     };
   }
   return null;
@@ -55,7 +81,6 @@ export async function listTopUsers(limitN = 10, filter = 'lifetime') {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-// Admin function to get all users
 export async function listAllUsers() {
   const snap = await getDocs(collection(db, 'users'));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -65,12 +90,10 @@ export async function listAllUsers() {
 export async function createShowcasePost(data, mediaFile) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
-
   let mediaUrl = null;
   if (mediaFile) {
     mediaUrl = await uploadToStorage(mediaFile, `showcase/${user.uid}`);
   }
-
   const postData = {
     ...data,
     uid: user.uid,
@@ -85,9 +108,17 @@ export async function createShowcasePost(data, mediaFile) {
 }
 
 export async function listShowcasePosts(limitN = 50) {
-  const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (isServer) {
+    console.log('Fetching showcase posts on the server...');
+    const adminDb = await getAdminFirestore();
+    const qy = adminDb.collection('wallPosts').orderBy('createdAt', 'desc').limit(limitN);
+    const snap = await qy.get();
+    return snap.docs.map(serializeFirestoreData);
+  } else {
+    const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
 }
 
 export async function listUserShowcasePosts(uid, limitN = 50) {
@@ -109,22 +140,16 @@ export async function togglePostVote(postId, uid) {
   const postRef = doc(db, "wallPosts", postId);
   return runTransaction(db, async (transaction) => {
     const postDoc = await transaction.get(postRef);
-    if (!postDoc.exists()) {
-      throw "Post does not exist!";
-    }
-
+    if (!postDoc.exists()) throw "Post does not exist!";
     const data = postDoc.data();
     const voters = data.voters || [];
     let newVotes = data.votes || 0;
-
     if (voters.includes(uid)) {
-      // User is unvoting
       transaction.update(postRef, {
         voters: voters.filter(voterId => voterId !== uid),
         votes: newVotes - 1,
       });
     } else {
-      // User is voting
       transaction.update(postRef, {
         voters: [...voters, uid],
         votes: newVotes + 1,
@@ -134,8 +159,6 @@ export async function togglePostVote(postId, uid) {
 }
 
 // Opportunities
-
-// Admin function to get all opportunities
 export async function listAllOpportunities() {
     const qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
     const snap = await getDocs(qy);
@@ -145,11 +168,10 @@ export async function listAllOpportunities() {
 export async function createOpportunity(data) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
-
   const oppData = {
     ...data,
     ownerId: user.uid,
-    status: 'pending', // Or 'approved' if you want to bypass approval for some users
+    status: 'pending',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -166,14 +188,20 @@ export async function deleteOpportunity(opportunityId) {
   await deleteDoc(doc(db, 'opportunities', opportunityId));
 }
 
-// Server-side function for fetching approved opportunities
 export async function getApprovedOpportunities(limitN = 50) {
-  const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (isServer) {
+    console.log('Fetching approved opportunities on the server...');
+    const adminDb = await getAdminFirestore();
+    const qy = adminDb.collection('opportunities').where('status', '==', 'approved').orderBy('createdAt', 'desc').limit(limitN);
+    const snap = await qy.get();
+    return snap.docs.map(serializeFirestoreData);
+  } else {
+    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
 }
 
-// Client-side real-time listener
 export function onOpportunitiesUpdate(isAdmin, user, callback, onError) {
   let qy;
   if (isAdmin) {
@@ -190,7 +218,6 @@ export function onOpportunitiesUpdate(isAdmin, user, callback, onError) {
     const opportunities = querySnapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .filter(opp => isAdmin || opp.status === 'approved' || opp.ownerId === user?.uid);
-
     callback(opportunities);
   }, (error) => {
     console.error("Error in onOpportunitiesUpdate listener:", error);
@@ -199,7 +226,6 @@ export function onOpportunitiesUpdate(isAdmin, user, callback, onError) {
 
   return unsubscribe;
 }
-
 
 export async function approveOpportunity(opportunityId) {
   const docRef = doc(db, 'opportunities', opportunityId);
@@ -213,15 +239,20 @@ export async function rejectOpportunity(opportunityId) {
 
 // Quotes
 export async function fetchLatestQuote() {
-  const qy = query(collection(db, 'quotes'), orderBy('createdAt', 'desc'), limit(1));
-  const snap = await getDocs(qy);
-  if (snap.empty) {
-    return null;
+  if (isServer) {
+    const adminDb = await getAdminFirestore();
+    const qy = adminDb.collection('quotes').orderBy('createdAt', 'desc').limit(1);
+    const snap = await qy.get();
+    if (snap.empty) return null;
+    return serializeFirestoreData(snap.docs[0]);
+  } else {
+    const qy = query(collection(db, 'quotes'), orderBy('createdAt', 'desc'), limit(1));
+    const snap = await getDocs(qy);
+    if (snap.empty) return null;
+    const quoteDoc = snap.docs[0];
+    return { id: quoteDoc.id, ...quoteDoc.data() };
   }
-  const quoteDoc = snap.docs[0];
-  return { id: quoteDoc.id, ...quoteDoc.data() };
 }
-
 
 // Storage
 export async function uploadToStorage(file, prefix = 'uploads') {

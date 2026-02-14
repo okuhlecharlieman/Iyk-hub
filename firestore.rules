@@ -40,8 +40,15 @@ service cloud.firestore {
       allow get: if isAdmin() || resource.data.status == 'approved' || resource.data.ownerId == request.auth.uid;
 
       // Admins can list all opportunities.
-      // Authenticated users can list approved or their own pending opportunities.
-      allow list: if isAdmin() || (request.auth.uid != null);
+      // Authenticated users may only list approved opportunities or their
+      // own documents — this prevents exposing other users' pending items.
+      allow list: if isAdmin()
+        || (
+          request.auth.uid != null && (
+            request.query.where('status','==','approved') ||
+            request.query.where('ownerId','==', request.auth.uid)
+          )
+        );
 
 
       // Authenticated users can create new opportunities.

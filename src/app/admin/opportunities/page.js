@@ -34,15 +34,24 @@ export default function ManageOpportunities() {
 
     const handleStatusUpdate = async (id, status) => {
         try {
-            await fetch('/api/admin/opportunities', {
+            const idToken = user ? await user.getIdToken(true) : null;
+            const res = await fetch('/api/admin/opportunities', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
                 body: JSON.stringify({ id, status }),
             });
-            loadOpps(); // Refresh the list after updating
+
+            const json = await res.json();
+            if (!res.ok) {
+              showNotification('error', json.error || json.message || 'Failed to update opportunity');
+              return;
+            }
+
+            await loadOpps(); // Refresh the list after updating
+            showNotification('success', `Updated "${json.title || id}" to ${status}`);
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);
-            alert(`Failed to update opportunity. See console for details.`);
+            showNotification('error', `Failed to update opportunity`);
         }
     };
     

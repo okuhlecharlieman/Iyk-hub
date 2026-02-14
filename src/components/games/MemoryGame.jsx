@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { db } from '../../lib/firebase';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 
 const cardEmojis = ['🍎', '🍌', '🍇', '🍒', '🍓', '🍍', '🥝', '🍊'];

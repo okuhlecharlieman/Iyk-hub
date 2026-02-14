@@ -8,6 +8,9 @@ import { FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
 import { auth } from '../../../lib/firebase';
 import { updateOpportunity as clientUpdateOpportunity, approveOpportunity as clientApproveOpportunity, rejectOpportunity as clientRejectOpportunity } from '../../../lib/firebase/helpers';
 import Button from '../../../components/ui/Button';
+import { useToast } from '../../../components/ui/ToastProvider';
+import Skeleton from '../../../components/ui/Skeleton';
+import Button from '../../../components/ui/Button';
 import Toast from '../../../components/ui/Toast';
 import Skeleton from '../../../components/ui/Skeleton';
 
@@ -16,12 +19,7 @@ export default function ManageOpportunities() {
     const [loading, setLoading] = useState(true);
     const [opps, setOpps] = useState([]);
     const [filter, setFilter] = useState('pending'); // ‘pending’, ‘approved’, ‘rejected'
-    const [notification, setNotification] = useState(null); // { type, message }
-
-    const showNotification = (type, message, timeout = 3500) => {
-      setNotification({ type, message });
-      setTimeout(() => setNotification(null), timeout);
-    };
+    const toast = useToast();
 
     useEffect(() => {
         // Only load admin-owned data when we have BOTH a signed-in user and
@@ -39,7 +37,7 @@ export default function ManageOpportunities() {
         try {
             const firebaseUser = user || auth.currentUser;
             if (!firebaseUser) {
-              showNotification('error', 'You must be signed in to manage opportunities');
+              toast('error', 'You must be signed in to manage opportunities');
               setOpps([]);
               setLoading(false);
               return;
@@ -49,7 +47,7 @@ export default function ManageOpportunities() {
             const res = await fetch('/api/admin/opportunities', { headers: { Authorization: `Bearer ${idToken}` } });
             const body = await res.json();
             if (!res.ok) {
-              showNotification('error', body.error || 'Failed to load opportunities');
+              toast('error', body.error || 'Failed to load opportunities');
               setOpps([]);
             } else if (!Array.isArray(body)) {
               console.warn('/api/admin/opportunities returned non-array', body);
@@ -84,7 +82,7 @@ export default function ManageOpportunities() {
             if (!res.ok) {
               // If server-side admin API is unavailable or unauthorized, fall back
               // to client-side Firestore update (relies on Firestore security rules).
-              showNotification('error', json.error || json.message || 'Failed to update opportunity via admin API — trying client fallback');
+              toast('error', json.error || json.message || 'Failed to update opportunity via admin API — trying client fallback');
 
               try {
                 if (status === 'approved') {
@@ -95,17 +93,17 @@ export default function ManageOpportunities() {
                   await clientUpdateOpportunity(id, { status });
                 }
                 await loadOpps();
-                showNotification('success', `Updated "${json.title || id}" to ${status} (client fallback)`);
+                toast('success', `Updated "${json.title || id}" to ${status} (client fallback)`);
                 return;
               } catch (fallbackErr) {
                 console.error('Client-side fallback failed:', fallbackErr);
-                showNotification('error', 'Both admin API and client fallback failed');
+                toast('error', 'Both admin API and client fallback failed');
                 return;
               }
             }
 
             await loadOpps(); // Refresh the list after updating
-            showNotification('success', `Updated "${json.title || id}" to ${status}`);
+            toast('success', `Updated "${json.title || id}" to ${status}`);
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);
             showNotification('error', `Failed to update opportunity`);
@@ -121,13 +119,7 @@ export default function ManageOpportunities() {
                     <div className="mb-8">
                         <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white">Manage Opportunities</h1>
                         <Link href="/admin" className="text-blue-600 dark:text-blue-400 hover:underline">← Back to Admin Dashboard</Link>
-                    </div>
-
-                    {notification && (
-                      <div className="mb-4 max-w-xl">
-                        <Toast type={notification.type} message={notification.message} onClose={() => setNotification(null)} />
-                      </div>
-                    )}
+                    </div> 
 
                     <div className="flex justify-center mb-6 border-b border-gray-200 dark:border-gray-700">
                         <button onClick={() => setFilter('pending')} className={`tab-button ${filter === 'pending' ? 'active' : ''}`}>Pending</button>

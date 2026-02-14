@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import { FaExclamationTriangle } from 'react-icons/fa';
+import Button from './ui/Button';
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, userProfile } = useAuth();
@@ -51,7 +52,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
                     <p className="text-sm text-gray-600 dark:text-gray-300">Please log out and log back in with an administrator account.</p>
                 </div>
 
-                <button onClick={() => router.push('/dashboard')} className="mt-6 w-full btn-primary">Return to Dashboard</button>
+                <Button onClick={() => router.push('/dashboard')} className="mt-6 w-full" variant="primary">Return to Dashboard</Button>
             </div>
         </div>
     );

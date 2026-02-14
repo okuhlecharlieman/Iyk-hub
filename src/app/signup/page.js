@@ -11,6 +11,8 @@ import { auth } from '../../lib/firebase';
 import { ensureUserDoc } from '../../lib/firebase/helpers';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/ToastProvider';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -38,7 +40,7 @@ export default function SignupPage() {
       await updateProfile(userCredential.user, { displayName });
       await sendEmailVerification(userCredential.user);
       await ensureUserDoc(userCredential.user, { displayName }); // Pass additional data
-      alert("Verification email sent! Please check your inbox.");
+      toast('success', "Verification email sent! Please check your inbox.");
       router.push('/');
     } catch (err) {
       setError(err.message);
@@ -80,9 +82,7 @@ export default function SignupPage() {
           <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input-field" />
           <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="input-field" />
           <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="input-field" />
-          <button type="submit" disabled={loading} className="btn-primary w-full flex justify-center">
-            {loading ? <LoadingSpinner size="sm" /> : 'Sign Up'}
-          </button>
+          <Button type="submit" disabled={loading} variant="primary" className="w-full flex justify-center">{loading ? <LoadingSpinner size="sm" /> : 'Sign Up'}</Button>
         </form>
 
         <div className="relative">
@@ -95,9 +95,7 @@ export default function SignupPage() {
         </div>
 
         <div>
-          <button onClick={handleGoogleSignIn} disabled={loading} className="btn-secondary w-full">
-            Sign in with Google
-          </button>
+          <Button onClick={handleGoogleSignIn} disabled={loading} variant="secondary" className="w-full">Sign in with Google</Button>
         </div>
 
         <div className="text-sm text-center">

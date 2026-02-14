@@ -6,7 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { listAllUsers, onUsersUpdate } from '../../../lib/firebase/helpers';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Button from '../../../components/ui/Button';
-import Toast from '../../../components/ui/Toast';
+import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
 
 const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
@@ -100,27 +100,22 @@ export default function AdminUsersPage() {
     }
   }, [userProfile]);
 
-  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message }
   const [processingUid, setProcessingUid] = useState(null);
-
-  const showNotification = (type, message, timeout = 3500) => {
-    setNotification({ type, message });
-    setTimeout(() => setNotification(null), timeout);
-  };
+  const toast = useToast();
 
   const handleSetRole = async (uid, role) => {
     if (!user) {
-      showNotification('error', 'Not authenticated');
+      toast('error', 'Not authenticated');
       return;
     }
 
     if (!uid) {
-      showNotification('error', 'Unable to determine user id for role change');
+      toast('error', 'Unable to determine user id for role change');
       return;
     }
 
     if (!['admin', 'user'].includes(role)) {
-      showNotification('error', 'Invalid role');
+      toast('error', 'Invalid role');
       return;
     }
 
@@ -138,7 +133,7 @@ export default function AdminUsersPage() {
 
       const json = await res.json();
       if (!res.ok) {
-        showNotification('error', json.error || json.message || 'Failed to set role');
+        toast('error', json.error || json.message || 'Failed to set role');
         return;
       }
 
@@ -150,7 +145,7 @@ export default function AdminUsersPage() {
       const name = json.targetDisplayName || (Array.isArray(updated) ? updated.find(u => u.id === uid)?.displayName : null) || uid;
       const baseMsg = `Successfully set role to ${role} for user ${name}.`;
       const extra = user.uid === uid ? 'Your session has been refreshed.' : 'They may need to sign out and sign in to pick up updated Auth claims.';
-      showNotification('success', `${baseMsg} ${extra}`);
+      toast('success', `${baseMsg} ${extra}`);
 
       // If the changed user is the currently signed-in user, refresh profile token/profile locally
       if (user.uid === uid) {
@@ -159,7 +154,7 @@ export default function AdminUsersPage() {
       }
     } catch (err) {
       console.error('Error setting role:', err);
-      showNotification('error', 'Error setting role: ' + (err.message || 'Unknown error'));
+      toast('error', 'Error setting role: ' + (err.message || 'Unknown error'));
     } finally {
       setProcessingUid(null);
     }
@@ -180,11 +175,7 @@ export default function AdminUsersPage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto px-4 py-8">
-        {notification && (
-          <div className="mb-4 max-w-xl mx-auto">
-            <Toast type={notification.type} message={notification.message} onClose={() => setNotification(null)} />
-          </div>
-        )} 
+
 
         <h1 className="text-3xl font-bold mb-4">Admin: All Users</h1>
         <div className="bg-white shadow-md rounded-lg overflow-x-auto">

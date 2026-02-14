@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import LoadingSpinner from '../LoadingSpinner';
+import Button from '../ui/Button';
+import { useToast } from '../ui/ToastProvider';
 
 export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
   const [title, setTitle] = useState('');
@@ -58,21 +60,9 @@ export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
           ></textarea>
         </div>
         <div className="flex justify-end pt-4 space-x-2">
-           <button
-            type="button"
-            onClick={onClose}
-            className="btn-secondary py-2 px-4 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 transition"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn-primary py-2 px-4 rounded-lg flex items-center justify-center disabled:opacity-50"
-          >
-            {isLoading ? <LoadingSpinner size="sm" /> : 'Update Post'}
-          </button>
-        </div>
+           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={isLoading} variant="primary">{isLoading ? <LoadingSpinner size="sm" /> : 'Update Post'}</Button>
+        </div> 
       </form>
     </Modal>
   );

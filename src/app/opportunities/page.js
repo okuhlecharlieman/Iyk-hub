@@ -14,6 +14,8 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import OpportunityCard from '../../components/OpportunityCard';
 import OpportunityForm from '../../components/OpportunityForm';
 import Modal from '../../components/Modal';
+import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/ToastProvider';
 
 const TABS = { ALL: 'All', PENDING: 'Pending' };
 
@@ -26,6 +28,8 @@ export default function OpportunitiesPage() {
   const [activeTab, setActiveTab] = useState(TABS.ALL);
 
   const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
+
+  const toast = useToast();
 
   useEffect(() => {
     // Ensure this runs only in the browser and when a user is present
@@ -56,17 +60,17 @@ export default function OpportunitiesPage() {
 
         if (editingOpp) {
             await updateOpportunity(editingOpp.id, submissionData);
-            alert('Opportunity updated successfully!');
+            toast('success', 'Opportunity updated successfully!');
         } else {
             submissionData = { ...submissionData, ownerId: user.uid };
             await createOpportunity(submissionData);
-            alert('Opportunity submitted for review!');
+            toast('success', 'Opportunity submitted for review!');
         }
         setIsFormModalOpen(false);
         setEditingOpp(null);
     } catch (error) {
         console.error("Error submitting form:", error);
-        alert('There was an error. Please try again.');
+        toast('error', 'There was an error. Please try again.');
     }
   };
 
@@ -109,7 +113,7 @@ export default function OpportunitiesPage() {
               <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Opportunity Board</h1>
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Connect with jobs, gigs, and collaborations in our community.</p>
             </div>
-            <button onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }} className="btn-primary w-full md:w-auto mt-6 md:mt-0">+ Add Opportunity</button>
+            <Button onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }} variant="primary" className="w-full md:w-auto mt-6 md:mt-0">+ Add Opportunity</Button>
           </div>
 
           {isAdmin && (

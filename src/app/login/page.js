@@ -5,6 +5,8 @@ import { auth } from '../../lib/firebase';
 import { ensureUserDoc } from '../../lib/firebase/helpers';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/ToastProvider';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -56,11 +58,9 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="space-y-4">
           <input className="w-full p-3 rounded-lg bg-gray-100/80 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all" placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} />
           <input className="w-full p-3 rounded-lg bg-gray-100/80 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all" placeholder="Password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} />
-          <button className="w-full btn-primary rounded-lg py-3" disabled={loading}>
-            {loading ? <LoadingSpinner /> : 'Sign in'}
-          </button>
+          <Button type="submit" className="w-full rounded-lg py-3" variant="primary" disabled={loading}>{loading ? <LoadingSpinner /> : 'Sign in'}</Button>
         </form>
-        <button onClick={signGoogle} className="w-full mt-4 border border-gray-300 dark:border-gray-600 rounded-lg py-3 hover:bg-gray-100 dark:hover:bg-gray-700/70 transition-colors">Continue with Google</button>
+        <Button onClick={signGoogle} className="w-full mt-4 rounded-lg py-3" variant="secondary">Continue with Google</Button>
         <p className="mt-6 text-sm text-center text-gray-600 dark:text-gray-400">
           No account? <a className="underline hover:text-blue-500" href="/signup">Sign up</a>
         </p>

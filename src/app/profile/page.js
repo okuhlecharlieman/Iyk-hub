@@ -6,10 +6,13 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FaEdit, FaSave, FaTimes, FaShieldAlt } from 'react-icons/fa';
 import Link from 'next/link';
+import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/ToastProvider';
 
 
 export default function ProfilePage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [doc, setDoc] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -59,7 +62,7 @@ export default function ProfilePage() {
       await loadProfile(); // Refresh data
     } catch (error) {
       console.error("Error saving profile:", error);
-      alert('Failed to save profile.');
+      toast('error', 'Failed to save profile.');
     } finally {
       setIsSaving(false);
     }
@@ -99,10 +102,10 @@ export default function ProfilePage() {
                       <textarea name="bio" value={form.bio} onChange={handleFormChange} className="input-field text-center" placeholder="Your Bio" rows="3"></textarea>
                       <input type="text" name="skills" value={form.skills} onChange={handleFormChange} className="input-field text-center" placeholder="Skills (comma-separated)" />
                       <div className="flex justify-center gap-4 mt-4">
-                        <button onClick={handleSave} disabled={isSaving} className="btn-primary w-24 flex items-center justify-center">
+                        <Button variant="primary" size="md" onClick={handleSave} disabled={isSaving} className="w-24 flex items-center justify-center">
                           {isSaving ? <LoadingSpinner size="sm" /> : <><FaSave className="mr-2" /> Save</>}
-                        </button>
-                        <button onClick={() => setIsEditing(false)} className="btn-secondary w-24 flex items-center justify-center"><FaTimes className="mr-2" /> Cancel</button>
+                        </Button>
+                        <Button variant="secondary" size="md" onClick={() => setIsEditing(false)} className="w-24 flex items-center justify-center"><FaTimes className="mr-2" /> Cancel</Button>
                       </div>
                     </div>
                   ) : (

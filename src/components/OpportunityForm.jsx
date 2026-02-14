@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Button from './ui/Button';
 
 export default function OpportunityForm({ onSubmit, initialFormState, submitButtonText }) {
   const [form, setForm] = useState(initialFormState);
@@ -25,9 +26,9 @@ export default function OpportunityForm({ onSubmit, initialFormState, submitButt
         <textarea className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Short Description" rows={3} name="description" value={form.description} onChange={handleChange} required />
         <input className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Tags (e.g., tech, volunteering)" name="tags" value={form.tags} onChange={handleChange} />
         <div className="flex justify-end space-x-3 pt-4">
-            <button type="button" className="btn-secondary" onClick={() => setForm(initialFormState)}>Reset</button>
-            <button type="submit" className="btn-primary">{submitButtonText}</button>
-        </div>
+            <Button type="button" variant="secondary" onClick={() => setForm(initialFormState)}>Reset</Button>
+            <Button type="submit" variant="primary">{submitButtonText}</Button>
+        </div> 
       </form>
   );
 }

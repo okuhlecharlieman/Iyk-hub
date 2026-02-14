@@ -2,23 +2,33 @@
 import { NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
-// Service account credentials should be stored securely as environment variables
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT) : null;
+export const runtime = 'nodejs';
+
+// Lazily parse service account JSON (accept both legacy and canonical env names)
+let serviceAccount = null;
+const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
+if (rawServiceAccount) {
+  try {
+    serviceAccount = JSON.parse(rawServiceAccount);
+  } catch (e) {
+    console.warn('Invalid FIREBASE_SERVICE_ACCOUNT_KEY/ACCOUNT JSON:', e?.message || e);
+  }
+}
 
 if (!admin.apps.length) {
-    if (serviceAccount) {
-        try {
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-            });
-        } catch (e) {
-            console.error('Firebase admin initialization error', e.stack);
-        }
-    } else {
-        console.warn("FIREBASE_SERVICE_ACCOUNT not set. Skipping Firebase admin initialization.");
+  if (serviceAccount) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+      });
+    } catch (e) {
+      console.error('Firebase admin initialization error', e.stack);
     }
-}
+  } else {
+    console.warn("FIREBASE_SERVICE_ACCOUNT_KEY not set. Skipping Firebase admin initialization.");
+  }
+} 
 
 export async function GET(request) {
   // During the build process, there's no real request or user.

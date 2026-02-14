@@ -116,7 +116,16 @@ export default function AdminUsersPage() {
       // Refresh the list so role changes are visible in the UI
       const updated = await listAllUsers();
       setUsers(updated.map(u => ({ uid: u.id, ...u })));
-      showNotification('success', json.message || 'Role updated');
+
+      // Prefer server-provided displayName in notification
+      const name = json.targetDisplayName || updated.find(u => u.id === uid)?.displayName || uid;
+      showNotification('success', `Successfully set role to ${role} for user ${name}`);
+
+      // If the changed user is the currently signed-in user, refresh profile token/profile locally
+      if (user.uid === uid) {
+        // Force reload of ID token and userProfile will update via Firestore listener
+        await user.getIdToken(true);
+      }
     } catch (err) {
       console.error('Error setting role:', err);
       showNotification('error', 'Error setting role: ' + (err.message || 'Unknown error'));

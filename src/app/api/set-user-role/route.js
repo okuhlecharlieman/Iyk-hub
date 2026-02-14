@@ -53,7 +53,19 @@ export async function POST(req) {
     await admin.auth().setCustomUserClaims(uid, { role });
     await adminDb.collection('users').doc(uid).set({ role }, { merge: true });
 
-    return NextResponse.json({ message: `Successfully set role to ${role} for user ${uid}` });
+    // Try to provide a friendly display name in the response
+    let targetDisplayName = null;
+    try {
+      const authUser = await admin.auth().getUser(uid);
+      targetDisplayName = authUser.displayName || null;
+    } catch (e) {
+      // ignore - we already validated existence earlier
+    }
+
+    return NextResponse.json({
+      message: `Successfully set role to ${role} for user ${targetDisplayName || uid}`,
+      targetDisplayName,
+    });
   } catch (error) {
     console.error('Error setting user role:', error?.message || error);
     // If the error looks like a service-account / init error, return it so deploy/env can be fixed quickly.

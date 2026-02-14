@@ -8,7 +8,6 @@ export async function POST(req) {
   await initializeFirebaseAdmin();
   const admin = await import('firebase-admin');
 
-  await initializeFirebaseAdmin();
   const { uid, role } = await req.json();
 
   const idToken = req.headers.get("authorization")?.split("Bearer ")[1];

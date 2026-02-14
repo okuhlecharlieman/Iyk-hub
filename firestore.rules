@@ -16,8 +16,10 @@ service cloud.firestore {
       allow get: if request.auth.uid == userId || isAdmin();
 
       // Admins can list all users.
-      // Non-admins cannot list users.
-      allow list: if true;
+      // Public leaderboard reads are served via a server endpoint that returns
+      // only public profile fields (displayName, photoURL, points).
+      // Listing all users directly is admin-only.
+      allow list: if isAdmin();
 
       // Users can create their own document upon signup.
       allow create: if request.auth.uid == userId;

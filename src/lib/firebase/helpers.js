@@ -48,10 +48,14 @@ export async function updateUserDoc(uid, data) {
 }
 
 export async function listTopUsers(limitN = 10, filter = 'lifetime') {
-  const orderByField = `points.${filter}`;
-  const qy = query(collection(db, 'users'), orderBy(orderByField, 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Use the server-side `/api/leaderboard` endpoint so the client doesn't
+  // need direct read access to the full `users` collection.
+  const res = await fetch(`/api/leaderboard?limit=${limitN}&filter=${encodeURIComponent(filter)}`);
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.error || json?.message || 'Failed to fetch leaderboard');
+  }
+  return json.users;
 }
 
 // Admin function to get all users

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { listTopUsers } from '../lib/firebase/helpers';
 import Link from 'next/link';
 import { FaTrophy } from 'react-icons/fa';
 
@@ -10,29 +9,26 @@ export default function LeaderboardPreview({ weekly = true }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let unsub;
-    try {
-      const usersCol = collection(db, 'users');
-      const field = weekly ? 'points.weekly' : 'points.lifetime';
-      const q = query(usersCol, orderBy(field, 'desc'), limit(5));
-      unsub = onSnapshot(
-        q,
-        (snap) => {
-          setTop(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-          setError("");
-        },
-        (err) => {
-          setError(
-            err?.message?.includes("index") ?
-              "Leaderboard unavailable: Firestore index missing. Please contact admin." :
-              "Unable to load leaderboard. Please try again later."
-          );
+    let mounted = true;
+    setError("");
+    const load = async () => {
+      try {
+        const topUsers = await listTopUsers(5, weekly ? 'weekly' : 'lifetime');
+        if (!mounted) return;
+        setTop(topUsers);
+      } catch (err) {
+        if (err?.message?.includes("index")) {
+          setError("Leaderboard unavailable: Firestore index missing. Please contact admin.");
+        } else if (err?.message?.toLowerCase().includes("permission")) {
+          setError("Leaderboard unavailable: Permission denied. Please contact admin.");
+        } else {
+          setError("Unable to load leaderboard. Please try again later.");
         }
-      );
-    } catch (err) {
-      setError("Leaderboard error: " + (err.message || "Unknown error"));
-    }
-    return () => unsub && unsub();
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
   }, [weekly]);
 
   return (

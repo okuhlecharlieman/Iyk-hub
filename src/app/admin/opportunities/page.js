@@ -5,15 +5,25 @@ import { useAuth } from '../../../context/AuthContext';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
+import { auth } from '../../../lib/firebase';
 
 export default function ManageOpportunities() {
     const { user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
     const [opps, setOpps] = useState([]);
-    const [filter, setFilter] = useState('pending'); // ‘pending’, ‘approved’, ‘rejected’
+    const [filter, setFilter] = useState('pending'); // ‘pending’, ‘approved’, ‘rejected'
+    const [notification, setNotification] = useState(null); // { type, message }
+
+    const showNotification = (type, message, timeout = 3500) => {
+      setNotification({ type, message });
+      setTimeout(() => setNotification(null), timeout);
+    };
 
     useEffect(() => {
-        if (userProfile?.isAdmin) {
+        // Only load admin-owned data when we have BOTH a signed-in user and
+        // a Firestore profile that marks them admin. This prevents calling the
+        // admin API without an ID token (causing 401s).
+        if (user && userProfile?.isAdmin) {
             loadOpps();
         } else if (user) {
             setLoading(false);
@@ -23,18 +33,43 @@ export default function ManageOpportunities() {
     const loadOpps = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/admin/opportunities');
-            const allOpps = await res.json();
-            setOpps(allOpps);
+            const firebaseUser = user || auth.currentUser;
+            if (!firebaseUser) {
+              showNotification('error', 'You must be signed in to manage opportunities');
+              setOpps([]);
+              setLoading(false);
+              return;
+            }
+
+            const idToken = await firebaseUser.getIdToken(true);
+            const res = await fetch('/api/admin/opportunities', { headers: { Authorization: `Bearer ${idToken}` } });
+            const body = await res.json();
+            if (!res.ok) {
+              showNotification('error', body.error || 'Failed to load opportunities');
+              setOpps([]);
+            } else if (!Array.isArray(body)) {
+              console.warn('/api/admin/opportunities returned non-array', body);
+              setOpps([]);
+            } else {
+              setOpps(body);
+            }
         } catch (error) {
             console.error("Error loading opportunities:", error);
+            showNotification('error', 'Error loading opportunities');
+            setOpps([]);
         }
         setLoading(false);
     };
 
     const handleStatusUpdate = async (id, status) => {
         try {
-            const idToken = user ? await user.getIdToken(true) : null;
+            const firebaseUser = user || auth.currentUser;
+            if (!firebaseUser) {
+              showNotification('error', 'You must be signed in to perform this action');
+              return;
+            }
+
+            const idToken = await firebaseUser.getIdToken(true);
             const res = await fetch('/api/admin/opportunities', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },

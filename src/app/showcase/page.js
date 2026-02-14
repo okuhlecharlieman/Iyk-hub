@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Masonry from 'react-masonry-css';
 import { useAuth } from '../../context/AuthContext';
-import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc, togglePostVote } from '../../lib/firebaseHelpers';
+import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc, togglePostVote } from '../../lib/firebase/helpers';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
 import NewPostCard from '../../components/showcase/NewPostCard';
 import NewPostModal from '../../components/showcase/NewPostModal';

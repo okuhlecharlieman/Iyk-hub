@@ -1,11 +1,13 @@
 
 import { NextResponse } from "next/server";
-import { auth } from "firebase-admin";
 import { initializeFirebaseAdmin } from "../../../lib/firebase/admin";
 
 export const runtime = 'nodejs';
 
 export async function POST(req) {
+  await initializeFirebaseAdmin();
+  const admin = await import('firebase-admin');
+
   await initializeFirebaseAdmin();
   const { uid, role } = await req.json();
 
@@ -16,12 +18,12 @@ export async function POST(req) {
   }
 
   try {
-    const decodedToken = await auth().verifyIdToken(idToken);
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
     if (decodedToken.role !== "admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await auth().setCustomUserClaims(uid, { role });
+    await admin.auth().setCustomUserClaims(uid, { role });
     return NextResponse.json({ message: `Successfully set role to ${role} for user ${uid}` });
   } catch (error) {
     console.error("Error setting user role:", error);

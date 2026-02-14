@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
+import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 
 export const runtime = 'nodejs';
 
@@ -15,20 +15,6 @@ if (rawServiceAccount) {
   }
 }
 
-if (!admin.apps.length) {
-  if (serviceAccount) {
-    try {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-      });
-    } catch (e) {
-      console.error('Firebase admin initialization error', e.stack);
-    }
-  } else {
-    console.warn("FIREBASE_SERVICE_ACCOUNT_KEY not set. Skipping Firebase admin initialization.");
-  }
-} 
 
 export async function GET(request) {
   // During the build process, there's no real request or user.
@@ -39,11 +25,14 @@ export async function GET(request) {
     return NextResponse.json({ success: true, users: [] });
   }
 
-  // Ensure admin is initialized before proceeding
-  if (!admin.apps.length) {
-      console.error("API Route Error: Firebase Admin SDK not initialized.");
-      return NextResponse.json({ success: false, error: 'Firebase Admin not configured.' }, { status: 500 });
+  // If running in production build-time and no service account, return empty list
+  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
+    console.log("Build-time: Returning empty list for /api/list-users.");
+    return NextResponse.json({ success: true, users: [] });
   }
+
+  await initializeFirebaseAdmin();
+  const admin = await import('firebase-admin');
 
   try {
     // The security check is now implicitly handled by the fact that only an

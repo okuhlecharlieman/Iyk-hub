@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 
 export const runtime = 'nodejs';
 
 export async function POST(request) {
-  initializeFirebaseAdmin();
+  await initializeFirebaseAdmin();
+  const admin = await import('firebase-admin');
   try {
     const { postId, uid } = await request.json();
 

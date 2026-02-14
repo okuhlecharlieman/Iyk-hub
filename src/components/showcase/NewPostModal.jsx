@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { createShowcasePost } from '../../lib/helpers';
+import { createShowcasePost } from '../../lib/firebase/helpers';
 import Modal from '../Modal';
 import LoadingSpinner from '../LoadingSpinner';
 

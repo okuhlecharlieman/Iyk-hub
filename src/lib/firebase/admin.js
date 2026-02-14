@@ -77,3 +77,30 @@ export async function listShowcasePosts(limitN = 50) {
 
   return snap.docs.map(serializeFirestoreData);
 }
+
+export async function listAllUsers() {
+    await initializeFirebaseAdmin();
+    const adminAuth = admin.auth();
+    const userRecords = await adminAuth.listUsers();
+    return userRecords.users.map(user => ({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        disabled: user.disabled,
+        customClaims: user.customClaims
+    }));
+}
+
+export async function listAllOpportunities() {
+    await initializeFirebaseAdmin();
+    const adminDb = admin.firestore();
+    const snap = await adminDb.collection('opportunities').get();
+    return snap.docs.map(serializeFirestoreData);
+}
+
+export async function updateOpportunity(id, data) {
+    await initializeFirebaseAdmin();
+    const adminDb = admin.firestore();
+    await adminDb.collection('opportunities').doc(id).update(data);
+}

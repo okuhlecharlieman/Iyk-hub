@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
-import { listAllOpportunities, listAllUsers } from '../../lib/firebaseHelpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
@@ -17,7 +16,13 @@ export default function AdminPage() {
             async function loadStats() {
                 setLoading(true);
                 try {
-                    const [users, opps] = await Promise.all([listAllUsers(), listAllOpportunities()]);
+                    const [usersRes, oppsRes] = await Promise.all([
+                        fetch('/api/admin/users'),
+                        fetch('/api/admin/opportunities')
+                    ]);
+                    const users = await usersRes.json();
+                    const opps = await oppsRes.json();
+
                     const pending = opps.filter(o => o.status === 'pending').length;
                     const approved = opps.filter(o => o.status === 'approved').length;
                     setStats({ users: users.length, pending, approved });

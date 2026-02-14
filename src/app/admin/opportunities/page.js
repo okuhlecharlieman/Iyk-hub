@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
-import { listAllOpportunities, updateOpportunity } from '../../../lib/firebaseHelpers';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaCheck, FaTimes, FaExternalLinkAlt } from 'react-icons/fa';
@@ -14,29 +13,33 @@ export default function ManageOpportunities() {
     const [filter, setFilter] = useState('pending'); // ‘pending’, ‘approved’, ‘rejected’
 
     useEffect(() => {
-        // Ensure this runs only in the browser
-        if (userProfile?.isAdmin && typeof window !== 'undefined') {
-            const loadOpps = async () => {
-                setLoading(true);
-                try {
-                    const allOpps = await listAllOpportunities();
-                    setOpps(allOpps);
-                } catch (error) {
-                    console.error("Error loading opportunities:", error);
-                }
-                setLoading(false);
-            };
+        if (userProfile?.isAdmin) {
             loadOpps();
-        } else if(user) {
+        } else if (user) {
             setLoading(false);
         }
     }, [user, userProfile]);
 
+    const loadOpps = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/opportunities');
+            const allOpps = await res.json();
+            setOpps(allOpps);
+        } catch (error) {
+            console.error("Error loading opportunities:", error);
+        }
+        setLoading(false);
+    };
+
     const handleStatusUpdate = async (id, status) => {
         try {
-            await updateOpportunity(id, { status });
-            // No need to call loadOpps, the component will re-render
-            // due to the state change in the parent component.
+            await fetch('/api/admin/opportunities', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status }),
+            });
+            loadOpps(); // Refresh the list after updating
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);
             alert(`Failed to update opportunity. See console for details.`);

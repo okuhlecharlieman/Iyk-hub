@@ -1,10 +1,10 @@
 
 import Link from 'next/link';
-import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebaseHelpers';
+import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebase/admin';
 import ContentCard from '../components/ContentCard';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush } from 'react-icons/fa';
 
-// Force dynamic rendering to avoid Firebase permission errors at build time
+// Force dynamic rendering to avoid static generation at build time
 export const dynamic = 'force-dynamic'; 
 
 // Helper to create a consistent section layout

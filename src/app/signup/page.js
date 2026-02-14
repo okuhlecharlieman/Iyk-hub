@@ -8,7 +8,7 @@ import {
   sendEmailVerification
 } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { ensureUserDoc } from '../../lib/firebaseHelpers';
+import { ensureUserDoc } from '../../lib/helpers';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../../components/LoadingSpinner';
 

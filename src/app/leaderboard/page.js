@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { listTopUsers } from '../../lib/firebaseHelpers';
+import { listTopUsers } from '../../lib/helpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Podium from '../../components/Podium';
 import LeaderboardItem from '../../components/LeaderboardItem';

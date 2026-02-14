@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
-import { listAllUsers } from '../../../lib/firebaseHelpers';
+import { listAllUsers } from '../../../lib/helpers';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 
 const UserRow = ({ user, onSetRole }) => {

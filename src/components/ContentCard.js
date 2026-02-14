@@ -1,7 +1,7 @@
 "use client";
 import { FaRegHeart, FaRegComment, FaCode, FaMusic, FaPaintBrush, FaRegUserCircle } from 'react-icons/fa';
 import { useState, useEffect } from 'react';
-import { getUserDoc } from '../lib/firebaseHelpers';
+import { getUserDoc } from '../lib/firebase/user'; // Corrected import path
 import Link from 'next/link';
 import CodeSnippet from './CodeSnippet';
 

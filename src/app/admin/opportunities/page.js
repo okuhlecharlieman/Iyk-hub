@@ -10,9 +10,6 @@ import { updateOpportunity as clientUpdateOpportunity, approveOpportunity as cli
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
-import Button from '../../../components/ui/Button';
-import Toast from '../../../components/ui/Toast';
-import Skeleton from '../../../components/ui/Skeleton';
 
 export default function ManageOpportunities() {
     const { user, userProfile } = useAuth();
@@ -57,7 +54,7 @@ export default function ManageOpportunities() {
             }
         } catch (error) {
             console.error("Error loading opportunities:", error);
-            showNotification('error', 'Error loading opportunities');
+            toast('error', 'Error loading opportunities');
             setOpps([]);
         }
         setLoading(false);
@@ -67,7 +64,7 @@ export default function ManageOpportunities() {
         try {
             const firebaseUser = user || auth.currentUser;
             if (!firebaseUser) {
-              showNotification('error', 'You must be signed in to perform this action');
+              toast('error', 'You must be signed in to perform this action');
               return;
             }
 
@@ -106,7 +103,7 @@ export default function ManageOpportunities() {
             toast('success', `Updated "${json.title || id}" to ${status}`);
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);
-            showNotification('error', `Failed to update opportunity`);
+            toast('error', `Failed to update opportunity`);
         }
     };
     

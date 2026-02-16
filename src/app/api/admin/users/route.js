@@ -87,10 +87,12 @@ export async function DELETE(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-        // Delete user from Firebase Authentication and Firestore.
-        await admin.auth().deleteUser(uid);
         const adminDb = admin.firestore();
+
+        // Delete user from Firebase Authentication, Firestore users collection, and leaderboard collection.
+        await admin.auth().deleteUser(uid);
         await adminDb.collection('users').doc(uid).delete();
+        await adminDb.collection('leaderboard').doc(uid).delete();
 
         return NextResponse.json({ message: `User ${uid} deleted successfully` });
     } catch (error) {

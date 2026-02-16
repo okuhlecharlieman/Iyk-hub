@@ -111,7 +111,7 @@ export default function AdminUsersPage() {
         try {
           const initial = await listAllUsers();
           if (Array.isArray(initial)) {
-            setUsers(initial.map(u => ({ uid: u.id, ...u })));
+            setUsers(initial.map(u => ({ ...u, uid: u.uid || u.id })));
           } else {
             setUsers([]);
           }
@@ -123,11 +123,17 @@ export default function AdminUsersPage() {
         }
 
         unsubscribe = onUsersUpdate((docs) => {
-          setUsers((prev) => {
-            const authMap = new Map(prev.map(p => [p.uid, p.authExists]));
-            return docs.map(d => ({ uid: d.id, ...d, authExists: authMap.get(d.id) ?? d.authExists ?? false }));
-          });
+            setUsers((prevUsers) => {
+                const usersMap = new Map(prevUsers.map(u => [u.uid, u]));
+                docs.forEach(userDoc => {
+                    const uid = userDoc.id;
+                    const existingUser = usersMap.get(uid) || {};
+                    usersMap.set(uid, { ...existingUser, ...userDoc, uid });
+                });
+                return Array.from(usersMap.values());
+            });
         }, (err) => console.error('onUsersUpdate error:', err));
+
       })();
 
       return () => unsubscribe && unsubscribe();

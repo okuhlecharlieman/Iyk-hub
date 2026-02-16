@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
-import { firestore } from '../../lib/firebase/client'; // Use client-side firebase
+import { db as firestore } from '../../lib/firebase'; // Use client-side firebase
 import { collection, onSnapshot } from 'firebase/firestore';
 
 export default function AdminPage() {

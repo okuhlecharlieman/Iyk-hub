@@ -124,13 +124,27 @@ export default function AdminUsersPage() {
 
         unsubscribe = onUsersUpdate((docs) => {
             setUsers((prevUsers) => {
-                const usersMap = new Map(prevUsers.map(u => [u.uid, u]));
+                const newUsersMap = new Map();
+                const prevUsersMap = new Map(prevUsers.map(u => [u.uid, u]));
+
+                // Rebuild the list from the Firestore snapshot, preserving Auth data.
                 docs.forEach(userDoc => {
                     const uid = userDoc.id;
-                    const existingUser = usersMap.get(uid) || {};
-                    usersMap.set(uid, { ...existingUser, ...userDoc, uid });
+                    const existingUser = prevUsersMap.get(uid) || {}; // has auth data
+                    newUsersMap.set(uid, { ...existingUser, ...userDoc, uid });
                 });
-                return Array.from(usersMap.values());
+
+                // Add back auth-only users from the previous state.
+                prevUsersMap.forEach((user, uid) => {
+                    if (!newUsersMap.has(uid)) {
+                        // A user that was just deleted HAD a role.
+                        if (!user.hasOwnProperty('role')) {
+                            newUsersMap.set(uid, user);
+                        }
+                    }
+                });
+
+                return Array.from(newUsersMap.values());
             });
         }, (err) => console.error('onUsersUpdate error:', err));
 

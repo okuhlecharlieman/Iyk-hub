@@ -74,7 +74,9 @@ export async function DELETE(req) {
             return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
         }
 
-        const { uid } = await req.json();
+        const { searchParams } = new URL(req.url);
+        const uid = searchParams.get('uid');
+
         if (!uid) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }

@@ -42,7 +42,7 @@ export async function GET() {
     }
 }
 
-// PUT handler to update a user's data (e.g., role).
+// PUT handler to update a user's data (e.g., role, displayName).
 export async function PUT(req) {
     try {
         const adminVerification = await verifyAdmin(req);
@@ -55,14 +55,17 @@ export async function PUT(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-        // Update user in Firebase Authentication
+        // Update user in Firebase Authentication (handles displayName, etc.)
         await admin.auth().updateUser(uid, updateData);
 
-        // If a role is being updated, set custom claims and update Firestore.
+        const adminDb = admin.firestore();
+
+        // Update the user document in Firestore to keep data consistent.
+        await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
+
+        // If a role is being updated, also set custom claims for security rules.
         if (updateData.role) {
              await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
-             const adminDb = admin.firestore();
-             await adminDb.collection('users').doc(uid).set({ role: updateData.role }, { merge: true });
         }
 
         return NextResponse.json({ message: `User ${uid} updated successfully` });
@@ -80,7 +83,6 @@ export async function DELETE(req) {
             return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
         }
 
-        // Correctly get UID from the request body.
         const { uid } = await req.json(); 
 
         if (!uid) {

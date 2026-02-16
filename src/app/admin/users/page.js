@@ -174,13 +174,6 @@ export default function AdminUsersPage() {
 
         toast('success', `Successfully updated user ${uid}.`);
 
-        const updated = await listAllUsers();
-        setUsers(updated.map(u => ({ uid: u.id, ...u })));
-
-        if (user.uid === uid) {
-            await user.getIdToken(true);
-        }
-
     } catch (err) {
         console.error('Error updating user:', err);
         toast('error', 'Error updating user: ' + (err.message || 'Unknown error'));
@@ -219,9 +212,6 @@ export default function AdminUsersPage() {
         }
 
         toast('success', `Successfully deleted user ${uid}.`);
-
-        const updated = await listAllUsers();
-        setUsers(updated.map(u => ({ uid: u.id, ...u })));
 
     } catch (err) {
         console.error('Error deleting user:', err);

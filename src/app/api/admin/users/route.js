@@ -1,10 +1,11 @@
 
 import { NextResponse } from 'next/server';
+import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { listAllUsers } from '../../../../lib/firebase/admin';
 
 async function verifyAdmin(req) {
-    const admin = await import('firebase-admin');
+    await initializeFirebaseAdmin();
     const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
 
     if (!idToken) {
@@ -39,7 +40,6 @@ export async function GET() {
 
 export async function PUT(req) {
     try {
-        await initializeFirebaseAdmin();
         const adminVerification = await verifyAdmin(req);
         if (adminVerification.error) {
             return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
@@ -50,7 +50,6 @@ export async function PUT(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-        const admin = await import('firebase-admin');
         await admin.auth().updateUser(uid, updateData);
         if (updateData.role) {
              await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
@@ -68,7 +67,6 @@ export async function PUT(req) {
 
 export async function DELETE(req) {
     try {
-        await initializeFirebaseAdmin();
         const adminVerification = await verifyAdmin(req);
         if (adminVerification.error) {
             return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
@@ -81,7 +79,6 @@ export async function DELETE(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-        const admin = await import('firebase-admin');
         await admin.auth().deleteUser(uid);
          const adminDb = admin.firestore();
         await adminDb.collection('users').doc(uid).delete();

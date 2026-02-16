@@ -9,8 +9,10 @@ import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
 
-const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
+const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const role = user.role || 'user';
 
   return (
@@ -44,6 +46,8 @@ const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
               Revoke
             </Button>
           )}
+          <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} className="ml-2" disabled={isProcessing}>Edit</Button>
+          <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
           {!user.authExists && (
             <div className="text-xs text-gray-500 mt-1">User has no Auth account — cannot set custom claims.</div>
           )}
@@ -54,7 +58,39 @@ const UserRow = ({ user, onRequestRoleChange, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
           <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestRoleChange(user.uid, role === 'admin' ? 'user' : 'admin'); }}>Confirm</Button>
+          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.uid, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
+        </div>
+      </Modal>
+
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit user">
+        <div className="flex flex-col gap-4">
+            <p>Editing user: <span className="font-semibold">{user.displayName || user.email || user.uid}</span></p>
+            <div>
+                <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">Display Name</label>
+                <input
+                    type="text"
+                    name="displayName"
+                    id="displayName"
+                    defaultValue={user.displayName}
+                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+            </div>
+            <div className="flex gap-2 justify-end">
+                <Button variant="ghost" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
+                <Button variant="primary" size="sm" onClick={async (e) => {
+                    const newDisplayName = e.target.closest('.flex-col').querySelector('#displayName').value;
+                    setEditOpen(false);
+                    await onRequestUpdate(user.uid, { displayName: newDisplayName });
+                }}>Save</Button>
+            </div>
+        </div>
+      </Modal>
+
+      <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Confirm deletion">
+        <p className="mb-4">Are you sure you want to <strong>delete</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
+        <div className="flex gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="danger" size="sm" onClick={async () => { setDeleteOpen(false); await onRequestDelete(user.uid); }}>Confirm</Button>
         </div>
       </Modal>
     </>
@@ -86,8 +122,6 @@ export default function AdminUsersPage() {
           setLoading(false);
         }
 
-        // Listen to real-time updates from the `users` collection so role
-        // changes show up instantly in the admin UI (no manual refresh).
         unsubscribe = onUsersUpdate((docs) => {
           setUsers((prev) => {
             const authMap = new Map(prev.map(p => [p.uid, p.authExists]));
@@ -103,60 +137,91 @@ export default function AdminUsersPage() {
   const [processingUid, setProcessingUid] = useState(null);
   const toast = useToast();
 
-  const handleSetRole = async (uid, role) => {
+  const handleUpdateUser = async (uid, updateData) => {
     if (!user) {
-      toast('error', 'Not authenticated');
-      return;
+        toast('error', 'Not authenticated');
+        return;
     }
 
     if (!uid) {
-      toast('error', 'Unable to determine user id for role change');
-      return;
-    }
-
-    if (!['admin', 'user'].includes(role)) {
-      toast('error', 'Invalid role');
-      return;
+        toast('error', 'Unable to determine user id for update');
+        return;
     }
 
     try {
-      setProcessingUid(uid);
-      const idToken = await user.getIdToken(true);
-      const res = await fetch('/api/set-user-role', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ uid, role }),
-      });
+        setProcessingUid(uid);
+        const idToken = await user.getIdToken(true);
+        const res = await fetch('/api/admin/users', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ uid, ...updateData }),
+        });
 
-      const json = await res.json();
-      if (!res.ok) {
-        toast('error', json.error || json.message || 'Failed to set role');
-        return;
-      }
+        const json = await res.json();
+        if (!res.ok) {
+            toast('error', json.error || json.message || 'Failed to update user');
+            return;
+        }
 
-      // Refresh the list so role changes are visible in the UI
-      const updated = await listAllUsers();
-      setUsers(updated.map(u => ({ uid: u.id, ...u })));
+        toast('success', `Successfully updated user ${uid}.`);
 
-      // Prefer server-provided displayName in notification
-      const name = json.targetDisplayName || (Array.isArray(updated) ? updated.find(u => u.id === uid)?.displayName : null) || uid;
-      const baseMsg = `Successfully set role to ${role} for user ${name}.`;
-      const extra = user.uid === uid ? 'Your session has been refreshed.' : 'They may need to sign out and sign in to pick up updated Auth claims.';
-      toast('success', `${baseMsg} ${extra}`);
+        const updated = await listAllUsers();
+        setUsers(updated.map(u => ({ uid: u.id, ...u })));
 
-      // If the changed user is the currently signed-in user, refresh profile token/profile locally
-      if (user.uid === uid) {
-        // Force reload of ID token and userProfile will update via Firestore listener
-        await user.getIdToken(true);
-      }
+        if (user.uid === uid) {
+            await user.getIdToken(true);
+        }
+
     } catch (err) {
-      console.error('Error setting role:', err);
-      toast('error', 'Error setting role: ' + (err.message || 'Unknown error'));
+        console.error('Error updating user:', err);
+        toast('error', 'Error updating user: ' + (err.message || 'Unknown error'));
     } finally {
-      setProcessingUid(null);
+        setProcessingUid(null);
+    }
+  };
+
+  const handleDeleteUser = async (uid) => {
+    if (!user) {
+        toast('error', 'Not authenticated');
+        return;
+    }
+
+    if (!uid) {
+        toast('error', 'Unable to determine user id for deletion');
+        return;
+    }
+
+    try {
+        setProcessingUid(uid);
+        const idToken = await user.getIdToken(true);
+        const res = await fetch('/api/admin/users', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ uid }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) {
+            toast('error', json.error || json.message || 'Failed to delete user');
+            return;
+        }
+
+        toast('success', `Successfully deleted user ${uid}.`);
+
+        const updated = await listAllUsers();
+        setUsers(updated.map(u => ({ uid: u.id, ...u })));
+
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        toast('error', 'Error deleting user: ' + (err.message || 'Unknown error'));
+    } finally {
+        setProcessingUid(null);
     }
   };
 
@@ -175,8 +240,6 @@ export default function AdminUsersPage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto px-4 py-8">
-
-
         <h1 className="text-3xl font-bold mb-4">Admin: All Users</h1>
         <div className="bg-white shadow-md rounded-lg overflow-x-auto">
           <table className="min-w-full table-auto">
@@ -190,7 +253,7 @@ export default function AdminUsersPage() {
             </thead>
             <tbody>
               {users.map((user) => (
-                <UserRow key={user.uid} user={user} onRequestRoleChange={handleSetRole} isProcessing={processingUid === user.uid} />
+                <UserRow key={user.uid} user={user} onRequestUpdate={handleUpdateUser} onRequestDelete={handleDeleteUser} isProcessing={processingUid === user.uid} />
               ))}
             </tbody>
           </table>

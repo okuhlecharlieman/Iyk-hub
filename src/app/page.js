@@ -1,6 +1,6 @@
 
 import Link from 'next/link';
-import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebase/admin';
+import { getApprovedOpportunities, listShowcasePosts, getUserDoc } from '../lib/firebase/helpers';
 import ContentCard from '../components/ContentCard';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush } from 'react-icons/fa';
 
@@ -28,6 +28,13 @@ export default async function Home() {
     getApprovedOpportunities(3),
     listShowcasePosts(3),
   ]);
+
+  const postsWithAuthors = await Promise.all(
+    posts.map(async (p) => {
+      const author = await getUserDoc(p.uid);
+      return { ...p, author };
+    })
+  );
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -74,9 +81,9 @@ export default async function Home() {
 
         {/* Showcase Section */}
         <FeatureSection title="Latest Creations" icon={<FaPaintBrush />} href="/showcase">
-          {posts.length > 0 ? (
+          {postsWithAuthors.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-6">
-              {posts.map(p => <ContentCard key={p.id} p={p} noactions />)}
+              {postsWithAuthors.map(p => <ContentCard key={p.id} p={p} author={p.author} />)}
             </div>
           ) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">No creations posted yet. Be the first!</p>}
         </FeatureSection>

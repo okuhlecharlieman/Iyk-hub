@@ -1,27 +1,34 @@
+
 import { NextResponse } from 'next/server';
-import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../../../../lib/firebase/firebase';
+import { authenticate } from '../../../../../lib/firebase/admin';
 
-export const runtime = 'nodejs';
-
-export async function POST(request) {
-  await initializeFirebaseAdmin();
-  const admin = await import('firebase-admin');
+// This endpoint deletes a post, converted to the App Router format.
+export async function POST(req) {
   try {
-    const { postId, uid } = await request.json();
+    // Authenticate the user as an admin.
+    // The `authenticate` function is assumed to work with the standard Request object.
+    await authenticate(req);
 
-    // 1. Verify the user is an admin
-    const userRecord = await admin.auth().getUser(uid);
-    if (userRecord.customClaims?.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Get the post ID from the request body.
+    const { postId } = await req.json();
+
+    if (!postId) {
+      return NextResponse.json({ error: 'Post ID is required' }, { status: 400 });
     }
 
-    // 2. Delete the post from Firestore
-    await admin.firestore().collection('wallPosts').doc(postId).delete();
+    // Get a reference to and delete the post document.
+    const postRef = doc(db, 'wallPosts', postId);
+    await deleteDoc(postRef);
 
-    return NextResponse.json({ message: 'Post deleted successfully' });
+    // Send a success response.
+    return NextResponse.json({ message: 'Post deleted successfully' }, { status: 200 });
 
   } catch (error) {
     console.error('Error deleting post:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    // The custom error from authenticate might have a code.
+    const status = (error.code && typeof error.code === 'number') ? error.code : 500;
+    return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status });
   }
 }

@@ -2,42 +2,80 @@
 import admin from 'firebase-admin';
 
 // Helper to initialize the Firebase Admin SDK.
-// This is safe to call multiple times.
-export const initializeFirebaseAdmin = async () => {
+export const initializeFirebaseAdmin = () => {
   if (admin.apps.length > 0) {
     return;
   }
 
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) {
-    throw new Error('Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable.');
-  }
-
-  // Validate JSON and required fields early to give actionable errors.
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (err) {
-    console.error('Invalid FIREBASE_SERVICE_ACCOUNT_KEY JSON:', err.message);
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY contains invalid JSON: ' + err.message);
-  }
-
-  if (!parsed.private_key || !parsed.client_email) {
-    console.error('FIREBASE_SERVICE_ACCOUNT_KEY missing required fields.');
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is missing required fields (private_key / client_email).');
+    throw new Error('Missing FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT environment variable.');
   }
 
   try {
-    await admin.initializeApp({
+    const parsed = JSON.parse(raw);
+    admin.initializeApp({
       credential: admin.credential.cert(parsed),
     });
     console.log('Firebase Admin SDK initialized successfully.');
   } catch (error) {
-    console.error('Error initializing Firebase Admin SDK:', error?.message || error);
-    // Surface the real message for faster debugging (safe for developers).
+    console.error('Error initializing Firebase Admin SDK:', error);
     throw new Error('Failed to initialize Firebase Admin SDK: ' + (error?.message || 'unknown error'));
   }
 };
+
+// Extracts the bearer token from a request object (works for both Pages and App Routers).
+const getBearerToken = (req) => {
+  const authHeader = req.headers.get ? req.headers.get('authorization') : req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  return authHeader.substring(7);
+};
+
+// Authenticates a request and verifies the user is an admin.
+export const authenticate = async (req) => {
+  initializeFirebaseAdmin();
+  const token = getBearerToken(req);
+  if (!token) {
+    const err = new Error('Not authenticated. No token provided.');
+    err.code = 401;
+    throw err;
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    if (decodedToken.admin !== true) {
+      const err = new Error('Not authorized. User is not an admin.');
+      err.code = 403;
+      throw err;
+    }
+    return decodedToken;
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+    const err = new Error(error.message);
+    err.code = error.code === 'auth/id-token-expired' ? 401 : 500;
+    throw err;
+  }
+};
+
+// Authenticates a request and returns the user's UID.
+export const authenticateAndGetUid = async (req) => {
+  initializeFirebaseAdmin();
+  const token = getBearerToken(req);
+  if (!token) {
+    throw new Error('Not authenticated. No token provided.');
+  }
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    return decodedToken.uid;
+  } catch (error) {
+    console.error('Authentication error:', error.message);
+    throw new Error('Authentication failed: ' + error.message);
+  }
+};
+
 
 // Converts Firestore Timestamps to a JSON-serializable format
 const serializeFirestoreData = (doc) => {
@@ -61,8 +99,6 @@ export async function getApprovedOpportunities(limitN = 50) {
   await initializeFirebaseAdmin();
   const adminDb = admin.firestore();
   
-  console.log('Fetching approved opportunities on the server...');
-  
   const qy = adminDb.collection('opportunities')
     .where('status', '==', 'approved')
     .orderBy('createdAt', 'desc')
@@ -77,8 +113,6 @@ export async function getApprovedOpportunities(limitN = 50) {
 export async function listShowcasePosts(limitN = 50) {
   await initializeFirebaseAdmin();
   const adminDb = admin.firestore();
-
-  console.log('Fetching showcase posts on the server...');
 
   const qy = adminDb.collection('wallPosts')
     .orderBy('createdAt', 'desc')

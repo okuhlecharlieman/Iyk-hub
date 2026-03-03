@@ -1,70 +1,76 @@
-"use client";
-import { FaRegHeart, FaRegComment, FaCode, FaMusic, FaPaintBrush, FaRegUserCircle } from 'react-icons/fa';
-import Link from 'next/link';
-import CodeSnippet from './CodeSnippet';
+'use client';
+import { useState } from 'react';
+import { FaThumbsUp, FaHeart, FaLaugh, FaEdit, FaTrash, FaEllipsisV } from 'react-icons/fa';
 
-const typeIcons = {
-  art: <FaPaintBrush />,
-  code: <FaCode />,
-  music: <FaMusic />,
-};
+// This is the component for each individual card in the showcase.
+// It now includes a dropdown menu for editing and deleting posts.
+export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
+  const [menuOpen, setMenuOpen] = useState(false);
 
-// The ContentCard is now a simpler, stateless component. It receives all its data
-// via props and is only responsible for displaying the content.
-export default function ContentCard({ p, react, noactions }) {
-  // The author data is now expected to be passed in the `p` (post) object.
-  const { author } = p;
+  const handleReaction = (reactionType) => {
+    if (react) {
+      react(p.id, reactionType);
+    }
+  };
+
+  const safeReactions = p.reactions || { likes: 0, hearts: 0, laughs: 0 };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-2xl">
-      <div className="p-5">
-        <div className="flex items-center gap-3 mb-4">
-          {author ? (
-            <Link href={`/profile/${p.uid}`}>
-              <img src={author.photoURL || '/logo.png'} alt={author.displayName} className="w-10 h-10 rounded-full cursor-pointer" />
-            </Link>
-          ) : (
-            <FaRegUserCircle className="w-10 h-10 text-gray-400" />
-          )}
-          <div>
-            <h4 className="font-bold text-gray-800 dark:text-white">{p.title}</h4>
-            {author && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                by <Link href={`/profile/${p.uid}`} className="hover:underline">{author.displayName || 'Anonymous User'}</Link>
-              </p>
-            )}
-          </div>
-          <div className="ml-auto text-gray-400 text-xl">
-            {typeIcons[p.type] || null}
-          </div>
-        </div>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">{p.description}</p>
-        {p.type === 'code' && p.code && (
-          <CodeSnippet code={p.code} language={p.language} />
-        )}
-        {p.type === 'art' && p.mediaUrl && <img src={p.mediaUrl} alt={p.title} className="rounded-lg w-full" />}
-        {p.type === 'music' && p.mediaUrl && <audio controls src={p.mediaUrl} className="w-full">Your browser does not support the audio element.</audio>}
-      </div>
-      {!noactions && (
-        <div className="bg-gray-50 dark:bg-gray-700/50 px-5 py-3 flex justify-between items-center text-sm text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex gap-2">
-                <button 
-                    onClick={() => react(p.id, '❤️')} 
-                    className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-600/50 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200"
-                >
-                    <FaRegHeart /> 
-                    <span>{p.reactions?.['❤️'] || 0}</span>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform transform hover:scale-105 duration-300 relative">
+      {/* Management Menu Dropdown */}
+      {canManage && (
+        <div className="absolute top-2 right-2">
+          <button onClick={() => setMenuOpen(!menuOpen)} className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white p-2 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <FaEllipsisV />
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10 ring-1 ring-black ring-opacity-5">
+              <div className="py-1">
+                <button onClick={() => { onEdit(); setMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
+                  <FaEdit className="mr-3" /> Edit
                 </button>
-                <button className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-600/50 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
-                    <FaRegComment /> 
-                    <span>{p.comments?.length || 0}</span>
+                <button onClick={() => { onDelete(); setMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-600">
+                  <FaTrash className="mr-3" /> Delete
                 </button>
+              </div>
             </div>
-            {p.createdAt && (
-              <p className="text-xs text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</p>
-            )}
+          )}
         </div>
       )}
+
+      {p.imageUrl && <img src={p.imageUrl} alt={p.title} className="w-full h-48 object-cover" />}
+      <div className="p-6">
+        <div className="flex items-center mb-4">
+          {p.author?.photoURL ? (
+            <img src={p.author.photoURL} alt={p.author.displayName} className="w-10 h-10 rounded-full mr-3" />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 mr-3"></div>
+          )}
+          <div>
+            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{p.title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">By {p.author?.displayName || 'Anonymous User'}</p>
+          </div>
+        </div>
+        <p className="text-gray-700 dark:text-gray-300 mb-4">{p.description}</p>
+        {react && (
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="flex space-x-4">
+              <button onClick={() => handleReaction('likes')} className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 dark:hover:text-blue-400">
+                <FaThumbsUp />
+                <span className="text-sm">{safeReactions.likes}</span>
+              </button>
+              <button onClick={() => handleReaction('hearts')} className="flex items-center space-x-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400">
+                <FaHeart />
+                <span className="text-sm">{safeReactions.hearts}</span>
+              </button>
+              <button onClick={() => handleReaction('laughs')} className="flex items-center space-x-2 text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400">
+                <FaLaugh />
+                <span className="text-sm">{safeReactions.laughs}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

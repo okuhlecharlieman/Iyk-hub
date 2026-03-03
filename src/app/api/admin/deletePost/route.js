@@ -1,8 +1,7 @@
-
 import { NextResponse } from 'next/server';
 import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../../../../lib/firebase/firebase';
-import { authenticate } from '../../../../../lib/firebase/admin';
+import { db } from '@/lib/firebase/firebase';
+import { authenticate } from '@/lib/firebase/admin/auth';
 
 // This endpoint deletes a post, converted to the App Router format.
 export async function POST(req) {
@@ -23,12 +22,11 @@ export async function POST(req) {
     await deleteDoc(postRef);
 
     // Send a success response.
-    return NextResponse.json({ message: 'Post deleted successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Post deleted successfully' });
 
   } catch (error) {
     console.error('Error deleting post:', error);
     // The custom error from authenticate might have a code.
-    const status = (error.code && typeof error.code === 'number') ? error.code : 500;
-    return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status });
+    return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status: error.code || 500 });
   }
 }

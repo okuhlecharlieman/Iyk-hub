@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../../../lib/firebase/firebase';
-import { authenticateAndGetUid } from '../../../../../lib/firebase/admin/auth';
+import { db } from '@/lib/firebase/firebase';
+import { authenticateAndGetUid } from '@/lib/firebase/admin/auth';
 
 // This endpoint safely updates a user's profile, converted to the App Router format.
 export async function POST(req) {
@@ -49,12 +49,10 @@ export async function POST(req) {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, allowedUpdates);
 
-    return NextResponse.json({ message: 'Profile updated successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Profile updated successfully' });
 
   } catch (error) {
     console.error('Error updating profile:', error);
     return NextResponse.json({ error: 'An internal error occurred while updating the profile.' }, { status: 500 });
   }
 }
-
-

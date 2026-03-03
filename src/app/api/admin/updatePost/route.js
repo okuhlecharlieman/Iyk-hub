@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../../../../lib/firebase/firebase';
-import { authenticate } from '../../../../../lib/firebase/admin';
+import { db } from '@/lib/firebase/firebase';
+import { authenticate } from '@/lib/firebase/admin/auth';
 
 // This endpoint safely updates a post, converted to the App Router format.
 export async function POST(req) {
@@ -34,11 +34,11 @@ export async function POST(req) {
     const postRef = doc(db, 'wallPosts', postId);
     await updateDoc(postRef, allowedUpdates);
 
-    return NextResponse.json({ message: 'Post updated successfully' }, { status: 200 });
+    return NextResponse.json({ message: 'Post updated successfully' });
 
   } catch (error) {
     console.error('Error updating post:', error);
-    const status = (error.code && typeof error.code === 'number') ? error.code : 500;
-    return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status });
+    // Return a generic error message to the client
+    return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status: error.code || 500 });
   }
 }

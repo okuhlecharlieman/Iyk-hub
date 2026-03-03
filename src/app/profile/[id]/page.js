@@ -1,100 +1,132 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
+import { useAuth } from '../../../context/AuthContext';
 import ContentCard from '../../../components/ContentCard';
-import { FaPaintBrush, FaUserCircle } from 'react-icons/fa';
+import ProfileEditor from '../../../components/ProfileEditor';
+import { FaPaintBrush, FaUserCircle, FaPencilAlt } from 'react-icons/fa';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 
-// This page now fetches all data using client-side calls that respect security rules.
-// It gets the public user profile and then fetches and filters all showcase posts.
 export default function ProfilePage() {
-  const { id } = useParams(); // Get the user ID from the URL
-  const [user, setUser] = useState(null);
+  const { id } = useParams();
+  const { user: currentUser } = useAuth(); // The logged-in user
+
+  const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
+  const isOwner = currentUser && currentUser.uid === id;
 
-    const fetchProfileData = async () => {
-      setLoading(true);
-      try {
-        // 1. Fetch the user's public profile document from the 'users' collection.
-        // This is a direct, client-side call that respects your Firestore security rules.
-        const userDocRef = doc(db, 'users', id);
-        const userDocSnap = await getDoc(userDocRef);
+  const fetchProfileData = useCallback(async () => {
+    try {
+      // No need to set loading to true on re-fetch
+      const userDocRef = doc(db, 'users', id);
+      const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-          setUser({ id: userDocSnap.id, ...userDocSnap.data() });
-        } else {
-          throw new Error('User not found');
-        }
-
-        // 2. Fetch all public posts from the secure API endpoint.
-        const res = await fetch('/api/showcase');
-        if (!res.ok) {
-            throw new Error(`API call failed: ${res.statusText}`);
-        }
-        const allPosts = await res.json();
-
-        // 3. Filter the posts on the client to show only this user's posts.
-        const userPosts = allPosts.filter(p => p.uid === id);
-        setPosts(userPosts);
-
-      } catch (err) {
-        console.error("Error fetching profile data:", err);
-        setError("There was an error loading this profile. Please try again later.");
-      } finally {
-        setLoading(false);
+      if (userDocSnap.exists()) {
+        setProfile({ id: userDocSnap.id, ...userDocSnap.data() });
+      } else {
+        throw new Error('User not found');
       }
-    };
 
-    fetchProfileData();
+      const res = await fetch('/api/showcase');
+      if (!res.ok) throw new Error(`API call failed: ${res.statusText}`);
+      const allPosts = await res.json();
+
+      const userPosts = allPosts.filter(p => p.uid === id);
+      setPosts(userPosts);
+
+    } catch (err) {
+      console.error("Error fetching profile data:", err);
+      setError("There was an error loading this profile.");
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  useEffect(() => {
+    if (id) {
+        setLoading(true);
+        fetchProfileData();
+    }
+  }, [id, fetchProfileData]);
 
-  if (error) {
-    return (
-        <div className="text-center py-20">
-            <p className="text-red-500">{error}</p>
-            <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Retry</button>
-        </div>
-    );
-  }
+  const handleSaveProfile = async (updates) => {
+    if (!isOwner) return;
 
-  if (!user) {
-    return <div className="text-center py-20">User not found.</div>;
-  }
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ updates }),
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update profile.');
+      }
+
+      setIsEditorOpen(false);
+      await fetchProfileData(); // Re-fetch all data to show changes
+
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      alert(`Error: ${err.message}`);
+    }
+  };
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <div className="text-center py-20 text-red-500">{error}</div>;
+  if (!profile) return <div className="text-center py-20">User not found.</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* Profile Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 mb-12 text-center">
-            <div className="relative w-32 h-32 mx-auto mb-4">
-                {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName} className="w-full h-full rounded-full object-cover shadow-md" />
-                ) : (
-                    <FaUserCircle className="w-full h-full text-gray-400" />
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 mb-12">
+          <div className="flex justify-between items-start">
+            <div className="text-center flex-grow">
+                <div className="relative w-32 h-32 mx-auto mb-4">
+                    {profile.photoURL ? (
+                        <img src={profile.photoURL} alt={profile.displayName} className="w-full h-full rounded-full object-cover shadow-md" />
+                    ) : (
+                        <FaUserCircle className="w-full h-full text-gray-400" />
+                    )}
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{profile.displayName || 'Anonymous'}</h1>
+                {profile.bio && <p className="mt-4 text-gray-700 dark:text-gray-300 max-w-prose mx-auto">{profile.bio}</p>}
+                
+                {profile.skills && profile.skills.length > 0 && (
+                    <div className="mt-4 flex flex-wrap justify-center gap-2">
+                        {profile.skills.map(skill => (
+                            <span key={skill} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full dark:bg-blue-900 dark:text-blue-200">
+                                {skill}
+                            </span>
+                        ))}
+                    </div>
                 )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{user.displayName || 'Anonymous User'}</h1>
-            {user.email && <p className="text-gray-600 dark:text-gray-400 mt-2">{user.email}</p>}
-            <div className="mt-6">
-                <p className="text-lg font-semibold text-yellow-500">Lifetime Points: {user.points?.lifetime || 0}</p>
-            </div>
-            {user.bio && <p className="mt-6 text-gray-700 dark:text-gray-300 max-w-prose mx-auto">{user.bio}</p>}
+            {isOwner && (
+              <button 
+                onClick={() => setIsEditorOpen(true)}
+                className="flex-shrink-0 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-2 rounded-full"
+                aria-label="Edit Profile"
+              >
+                <FaPencilAlt size={20} />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* User's Posts */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8">Creations by {user.displayName || 'User'}</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-8">Creations</h2>
           {posts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {posts.map(p => <ContentCard key={p.id} p={p} />)}
@@ -102,11 +134,19 @@ export default function ProfilePage() {
           ) : (
             <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl shadow-md">
                 <FaPaintBrush className="text-5xl text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">This user hasn't posted any creations yet.</p>
+                <p className="text-gray-500 dark:text-gray-400">No creations posted yet.</p>
             </div>
           )}
         </div>
       </div>
+      
+      {isEditorOpen && (
+        <ProfileEditor 
+          profile={profile}
+          onSave={handleSaveProfile}
+          onClose={() => setIsEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }

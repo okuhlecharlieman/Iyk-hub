@@ -2,71 +2,72 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { ensureUserDoc, getUserDoc } from '../lib/firebase/helpers';
+import { ensureUserDoc } from '../lib/firebase/helpers';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-const AuthContext = createContext({ user: null, userProfile: null, loading: true });
+const AuthContext = createContext({ 
+  user: null, 
+  userProfile: null, 
+  isAdmin: false, // Default isAdmin to false
+  loading: true 
+});
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsubProfile = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
       if (currentUser) {
         await ensureUserDoc(currentUser);
 
-        // Subscribe to Firestore `users/{uid}` so profile updates (like role changes)
-        // are reflected immediately without requiring the user to re-login.
         const userRef = doc(db, 'users', currentUser.uid);
         unsubProfile = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
-            setUserProfile({ id: snap.id, ...data, isAdmin: data.role === 'admin' });
-
-            // Force-refresh the ID token for the signed-in user so server-side
-            // checks relying on custom claims observe the change immediately.
-            if (currentUser && typeof currentUser.getIdToken === 'function') {
-              currentUser.getIdToken(true).catch((err) => {
-                console.warn('Failed to refresh ID token after profile change:', err?.message || err);
-              });
-            }
-
+            const adminStatus = data.role === 'admin';
+            setUserProfile({ id: snap.id, ...data });
+            setIsAdmin(adminStatus); // Set the isAdmin state
+            
+            // Optional: Force-refresh the ID token if role changes are reflected in custom claims
+            currentUser.getIdToken(true).catch(console.warn);
           } else {
             setUserProfile(null);
+            setIsAdmin(false);
           }
         }, (err) => {
           console.error('Error listening to user profile:', err);
+          setUserProfile(null);
+          setIsAdmin(false);
         });
 
         setUser(currentUser);
       } else {
-        // No user is logged in.
         setUser(null);
         setUserProfile(null);
-        if (unsubProfile) {
-          unsubProfile();
-          unsubProfile = null;
-        }
+        setIsAdmin(false);
+        if (unsubProfile) unsubProfile();
       }
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => {
       unsubscribe();
       if (unsubProfile) unsubProfile();
     };
   }, []);
 
-  const value = { user, userProfile, loading };
+  // Expose user, profile, loading status, AND the isAdmin boolean directly
+  const value = { user, userProfile, loading, isAdmin };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

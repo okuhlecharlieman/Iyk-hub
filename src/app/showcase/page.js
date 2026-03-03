@@ -1,30 +1,26 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { doc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, addDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
-import PostEditor from '../../components/PostEditor'; // Import the new editor
+import PostEditor from '../../components/PostEditor';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FaPlus } from 'react-icons/fa';
 
 export default function ShowcasePage() {
-  const { user, isAdmin } = useAuth(); // Get user and admin status
+  const { user, isAdmin } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // State for the PostEditor modal
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingPost, setEditingPost] = useState(null); // If not null, we are editing
+  const [editingPost, setEditingPost] = useState(null);
 
   const fetchPosts = async () => {
-    // No need to set loading to true here, to avoid flashing on re-fetches
     try {
       const response = await fetch('/api/showcase');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
       const data = await response.json();
       setPosts(data);
     } catch (err) {
@@ -39,10 +35,8 @@ export default function ShowcasePage() {
     fetchPosts();
   }, []);
 
-  // ---- CRUD Handlers ----
-
   const handleAddPost = () => {
-    setEditingPost(null); // Ensure we are creating, not editing
+    setEditingPost(null);
     setIsEditorOpen(true);
   };
 
@@ -52,62 +46,77 @@ export default function ShowcasePage() {
   };
 
   const handleSavePost = async (postData) => {
-    if (!user) {
-      alert('You must be logged in to save a post.');
-      return;
-    }
+    if (!user) return alert('You must be logged in to save a post.');
 
     try {
+      const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
+
       if (editingPost) {
-        // Update existing post
-        const postRef = doc(db, 'wallPosts', editingPost.id);
-        await updateDoc(postRef, { ...postData, updatedAt: serverTimestamp() });
+        // If user is an admin editing another user's post, use the admin API
+        if (isAdmin && isEditingAnotherUsersPost) {
+          const token = await user.getIdToken();
+          const response = await fetch('/api/admin/updatePost', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ postId: editingPost.id, updates: postData }),
+          });
+          if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || 'Could not update the post as admin.');
+          }
+        } else {
+          // User is editing their own post
+          const postRef = doc(db, 'wallPosts', editingPost.id);
+          await updateDoc(postRef, { ...postData, updatedAt: serverTimestamp() });
+        }
       } else {
         // Create new post
         await addDoc(collection(db, 'wallPosts'), {
           ...postData,
           uid: user.uid,
+          author: { displayName: user.displayName, photoURL: user.photoURL },
           createdAt: serverTimestamp(),
           reactions: { likes: 0, hearts: 0, laughs: 0 },
         });
       }
+      
       setIsEditorOpen(false);
-      fetchPosts(); // Refresh posts after saving
+      setEditingPost(null);
+      fetchPosts(); // Refresh posts
     } catch (err) {
       console.error('Error saving post:', err);
-      alert('There was an error saving your post. Please try again.');
+      alert(`There was an error saving your post: ${err.message}`);
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!user || !window.confirm('Are you sure you want to delete this post?')) {
-      return;
-    }
+  const handleDeletePost = async (postId, postUid) => {
+    if (!user || !window.confirm('Are you sure you want to delete this post?')) return;
 
     try {
-        // A user can delete their own post. An admin can delete any post.
-        // The API endpoint handles the security check for non-admins.
-        if (isAdmin) {
-            // Use admin privilege to delete directly
-            const postRef = doc(db, 'wallPosts', postId);
-            await deleteDoc(postRef);
-        } else {
-            // Use the secure API endpoint for regular users
-            const response = await fetch('/api/showcase/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId, uid: user.uid }),
-            });
-
-            if (!response.ok) {
-                const result = await response.json();
-                throw new Error(result.error || 'Could not delete the post.');
-            }
-        }
-        fetchPosts(); // Refresh posts
+      const isOwner = user.uid === postUid;
+      
+      if (isAdmin) {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/admin/deletePost', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ postId }),
+        });
+        if (!response.ok) throw new Error(await response.text());
+      } else if (isOwner) {
+        const response = await fetch('/api/showcase/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId }),
+        });
+        if (!response.ok) throw new Error(await response.text());
+      } else {
+        throw new Error('You do not have permission to delete this post.');
+      }
+      fetchPosts();
     } catch (err) {
-        console.error('Error deleting post:', err);
-        alert(`Failed to delete post: ${err.message}`);
+      console.error('Error deleting post:', err);
+      alert(`Failed to delete post: ${err.message}`);
     }
   };
 
@@ -135,8 +144,8 @@ export default function ShowcasePage() {
                   key={p.id} 
                   p={p} 
                   onEdit={() => handleEditPost(p)} 
-                  onDelete={() => handleDeletePost(p.id)}
-                  canManage={isAdmin || (user && user.uid === p.uid)} // Pass down permission
+                  onDelete={() => handleDeletePost(p.id, p.uid)} // Pass post UID for permission check
+                  canManage={isAdmin || (user && user.uid === p.uid)}
                 />
               ))}
             </div>

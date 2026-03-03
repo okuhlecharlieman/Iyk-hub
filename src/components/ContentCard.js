@@ -1,8 +1,9 @@
 'use client';
+import Link from 'next/link';
 import { FaThumbsUp, FaHeart, FaLaugh, FaEdit, FaTrash } from 'react-icons/fa';
 
 // This is the component for each individual card in the showcase.
-// It now includes simple Edit and Delete buttons instead of a dropdown menu.
+// It now includes a clickable author section and management buttons.
 export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
 
   const handleReaction = (reactionType) => {
@@ -28,19 +29,36 @@ export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
       )}
 
       {p.imageUrl && <img src={p.imageUrl} alt={p.title} className="w-full h-48 object-cover" />}
+      
       <div className="p-6">
-        <div className="flex items-center mb-4">
-          {p.author?.photoURL ? (
-            <img src={p.author.photoURL} alt={p.author.displayName} className="w-10 h-10 rounded-full mr-3" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 mr-3"></div>
-          )}
-          <div>
-            <h3 className="font-bold text-lg text-gray-900 dark:text-white">{p.title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">By {p.author?.displayName || 'Anonymous User'}</p>
-          </div>
-        </div>
+        <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-2">{p.title}</h3>
+        
+        {/* Clickable Author Info */}
+        {p.uid && p.author ? (
+            <Link href={`/profile/${p.uid}`} className="flex items-center mb-4 group cursor-pointer w-fit">
+                {p.author.photoURL ? (
+                    <img src={p.author.photoURL} alt={p.author.displayName} className="w-10 h-10 rounded-full mr-3" />
+                ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 mr-3" />
+                )}
+                <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:underline">
+                    By {p.author.displayName || 'Anonymous User'}
+                    </p>
+                </div>
+            </Link>
+        ) : (
+            <div className="flex items-center mb-4">
+                 <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 mr-3" />
+                 <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">By Anonymous User</p>
+                 </div>
+            </div>
+        )}
+
         <p className="text-gray-700 dark:text-gray-300 mb-4">{p.description}</p>
+
+        {/* Reactions */}
         {react && (
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
             <div className="flex space-x-4">

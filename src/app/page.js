@@ -1,11 +1,9 @@
-
+'use client';
 import Link from 'next/link';
-import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebase/admin';
+import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebase/helpers';
 import ContentCard from '../components/ContentCard';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush } from 'react-icons/fa';
-
-// Force dynamic rendering to avoid static generation at build time
-export const dynamic = 'force-dynamic'; 
+import { useEffect, useState } from 'react';
 
 // Helper to create a consistent section layout
 const FeatureSection = ({ title, icon, children, href }) => (
@@ -23,11 +21,28 @@ const FeatureSection = ({ title, icon, children, href }) => (
   </section>
 );
 
-export default async function Home() {
-  const [opps, posts] = await Promise.all([
-    getApprovedOpportunities(3),
-    listShowcasePosts(3),
-  ]);
+export default function Home() {
+  const [opps, setOpps] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [oppsData, postsData] = await Promise.all([
+          getApprovedOpportunities(3),
+          listShowcasePosts(3),
+        ]);
+        setOpps(oppsData);
+        setPosts(postsData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -74,16 +89,16 @@ export default async function Home() {
 
         {/* Showcase Section */}
         <FeatureSection title="Latest Creations" icon={<FaPaintBrush />} href="/showcase">
-          {posts.length > 0 ? (
+          {loading ? <p>Loading...</p> : posts.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-6">
-              {posts.map(p => <ContentCard key={p.id} p={p} noactions />)}
+              {posts.map(p => <ContentCard key={p.id} p={p} />)}
             </div>
           ) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">No creations posted yet. Be the first!</p>}
         </FeatureSection>
         
         {/* Opportunities Section */}
         <FeatureSection title="New Opportunities" icon={<FaBriefcase />} href="/opportunities">
-           {opps.length > 0 ? (
+           {loading ? <p>Loading...</p> : opps.length > 0 ? (
             <div className="space-y-4">
               {opps.map(o => (
                 <Link key={o.id} href={o.link || '#'} target="_blank" rel="noopener noreferrer" className="block bg-gray-100/50 dark:bg-gray-700/50 p-5 rounded-lg hover:bg-gray-200/70 dark:hover:bg-gray-700/80 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500">

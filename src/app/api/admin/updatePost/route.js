@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/firebase';
-import { authenticate } from '@/lib/firebase/admin/auth';
+import { db } from '@/lib/firebase';
+import { authenticate } from '@/lib/firebase/admin';
 
 // This endpoint safely updates a post, converted to the App Router format.
 export async function POST(req) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/firebase';
-import { authenticateAndGetUid } from '@/lib/firebase/admin/auth';
+import { db } from '@/lib/firebase';
+import { authenticateAndGetUid } from '@/lib/firebase/admin';
 
 // This endpoint safely updates a user's profile, converted to the App Router format.
 export async function POST(req) {

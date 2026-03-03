@@ -1,11 +1,9 @@
 'use client';
-import { useState } from 'react';
-import { FaThumbsUp, FaHeart, FaLaugh, FaEdit, FaTrash, FaEllipsisV } from 'react-icons/fa';
+import { FaThumbsUp, FaHeart, FaLaugh, FaEdit, FaTrash } from 'react-icons/fa';
 
 // This is the component for each individual card in the showcase.
-// It now includes a dropdown menu for editing and deleting posts.
+// It now includes simple Edit and Delete buttons instead of a dropdown menu.
 export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleReaction = (reactionType) => {
     if (react) {
@@ -16,25 +14,16 @@ export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
   const safeReactions = p.reactions || { likes: 0, hearts: 0, laughs: 0 };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform transform hover:scale-105 duration-300 relative">
-      {/* Management Menu Dropdown */}
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden relative">
+      {/* Management Buttons */}
       {canManage && (
-        <div className="absolute top-2 right-2">
-          <button onClick={() => setMenuOpen(!menuOpen)} className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white p-2 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
-            <FaEllipsisV />
+        <div className="absolute top-2 right-2 flex items-center space-x-2">
+          <button onClick={onEdit} className="p-2 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+            <FaEdit />
           </button>
-          {menuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg z-10 ring-1 ring-black ring-opacity-5">
-              <div className="py-1">
-                <button onClick={() => { onEdit(); setMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600">
-                  <FaEdit className="mr-3" /> Edit
-                </button>
-                <button onClick={() => { onDelete(); setMenuOpen(false); }} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-600">
-                  <FaTrash className="mr-3" /> Delete
-                </button>
-              </div>
-            </div>
-          )}
+          <button onClick={onDelete} className="p-2 rounded-full bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm text-red-500 hover:bg-gray-200 dark:hover:bg-gray-700">
+            <FaTrash />
+          </button>
         </div>
       )}
 

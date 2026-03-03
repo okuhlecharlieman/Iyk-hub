@@ -1,139 +1,76 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import Masonry from 'react-masonry-css';
-import { useAuth } from '../../context/AuthContext';
-import { listShowcasePosts, deleteShowcasePost, updateShowcasePost, getUserDoc, togglePostVote } from '../../lib/firebase/helpers';
-import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
-import NewPostCard from '../../components/showcase/NewPostCard';
-import NewPostModal from '../../components/showcase/NewPostModal';
-import EditPostModal from '../../components/showcase/EditPostModal';
+import { useEffect, useState } from 'react';
+import ContentCard from '../../components/ContentCard';
+import { reactToPost } from '../../lib/firebase/helpers'; 
+import { useAuth } from '../../lib/firebase/auth'; 
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function ShowcasePage() {
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
-  const [authors, setAuthors] = useState({});
   const [loading, setLoading] = useState(true);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [postToEdit, setPostToEdit] = useState(null);
-  const [isNewPostModalOpen, setIsNewPostModalOpen] = useState(false);
+  const [error, setError] = useState('');
 
-  const loadPosts = useCallback(async () => {
+  const fetchPosts = async () => {
     setLoading(true);
     try {
-      const postList = await listShowcasePosts(100);
-      setPosts(postList);
-      const authorIds = [...new Set(postList.map(p => p.uid))];
-      const authorPromises = authorIds.map(uid => getUserDoc(uid));
-      const authorDocs = await Promise.all(authorPromises);
-      const authorMap = authorDocs.reduce((acc, doc) => {
-        if (doc) acc[doc.id] = doc;
-        return acc;
-      }, {});
-      setAuthors(authorMap);
-    } catch (error) {
-      console.error("Error loading showcase posts:", error);
+      // Fetch posts from the new, centralized API endpoint
+      const response = await fetch('/api/showcase');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setPosts(data);
+    } catch (err) {
+      console.error(err);
+      setError('Could not load the showcase. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    loadPosts();
-  }, [loadPosts]);
+    fetchPosts();
+  }, []);
 
-  const handleDelete = async (postId) => {
-    if (window.confirm("Are you sure you want to delete this post?")) {
-      try {
-        await deleteShowcasePost(postId);
-        await loadPosts();
-      } catch (error) {
-        console.error("Error deleting post:", error);
-        alert("Failed to delete post.");
-      }
+  const handleReaction = async (postId, reaction) => {
+    if (!user) {
+      alert('You must be logged in to react.');
+      return;
     }
-  };
-
-  const handleUpdate = async (postId, data) => {
     try {
-      await updateShowcasePost(postId, data);
-      await loadPosts();
-      return true;
-    } catch (error) {
-      console.error("Error updating post:", error);
-      return false;
+      await reactToPost(postId, user.uid, reaction);
+      // Re-fetch posts to show the updated reaction count
+      fetchPosts(); 
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add reaction. Please try again.');
     }
-  };
-
-  const handleVote = async (postId) => {
-    if (!user) return alert("You must be logged in to vote.");
-    try {
-      await togglePostVote(postId, user.uid);
-      // Optimistically update UI or reload
-      loadPosts(); 
-    } catch (error) {
-      console.error("Error toggling vote:", error);
-    }
-  };
-
-  const openEditModal = (post) => {
-    setPostToEdit(post);
-    setIsEditModalOpen(true);
-  };
-
-  const breakpointColumnsObj = {
-    default: 4,
-    1500: 3,
-    1100: 2,
-    700: 1
   };
 
   return (
-    <div className="min-h-screen w-full px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-      <div className="w-full mx-auto">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900 dark:text-white">Community Showcase</h1>
-          <p className="mt-4 max-w-3xl mx-auto text-lg md:text-xl text-gray-500 dark:text-gray-400">Discover the creativity and talent within the Intwana Hub community.</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
         </div>
-        <div className="flex justify-center">
-          <Masonry
-            breakpointCols={breakpointColumnsObj}
-            className="my-masonry-grid w-full"
-            columnClassName="my-masonry-grid_column px-4">
-            
-            {user && <div className="mb-8"><NewPostCard onClick={() => setIsNewPostModalOpen(true)} /></div>}
-            
-            {loading ? (
-              Array.from({ length: 6 }).map((_, i) => <div className="mb-8" key={i}><PostCardSkeleton /></div>)
-            ) : (
-              posts.map(post => (
-                <div className="mb-8" key={post.id}>
-                  <PostCard 
-                    post={post} 
-                    author={authors[post.uid]} 
-                    isOwner={user && user.uid === post.uid}
-                    onEdit={() => openEditModal(post)}
-                    onDelete={() => handleDelete(post.id)}
-                    onVote={() => handleVote(post.id)}
-                  />
-                </div>
-              ))
-            )}
-          </Masonry>
-        </div>
+
+        {loading ? <LoadingSpinner /> :
+          error ? <div className="text-red-500 text-center py-10">{error}</div> :
+          posts.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {posts.map(p => (
+                <ContentCard key={p.id} p={p} react={handleReaction} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-gray-500 dark:text-gray-400">The showcase is empty. Be the first to post!</p>
+            </div>
+          )
+        }
       </div>
-
-      <NewPostModal 
-        isOpen={isNewPostModalOpen} 
-        onClose={() => setIsNewPostModalOpen(false)} 
-        onPostCreated={loadPosts} 
-      />
-
-      <EditPostModal
-        isOpen={isEditModalOpen}
-        onClose={() => setPostToEdit(null)}
-        post={postToEdit}
-        onUpdate={handleUpdate}
-      />
     </div>
   );
 }

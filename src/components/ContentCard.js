@@ -1,7 +1,5 @@
 "use client";
 import { FaRegHeart, FaRegComment, FaCode, FaMusic, FaPaintBrush, FaRegUserCircle } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
-import { getUserDoc } from '../lib/firebase/user'; // Corrected import path
 import Link from 'next/link';
 import CodeSnippet from './CodeSnippet';
 
@@ -11,31 +9,18 @@ const typeIcons = {
   music: <FaMusic />,
 };
 
+// The ContentCard is now a simpler, stateless component. It receives all its data
+// via props and is only responsible for displaying the content.
 export default function ContentCard({ p, react, noactions }) {
-  const [author, setAuthor] = useState(null);
-  const [err, setErr] = useState('');
-
-  useEffect(() => {
-    async function loadAuthor() {
-      try {
-        if (!p.uid) return;
-        const authorDoc = await getUserDoc(p.uid);
-        if (authorDoc) {
-          setAuthor(authorDoc);
-        }
-      } catch (e) {
-        setErr(e.message || 'Failed to load author');
-      }
-    }
-    loadAuthor();
-  }, [p.uid]);
+  // The author data is now expected to be passed in the `p` (post) object.
+  const { author } = p;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-2xl">
       <div className="p-5">
         <div className="flex items-center gap-3 mb-4">
           {author ? (
-            <Link href={`/profile/${author.id}`}>
+            <Link href={`/profile/${p.uid}`}>
               <img src={author.photoURL || '/logo.png'} alt={author.displayName} className="w-10 h-10 rounded-full cursor-pointer" />
             </Link>
           ) : (
@@ -45,7 +30,7 @@ export default function ContentCard({ p, react, noactions }) {
             <h4 className="font-bold text-gray-800 dark:text-white">{p.title}</h4>
             {author && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                by <Link href={`/profile/${author.id}`} className="hover:underline">{author.displayName || 'Anonymous'}</Link>
+                by <Link href={`/profile/${p.uid}`} className="hover:underline">{author.displayName || 'Anonymous User'}</Link>
               </p>
             )}
           </div>
@@ -72,13 +57,14 @@ export default function ContentCard({ p, react, noactions }) {
                 </button>
                 <button className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-600/50 px-3 py-1.5 rounded-full text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
                     <FaRegComment /> 
-                    <span>0</span>
+                    <span>{p.comments?.length || 0}</span>
                 </button>
             </div>
-            <p className="text-xs text-gray-500">{p.createdAt?.toDate().toLocaleDateString()}</p>
+            {p.createdAt && (
+              <p className="text-xs text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</p>
+            )}
         </div>
       )}
-      {err && <p className="text-red-500 p-4">{err}</p>}
     </div>
   );
 }

@@ -27,20 +27,6 @@ export async function ensureUserDoc(user) {
   }
 }
 
-export async function getUserDoc(uid) {
-  if (!uid) return null;
-  const snap = await getDoc(doc(db, 'users', uid));
-  if (snap.exists()) {
-    const data = snap.data();
-    return {
-      id: uid,
-      ...data,
-      isAdmin: data.role === 'admin', // Derive isAdmin from the role field
-    };
-  }
-  return null;
-}
-
 export async function updateUserDoc(uid, data) {
     if (!uid) return;
     const userRef = doc(db, 'users', uid);
@@ -89,12 +75,6 @@ export async function createShowcasePost(data, mediaFile) {
   };
   const postRef = await addDoc(collection(db, 'wallPosts'), postData);
   return postRef.id;
-}
-
-export async function listShowcasePosts(limitN = 50) {
-  const qy = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function listUserShowcasePosts(uid, limitN = 50) {

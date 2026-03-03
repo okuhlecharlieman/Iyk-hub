@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { getApprovedOpportunities, listShowcasePosts } from '../lib/firebase/helpers';
+import { getApprovedOpportunities } from '../lib/firebase/helpers';
 import ContentCard from '../components/ContentCard';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
+import LoadingSpinner from '../components/LoadingSpinner';
 
-// Helper to create a consistent section layout
 const FeatureSection = ({ title, icon, children, href }) => (
   <section className="bg-white/50 dark:bg-gray-800/50 rounded-2xl shadow-lg p-6 md:p-8 border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
     <div className="flex items-center justify-between mb-6">
@@ -25,18 +25,28 @@ export default function Home() {
   const [opps, setOpps] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     async function fetchData() {
+      setLoading(true);
       try {
-        const [oppsData, postsData] = await Promise.all([
-          getApprovedOpportunities(3),
-          listShowcasePosts(3),
-        ]);
+        // Fetch both opportunities and showcase posts from their respective sources
+        const oppsData = await getApprovedOpportunities(3);
         setOpps(oppsData);
-        setPosts(postsData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        
+        // Fetch showcase posts from the new, centralized API endpoint
+        const res = await fetch('/api/showcase');
+        if (!res.ok) {
+          throw new Error(`API call failed with status: ${res.status}`);
+        }
+        const postsData = await res.json();
+        // We only need the latest 3 for the homepage
+        setPosts(postsData.slice(0, 3));
+
+      } catch (e) {
+        console.error("Failed to fetch homepage data:", e);
+        setError("Sorry, we couldn't load all content. Please try refreshing.");
       } finally {
         setLoading(false);
       }
@@ -48,7 +58,6 @@ export default function Home() {
     <div className="px-4 sm:px-6 lg:px-8 py-12 md:py-16">
       <div className="max-w-7xl mx-auto space-y-20 md:space-y-28">
 
-        {/* Hero Section */}
         <div className="text-center py-16 md:py-24 bg-gradient-to-b from-white/70 via-white to-gray-100/70 dark:from-gray-900/70 dark:via-gray-800/80 dark:to-gray-900/70 rounded-3xl shadow-inner-lg border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 bg-gradient-to-r from-yellow-400 via-teal-400 to-blue-500 bg-clip-text text-transparent drop-shadow-sm">
             Welcome to Intwana Hub
@@ -62,7 +71,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* How it Works Section */}
         <section id="how-it-works" className="scroll-mt-24">
           <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">How It Works</h2>
@@ -87,18 +95,18 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Showcase Section */}
+        {error && <div className="text-red-500 text-center py-4">{error}</div>}
+
         <FeatureSection title="Latest Creations" icon={<FaPaintBrush />} href="/showcase">
-          {loading ? <p>Loading...</p> : posts.length > 0 ? (
+          {loading ? <LoadingSpinner /> : posts.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-6">
               {posts.map(p => <ContentCard key={p.id} p={p} />)}
             </div>
           ) : <p className="text-gray-500 dark:text-gray-400 text-center py-8">No creations posted yet. Be the first!</p>}
         </FeatureSection>
         
-        {/* Opportunities Section */}
         <FeatureSection title="New Opportunities" icon={<FaBriefcase />} href="/opportunities">
-           {loading ? <p>Loading...</p> : opps.length > 0 ? (
+           {loading ? <LoadingSpinner /> : opps.length > 0 ? (
             <div className="space-y-4">
               {opps.map(o => (
                 <Link key={o.id} href={o.link || '#'} target="_blank" rel="noopener noreferrer" className="block bg-gray-100/50 dark:bg-gray-700/50 p-5 rounded-lg hover:bg-gray-200/70 dark:hover:bg-gray-700/80 transition-all duration-200 border border-gray-200 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500">

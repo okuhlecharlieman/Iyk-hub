@@ -12,14 +12,9 @@ export async function GET(request) {
     await initializeFirebaseAdmin();
     const db = admin.firestore();
 
-    // IMPORTANT: This query requires a composite index in Firestore.
-    // If you see a "FAILED_PRECONDITION" error in your logs, please create the index.
-    // The error message from Firebase will include a direct link to create it.
-    // Index details:
-    // Collection: wallPosts
-    // Fields: isApproved (Ascending), createdAt (Descending)
+    // Fetch the latest 50 posts, ordered by creation date.
+    // The approval filter has been removed as per the user's request.
     const postsSnapshot = await db.collection('wallPosts')
-                                  .where('isApproved', '==', true)
                                   .orderBy('createdAt', 'desc')
                                   .limit(50)
                                   .get();

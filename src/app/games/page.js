@@ -1,24 +1,23 @@
 'use client';
-import Link from 'next/link';
+import GameCard from '../../components/GameCard';
+import UserRoomsList from '../../components/UserRoomsList';
 
-const GAMES = [
-  { id: 'rps', name: 'Rock-Paper-Scissors' },
-  { id: 'tictactoe', name: 'Tic-Tac-Toe' },
-  { id: 'memory', name: 'Memory Match' },
-  { id: 'hangman', name: 'Hangman' },
-  { id: 'quiz', name: 'Quiz' },
-];
+const GAMES = ['rps', 'tictactoe', 'memory', 'hangman', 'quiz'];
 
-export default function GamesIndex() {
+export default function GamesPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Mini Games</h1>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {GAMES.map((g) => (
-          <Link key={g.id} href={`/games/${g.id}`} className="border rounded p-4 hover:bg-neutral-50">
-            {g.name}
-          </Link>
-        ))}
+    <div className="min-h-screen px-4 py-12 md:px-8 md:py-16">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Intwana Games</h1>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Test your skills, challenge friends, and earn points!</p>
+        </div>
+        <UserRoomsList />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {GAMES.map((gameId) => (
+            <GameCard key={gameId} gameId={gameId} />
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -1,122 +1,169 @@
 'use client';
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { doc, collection, addDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import ContentCard from '../../components/ContentCard';
+import PostEditor from '../../components/PostEditor';
 import { useAuth } from '../../context/AuthContext';
-import { createWallPost, listWallPosts, reactToPost, uploadToStorage, awardUploadPoints } from '../../lib/firebaseHelpers';
+import LoadingSpinner from '../../components/LoadingSpinner';
+import { FaPlus } from 'react-icons/fa';
 
 export default function ShowcasePage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [posts, setPosts] = useState([]);
-  const [form, setForm] = useState({ type: 'art', title: '', description: '', code: '', language: 'javascript', file: null });
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
 
-  async function load() {
-    const list = await listWallPosts(50);
-    setPosts(list);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function submit(e) {
-    e.preventDefault();
-    if (!user) return;
-    setLoading(true);
-    setErr('');
+  const fetchPosts = async () => {
     try {
-      let mediaUrl = null;
-      if (form.file) {
-        mediaUrl = await uploadToStorage(form.file, 'wall');
-      }
-      await createWallPost(
-        {
-          type: form.type,
-          title: form.title,
-          description: form.description,
-          mediaUrl,
-          code: form.type === 'code' ? form.code : null,
-          language: form.type === 'code' ? form.language : null,
-        },
-        user.uid
-      );
-      await awardUploadPoints(user.uid);
-      setForm({ type: 'art', title: '', description: '', code: '', language: 'javascript', file: null });
-      await load();
-    } catch (e) {
-      setErr(e.message || 'Upload failed');
+      const response = await fetch('/api/showcase');
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
+      const data = await response.json();
+      setPosts(data);
+    } catch (err) {
+      console.error(err);
+      setError('Could not load the showcase. Please try again later.');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function react(id, emoji) {
-    await reactToPost(id, emoji);
-    await load();
-  }
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleAddPost = () => {
+    setEditingPost(null);
+    setIsEditorOpen(true);
+  };
+
+  const handleEditPost = (post) => {
+    setEditingPost(post);
+    setIsEditorOpen(true);
+  };
+
+  const handleSavePost = async (postData) => {
+    if (!user) return alert('You must be logged in to save a post.');
+
+    try {
+      const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
+
+      if (editingPost) {
+        // If user is an admin editing another user's post, use the admin API
+        if (isAdmin && isEditingAnotherUsersPost) {
+          const token = await user.getIdToken();
+          const response = await fetch('/api/admin/updatePost', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ postId: editingPost.id, updates: postData }),
+          });
+          if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || 'Could not update the post as admin.');
+          }
+        } else {
+          // User is editing their own post
+          const postRef = doc(db, 'wallPosts', editingPost.id);
+          await updateDoc(postRef, { ...postData, updatedAt: serverTimestamp() });
+        }
+      } else {
+        // Create new post
+        await addDoc(collection(db, 'wallPosts'), {
+          ...postData,
+          uid: user.uid,
+          author: { displayName: user.displayName, photoURL: user.photoURL },
+          createdAt: serverTimestamp(),
+          reactions: { likes: 0, hearts: 0, laughs: 0 },
+        });
+      }
+      
+      setIsEditorOpen(false);
+      setEditingPost(null);
+      fetchPosts(); // Refresh posts
+    } catch (err) {
+      console.error('Error saving post:', err);
+      alert(`There was an error saving your post: ${err.message}`);
+    }
+  };
+
+  const handleDeletePost = async (postId, postUid) => {
+    if (!user || !window.confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      const isOwner = user.uid === postUid;
+      
+      if (isAdmin) {
+        const token = await user.getIdToken();
+        const response = await fetch('/api/admin/deletePost', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ postId }),
+        });
+        if (!response.ok) throw new Error(await response.text());
+      } else if (isOwner) {
+        const response = await fetch('/api/showcase/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ postId }),
+        });
+        if (!response.ok) throw new Error(await response.text());
+      } else {
+        throw new Error('You do not have permission to delete this post.');
+      }
+      fetchPosts();
+    } catch (err) {
+      console.error('Error deleting post:', err);
+      alert(`Failed to delete post: ${err.message}`);
+    }
+  };
 
   return (
-    <ProtectedRoute>
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 bg-white p-4 rounded shadow">
-          <h2 className="font-semibold mb-3">Share your creation</h2>
-          {err ? <p className="text-red-600 mb-2">{err}</p> : null}
-          <form onSubmit={submit} className="space-y-3">
-            <select className="w-full border p-2 rounded" value={form.type} onChange={(e)=>setForm({...form, type: e.target.value})}>
-              <option value="art">Art / Image</option>
-              <option value="music">Music / Audio</option>
-              <option value="code">Code</option>
-              <option value="poem">Poem / Text</option>
-            </select>
-            <input className="w-full border p-2 rounded" placeholder="Title" value={form.title} onChange={(e)=>setForm({...form, title: e.target.value})} />
-            <textarea className="w-full border p-2 rounded" placeholder="Description" rows={3} value={form.description} onChange={(e)=>setForm({...form, description: e.target.value})} />
-            {form.type === 'code' ? (
-              <>
-                <select className="w-full border p-2 rounded" value={form.language} onChange={(e)=>setForm({...form, language: e.target.value})}>
-                  <option value="javascript">JavaScript</option>
-                  <option value="python">Python</option>
-                  <option value="html">HTML</option>
-                </select>
-                <textarea className="w-full border p-2 rounded font-mono" rows={6} placeholder="// your code here" value={form.code} onChange={(e)=>setForm({...form, code: e.target.value})} />
-              </>
-            ) : (
-              <input type="file" accept={form.type === 'music' ? 'audio/*' : 'image/*'} onChange={(e)=>setForm({...form, file: e.target.files?.[0] || null})} />
-            )}
-            <button className="w-full bg-neutral-900 text-white rounded py-2" disabled={loading}>
-              {loading ? 'Uploading…' : 'Post'}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-12">
+          <div className="text-center flex-grow">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
+          </div>
+          {user && (
+            <button onClick={handleAddPost} className="ml-4 flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+              <FaPlus size={20} />
             </button>
-          </form>
+          )}
         </div>
 
-        <div className="md:col-span-2 space-y-4">
-          {posts.length === 0 ? <p className="text-neutral-500">No posts yet. Be the first!</p> : null}
-          {posts.map((p)=>(
-            <div key={p.id} className="bg-white p-4 rounded shadow">
-              <p className="text-sm text-neutral-500 mb-1">{p.type?.toUpperCase()}</p>
-              <h3 className="font-semibold">{p.title}</h3>
-              {p.mediaUrl ? (
-                p.type === 'music' ? (
-                  <audio className="w-full mt-2" src={p.mediaUrl} controls />
-                ) : (
-                  <img className="mt-2 max-h-64 object-contain" src={p.mediaUrl} alt={p.title} />
-                )
-              ) : null}
-              {p.code ? (
-                <pre className="bg-neutral-900 text-white p-3 rounded mt-2 overflow-auto text-sm"><code>{p.code}</code></pre>
-              ) : null}
-              {p.description ? <p className="mt-2 text-neutral-700">{p.description}</p> : null}
-              <div className="flex gap-3 mt-3">
-                {['❤️','🎉','👍'].map((e)=>(
-                  <button key={e} onClick={()=>react(p.id, e)} className="border rounded px-3 py-1">
-                    {e} {(p.reactions && p.reactions[e]) || 0}
-                  </button>
-                ))}
-              </div>
+        {loading ? <LoadingSpinner /> :
+          error ? <div className="text-red-500 text-center py-10">{error}</div> :
+          posts.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {posts.map(p => (
+                <ContentCard 
+                  key={p.id} 
+                  p={p} 
+                  onEdit={() => handleEditPost(p)} 
+                  onDelete={() => handleDeletePost(p.id, p.uid)} // Pass post UID for permission check
+                  canManage={isAdmin || (user && user.uid === p.uid)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-gray-500 dark:text-gray-400">The showcase is empty. Be the first to post!</p>
+            </div>
+          )
+        }
       </div>
-    </ProtectedRoute>
+      
+      {isEditorOpen && (
+        <PostEditor 
+          post={editingPost}
+          onSave={handleSavePost}
+          onClose={() => setIsEditorOpen(false)}
+        />
+      )}
+    </div>
   );
 }

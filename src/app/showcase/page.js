@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import ContentCard from '../../components/ContentCard';
 import { reactToPost } from '../../lib/firebase/helpers'; 
-import { useAuth } from '../../lib/firebase/auth'; 
+import { useAuth } from '../../lib/firebase/user'; 
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function ShowcasePage() {

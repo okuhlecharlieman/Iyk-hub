@@ -12,7 +12,12 @@ export async function GET(request) {
     await initializeFirebaseAdmin();
     const db = admin.firestore();
 
-    // 1. Fetch the latest approved showcase posts
+    // IMPORTANT: This query requires a composite index in Firestore.
+    // If you see a "FAILED_PRECONDITION" error in your logs, please create the index.
+    // The error message from Firebase will include a direct link to create it.
+    // Index details:
+    // Collection: wallPosts
+    // Fields: isApproved (Ascending), createdAt (Descending)
     const postsSnapshot = await db.collection('wallPosts')
                                   .where('isApproved', '==', true)
                                   .orderBy('createdAt', 'desc')

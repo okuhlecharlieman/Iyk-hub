@@ -11,13 +11,12 @@ const typeIcons = {
   music: <FaMusic />,
 };
 
-export default function ContentCard({ p, author: initialAuthor, react, noactions }) {
-  const [author, setAuthor] = useState(initialAuthor);
+export default function ContentCard({ p, react, noactions }) {
+  const [author, setAuthor] = useState(null);
   const [err, setErr] = useState('');
 
   useEffect(() => {
     async function loadAuthor() {
-      if (initialAuthor) return;
       try {
         if (!p.uid) return;
         const authorDoc = await getUserDoc(p.uid);
@@ -29,7 +28,7 @@ export default function ContentCard({ p, author: initialAuthor, react, noactions
       }
     }
     loadAuthor();
-  }, [p.uid, initialAuthor]);
+  }, [p.uid]);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 hover:shadow-2xl">

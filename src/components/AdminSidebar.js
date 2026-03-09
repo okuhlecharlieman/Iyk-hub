@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt } from 'react-icons/fa';
+import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 const AdminSidebar = () => {
@@ -15,32 +15,49 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <div className="bg-gray-800 text-white w-64 min-h-screen p-4 flex flex-col">
-      <div className="text-2xl font-bold mb-10">Admin Panel</div>
-      <nav className="flex-grow">
-        <ul>
-          {links.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <li key={link.href} className="mb-4">
-                <Link
-                  href={link.href}
-                  className={`flex items-center p-2 rounded-lg transition-colors ${isActive ? 'bg-blue-600' : 'hover:bg-gray-700'}`}>
-                  <span className="mr-3">{link.icon}</span>
-                  {link.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+    <aside className="bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-300 w-64 min-h-screen p-4 flex flex-col justify-between border-r dark:border-gray-700">
       <div>
-        <button onClick={logout} className="w-full flex items-center p-2 rounded-lg text-left hover:bg-red-600 transition-colors">
-            <span className="mr-3"><FaSignOutAlt /></span>
-            Logout
-        </button>
+        <Link href="/dashboard" className="flex items-center gap-2 mb-10">
+          <img src="/logo.png" alt="Intwana Hub Logo" className="w-10 h-10" />
+          <span className="text-xl font-bold text-gray-800 dark:text-white">Intwana Hub</span>
+        </Link>
+        <nav>
+          <ul>
+            {links.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <li key={link.href} className="mb-2">
+                  <Link
+                    href={link.href}
+                    className={`flex items-center py-2 px-4 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-lg'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="mr-3 text-lg">{link.icon}</span>
+                    <span className="font-medium">{link.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </div>
-    </div>
+      <div className="pt-4 border-t dark:border-gray-700">
+          <Link href="/" className="flex items-center py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+              <span className="mr-3 text-lg"><FaHome /></span>
+              <span className="font-medium">Back to Site</span>
+          </Link>
+          <button 
+            onClick={logout} 
+            className="w-full flex items-center py-2 px-4 rounded-lg text-left text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 mt-2"
+          >
+              <span className="mr-3 text-lg"><FaSignOutAlt /></span>
+              <span className="font-medium">Logout</span>
+          </button>
+      </div>
+    </aside>
   );
 };
 

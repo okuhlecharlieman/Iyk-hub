@@ -4,88 +4,109 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
-import { FaUsers, FaClock, FaCheckCircle } from 'react-icons/fa';
-import { db as firestore } from '../../lib/firebase'; // Use client-side firebase
+import { FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { db } from '../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import StatCard from '../../components/admin/StatCard';
+import UserManagementCard from '../../components/admin/UserManagementCard';
+import PendingOppsCard from '../../components/admin/PendingOppsCard';
+import LeaderboardCard from '../../components/admin/LeaderboardCard';
 
 export default function AdminPage() {
-    const { user, userProfile } = useAuth();
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0 });
+  const { user, userProfile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0 });
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        if (userProfile?.role !== 'admin') {
-            if (user) setLoading(false);
-            return;
-        }
+  useEffect(() => {
+    if (userProfile?.role !== 'admin') {
+      if (user) setLoading(false);
+      return;
+    }
 
-        setLoading(true);
+    setLoading(true);
 
-        // Real-time listener for users
-        const usersUnsubscribe = onSnapshot(collection(firestore, 'users'), (snapshot) => {
-            setStats(prevStats => ({ ...prevStats, users: snapshot.size }));
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching user stats:", error);
-            setLoading(false);
-        });
-
-        // Real-time listener for opportunities
-        const oppsUnsubscribe = onSnapshot(collection(firestore, 'opportunities'), (snapshot) => {
-            let pending = 0;
-            let approved = 0;
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.status === 'pending') pending++;
-                if (data.status === 'approved') approved++;
-            });
-            setStats(prevStats => ({ ...prevStats, pending, approved }));
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching opportunity stats:", error);
-            setLoading(false);
-        });
-
-        // Cleanup listeners on component unmount
-        return () => {
-            usersUnsubscribe();
-            oppsUnsubscribe();
-        };
-
-    }, [user, userProfile]);
-
-    return (
-        <ProtectedRoute adminOnly={true}>
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Admin Dashboard</h1>
-                        <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">Overview of the community hub.</p>
-                    </div>
-
-                    {loading ? (
-                        <div className="flex justify-center items-center h-32">
-                            <LoadingSpinner />
-                        </div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                <div className="stat-card"><FaUsers className="text-3xl text-blue-500" /><div><p className="text-gray-500">Total Users</p><p className="text-2xl font-bold">{stats.users}</p></div></div>
-                                <div className="stat-card"><FaClock className="text-3xl text-yellow-500" /><div><p className="text-gray-500">Pending Opportunities</p><p className="text-2xl font-bold">{stats.pending}</p></div></div>
-                                <div className="stat-card"><FaCheckCircle className="text-3xl text-green-500" /><div><p className="text-gray-500">Approved Opportunities</p><p className="text-2xl font-bold">{stats.approved}</p></div></div>
-                            </div>
-
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                                <h2 className="text-2xl font-bold mb-4">Management</h2>
-                                <div className="flex flex-col space-y-4">
-                                    <Link href="/admin/opportunities" className="btn-secondary">Manage Opportunities</Link>
-                                    <Link href="/admin/users" className="btn-secondary">Manage Users</Link>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        </ProtectedRoute>
+    const usersUnsubscribe = onSnapshot(collection(db, 'users'), 
+      (snapshot) => setStats(prev => ({ ...prev, users: snapshot.size })), 
+      (err) => {
+        console.error("Error fetching user stats:", err);
+        setError("Could not load user statistics.");
+      }
     );
+
+    const oppsUnsubscribe = onSnapshot(collection(db, 'opportunities'), 
+      (snapshot) => {
+        let pending = 0, approved = 0;
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.status === 'pending') pending++;
+          if (data.status === 'approved') approved++;
+        });
+        setStats(prev => ({ ...prev, pending, approved }));
+      },
+      (err) => {
+        console.error("Error fetching opportunity stats:", err);
+        setError("Could not load opportunity statistics.");
+      }
+    );
+
+    Promise.allSettled([
+        new Promise(res => onSnapshot(collection(db, 'users'), res)),
+        new Promise(res => onSnapshot(collection(db, 'opportunities'), res))
+    ]).then(() => setLoading(false));
+
+    return () => {
+      usersUnsubscribe();
+      oppsUnsubscribe();
+    };
+  }, [user, userProfile]);
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen"><LoadingSpinner /></div>;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center">
+        <FaExclamationTriangle className="text-5xl text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2">An Error Occurred</h2>
+        <p className="text-gray-600 dark:text-gray-400">{error}</p>
+        <p className="mt-4">Please try refreshing the page or contact support.</p>
+      </div>
+    );
+  }
+
+  return (
+    <ProtectedRoute adminOnly={true}>
+      <div className="flex flex-col space-y-8">
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <StatCard icon={<FaUsers />} title="Total Users" value={stats.users} color="blue" />
+          <StatCard icon={<FaClock />} title="Pending Opportunities" value={stats.pending} color="yellow" />
+          <StatCard icon={<FaCheckCircle />} title="Approved Opportunities" value={stats.approved} color="green" />
+        </div>
+
+        {/* Main Content Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-8">
+            <UserManagementCard />
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-8">
+            <PendingOppsCard />
+          </div>
+        </div>
+        
+        {/* Full-width Bottom Section */}
+        <div>
+          <LeaderboardCard />
+        </div>
+
+      </div>
+    </ProtectedRoute>
+  );
 }

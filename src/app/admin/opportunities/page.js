@@ -34,7 +34,7 @@ export default function ManageOpportunities() {
         try {
             const firebaseUser = user || auth.currentUser;
             if (!firebaseUser) {
-              toast('error', 'You must be signed in to manage opportunities');
+              if (toast) toast('error', 'You must be signed in to manage opportunities');
               setOpps([]);
               setLoading(false);
               return;
@@ -44,7 +44,7 @@ export default function ManageOpportunities() {
             const res = await fetch('/api/admin/opportunities', { headers: { Authorization: `Bearer ${idToken}` } });
             const body = await res.json();
             if (!res.ok) {
-              toast('error', body.error || 'Failed to load opportunities');
+              if (toast) toast('error', body.error || 'Failed to load opportunities');
               setOpps([]);
             } else if (!Array.isArray(body)) {
               console.warn('/api/admin/opportunities returned non-array', body);
@@ -54,7 +54,7 @@ export default function ManageOpportunities() {
             }
         } catch (error) {
             console.error("Error loading opportunities:", error);
-            toast('error', 'Error loading opportunities');
+            if (toast) toast('error', 'Error loading opportunities');
             setOpps([]);
         }
         setLoading(false);
@@ -64,7 +64,7 @@ export default function ManageOpportunities() {
         try {
             const firebaseUser = user || auth.currentUser;
             if (!firebaseUser) {
-              toast('error', 'You must be signed in to perform this action');
+              if (toast) toast('error', 'You must be signed in to perform this action');
               return;
             }
 
@@ -79,7 +79,7 @@ export default function ManageOpportunities() {
             if (!res.ok) {
               // If server-side admin API is unavailable or unauthorized, fall back
               // to client-side Firestore update (relies on Firestore security rules).
-              toast('error', json.error || json.message || 'Failed to update opportunity via admin API — trying client fallback');
+              if (toast) toast('error', json.error || json.message || 'Failed to update opportunity via admin API — trying client fallback');
 
               try {
                 if (status === 'approved') {
@@ -90,20 +90,20 @@ export default function ManageOpportunities() {
                   await clientUpdateOpportunity(id, { status });
                 }
                 await loadOpps();
-                toast('success', `Updated "${json.title || id}" to ${status} (client fallback)`);
+                if (toast) toast('success', `Updated "${json.title || id}" to ${status} (client fallback)`);
                 return;
               } catch (fallbackErr) {
                 console.error('Client-side fallback failed:', fallbackErr);
-                toast('error', 'Both admin API and client fallback failed');
+                if (toast) toast('error', 'Both admin API and client fallback failed');
                 return;
               }
             }
 
             await loadOpps(); // Refresh the list after updating
-            toast('success', `Updated "${json.title || id}" to ${status}`);
+            if (toast) toast('success', `Updated "${json.title || id}" to ${status}`);
         } catch (error) {
             console.error(`Error updating opportunity ${id} to ${status}:`, error);
-            toast('error', `Failed to update opportunity`);
+            if (toast) toast('error', `Failed to update opportunity`);
         }
     };
     
@@ -142,7 +142,7 @@ export default function ManageOpportunities() {
                                                 {filter === 'pending' && (
                                                     <>
                                                         <Button size="sm" variant="primary" ariaLabel={`Approve ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'approved')}><FaCheck /></Button>
-                                                        <Button size="sm" variant="danger" ariaLabel={`Reject ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'rejected')}><FaTimes /></Button>
+                                                        <Button size="sm" variant="danger" ariaLabel={`Reject ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'rejected')}><FaTimes /></Button
                                                     </>
                                                 )}
                                                 {filter !== 'pending' && (

@@ -1,7 +1,7 @@
 'use client';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import { FaExclamationTriangle } from 'react-icons/fa';
 import Button from './ui/Button';
@@ -9,9 +9,14 @@ import Button from './ui/Button';
 export default function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, userProfile } = useAuth();
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || loading) return;
 
     if (!user) {
       router.replace('/login');
@@ -23,9 +28,9 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
       // We don't redirect here; we let the render logic show the detailed access denied message.
     }
 
-  }, [loading, user, userProfile, adminOnly, router]);
+  }, [isMounted, loading, user, userProfile, adminOnly, router]);
 
-  if (loading || !user) {
+  if (!isMounted || loading || !user) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-center px-4">
             <LoadingSpinner />

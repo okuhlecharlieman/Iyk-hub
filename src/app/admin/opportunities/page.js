@@ -142,7 +142,7 @@ export default function ManageOpportunities() {
                                                 {filter === 'pending' && (
                                                     <>
                                                         <Button size="sm" variant="primary" ariaLabel={`Approve ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'approved')}><FaCheck /></Button>
-                                                        <Button size="sm" variant="danger" ariaLabel={`Reject ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'rejected')}><FaTimes /></Button
+                                                        <Button size="sm" variant="danger" ariaLabel={`Reject ${opp.title}`} onClick={() => handleStatusUpdate(opp.id, 'rejected')}><FaTimes /></Button>
                                                     </>
                                                 )}
                                                 {filter !== 'pending' && (

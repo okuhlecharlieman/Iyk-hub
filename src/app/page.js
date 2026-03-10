@@ -42,7 +42,7 @@ export default function Home() {
         }
         const postsData = await res.json();
         // We only need the latest 3 for the homepage
-        setPosts(postsData.slice(0, 3));
+        setPosts(Array.isArray(postsData) ? postsData.slice(0, 3) : []);
 
       } catch (e) {
         console.error("Failed to fetch homepage data:", e);

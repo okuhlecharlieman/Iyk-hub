@@ -131,7 +131,7 @@ export default function ManageOpportunities() {
                             {filteredOpps.length > 0 ? (
                                 <div className="space-y-4">
                                     {filteredOpps.map(opp => (
-                                        <div key={opp.id} className="p-4 border rounded-lg dark:border-gray-700 flex flex-col md:flex-.row justify-between items-start">
+                                        <div key={opp.id} className="p-4 border rounded-lg dark:border-gray-700 flex flex-col md:flex-row justify-between items-start">
                                             <div className="flex-1">
                                                 <h3 className="font-bold text-lg">{opp.title}</h3>
                                                 <p className="text-sm text-gray-500">{opp.org}</p>

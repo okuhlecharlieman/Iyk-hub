@@ -26,6 +26,7 @@ export default function OpportunitiesPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingOpp, setEditingOpp] = useState(null);
   const [activeTab, setActiveTab] = useState(TABS.ALL);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
 
@@ -98,17 +99,35 @@ export default function OpportunitiesPage() {
   };
 
   const filteredOpps = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    let items = opportunities;
     if (activeTab === TABS.PENDING) {
-      return opportunities.filter(o => o.status === 'pending');
+      items = items.filter(o => o.status === 'pending');
     }
-    return opportunities;
-  }, [activeTab, opportunities]);
+
+    if (!query) return items;
+
+    return items.filter((o) => {
+      const haystack = [
+        o.title,
+        o.org,
+        o.description,
+        ...(Array.isArray(o.tags) ? o.tags : []),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [activeTab, opportunities, searchQuery]);
 
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="md:flex justify-between items-center mb-8">
+          <div className="md:flex justify-between items-center mb-6 gap-6">
             <div className="text-center md:text-left">
               <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Opportunity Board</h1>
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Connect with jobs, gigs, and collaborations in our community.</p>
@@ -116,14 +135,36 @@ export default function OpportunitiesPage() {
             <Button onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }} variant="primary" className="w-full md:w-auto mt-6 md:mt-0">+ Add Opportunity</Button>
           </div>
 
-          {isAdmin && (
-            <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-              <nav className="-mb-px flex space-x-6">
-                <button className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === TABS.ALL ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`} onClick={() => setActiveTab(TABS.ALL)}>All</button>
-                <button className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === TABS.PENDING ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`} onClick={() => setActiveTab(TABS.PENDING)}>Pending Review</button>
-              </nav>
+          <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="relative w-full md:w-1/2">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by title, org, tags..."
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 px-4 py-3 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
             </div>
-          )}
+
+            {isAdmin && (
+              <div className="w-full md:w-auto border-b border-gray-200 dark:border-gray-700">
+                <nav className="-mb-px flex space-x-6">
+                  <button className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === TABS.ALL ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`} onClick={() => setActiveTab(TABS.ALL)}>All</button>
+                  <button className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === TABS.PENDING ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`} onClick={() => setActiveTab(TABS.PENDING)}>Pending Review</button>
+                </nav>
+              </div>
+            )}
+          </div>
 
           {loading ? <LoadingSpinner /> : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

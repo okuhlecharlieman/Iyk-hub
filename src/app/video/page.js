@@ -1,11 +1,12 @@
 'use client';
 
+import ProtectedRoute from '../../components/ProtectedRoute';
 import VideoChat from '../../components/VideoChat';
 
 export default function VideoPage() {
   return (
-    <div>
+    <ProtectedRoute>
       <VideoChat />
-    </div>
+    </ProtectedRoute>
   );
 }

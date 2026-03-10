@@ -289,7 +289,7 @@ export default function VideoChat() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Intwana Video Match</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Random Chats</h1>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
             Meet a random Intwana Hub user via video. Nothing is shared until both agree.
           </p>

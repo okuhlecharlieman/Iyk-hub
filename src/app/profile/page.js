@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getUserDoc, listUserShowcasePosts, updateUserDoc } from '../../lib/firebase/helpers';
+import { getUserDoc } from '../../lib/firebase/user';
+import { listUserShowcasePosts, updateUserDoc } from '../../lib/firebase/helpers';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { FaEdit, FaSave, FaTimes, FaShieldAlt } from 'react-icons/fa';

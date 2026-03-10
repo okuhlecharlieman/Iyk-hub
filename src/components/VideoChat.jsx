@@ -201,7 +201,7 @@ export default function VideoChat() {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
       await updateDoc(roomRef, {
-        offer: offer.toJSON(),
+        offer: pc.localDescription.toJSON(), // FIX: Use pc.localDescription
         status: 'connecting',
       });
     }

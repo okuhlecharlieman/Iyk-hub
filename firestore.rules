@@ -86,5 +86,17 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read, write: if request.auth.uid != null;
     }
+    
+    // Rules for video chat
+    match /videoRooms/{roomId} {
+      // Allow authenticated users to create, read, update, and delete rooms.
+      allow read, write: if request.auth.uid != null;
+
+      // Rules for the 'signals' subcollection for WebRTC
+      match /signals/{signalId} {
+        // Allow authenticated users to exchange signaling messages.
+        allow read, write: if request.auth.uid != null;
+      }
+    }
   }
 }

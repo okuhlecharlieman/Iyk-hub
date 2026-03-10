@@ -1,3 +1,4 @@
+'use client';
 
 import AdminSidebar from '../../components/AdminSidebar';
 import { FaBell } from 'react-icons/fa';

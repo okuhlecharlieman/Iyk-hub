@@ -45,11 +45,22 @@ export const authenticate = async (req) => {
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
-    if (decodedToken.admin !== true) {
+
+    // Support both old-style boolean `admin` claim and new `role` claim.
+    const hasAdminClaim = decodedToken.admin === true || decodedToken.role === 'admin';
+
+    if (!hasAdminClaim) {
+      // Fall back to checking Firestore user document role if the custom claim isn't present.
+      const userDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
+      if (userDoc.exists && userDoc.data()?.role === 'admin') {
+        return decodedToken;
+      }
+
       const err = new Error('Not authorized. User is not an admin.');
       err.code = 403;
       throw err;
     }
+
     return decodedToken;
   } catch (error) {
     console.error('Authentication error:', error.message);

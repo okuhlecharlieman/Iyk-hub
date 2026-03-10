@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { listTopUsers } from '../../lib/firebase/helpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Podium from '../../components/Podium';

@@ -60,9 +60,18 @@ export default function ShowcasePage() {
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ postId: editingPost.id, updates: postData }),
           });
+
           if (!response.ok) {
-            const result = await response.json();
-            throw new Error(result.error || 'Could not update the post as admin.');
+            let errorMessage = 'Could not update the post as admin.';
+            try {
+              const result = await response.json();
+              if (result?.error) errorMessage = result.error;
+            } catch (parseError) {
+              // If the response isn't valid JSON, fallback to raw text
+              const text = await response.text();
+              if (text) errorMessage = text;
+            }
+            throw new Error(errorMessage);
           }
         } else {
           // User is editing their own post
@@ -102,14 +111,34 @@ export default function ShowcasePage() {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ postId }),
         });
-        if (!response.ok) throw new Error(await response.text());
+        if (!response.ok) {
+          let errorMessage = 'Failed to delete post.';
+          try {
+            const json = await response.json();
+            if (json?.error) errorMessage = json.error;
+          } catch {
+            const text = await response.text();
+            if (text) errorMessage = text;
+          }
+          throw new Error(errorMessage);
+        }
       } else if (isOwner) {
         const response = await fetch('/api/showcase/delete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ postId }),
         });
-        if (!response.ok) throw new Error(await response.text());
+        if (!response.ok) {
+          let errorMessage = 'Failed to delete post.';
+          try {
+            const json = await response.json();
+            if (json?.error) errorMessage = json.error;
+          } catch {
+            const text = await response.text();
+            if (text) errorMessage = text;
+          }
+          throw new Error(errorMessage);
+        }
       } else {
         throw new Error('You do not have permission to delete this post.');
       }

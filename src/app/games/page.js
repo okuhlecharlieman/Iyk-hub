@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import GameCard from '../../components/GameCard';
 import UserRoomsList from '../../components/UserRoomsList';
 
-const GAMES = ['rps', 'tictactoe', 'memory', 'hangman', 'quiz'];
+const GAMES = ['rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
 
 export default function GamesPage() {
   const [search, setSearch] = useState('');

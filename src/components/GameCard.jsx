@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain } from 'react-icons/gi';
+import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain, GiVideoCamera } from 'react-icons/gi';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -30,6 +30,11 @@ const GAME_DETAILS = {
     icon: <GiBrain size={40} />,
     description: 'Test your knowledge on various topics.'
   },
+  randomchat: { // Added randomchat
+    name: 'Random Video Chat',
+    icon: <GiVideoCamera size={40} />,
+    description: 'Hop into a random video chat room.'
+  },
 };
 
 export default function GameCard({ gameId }) {
@@ -38,8 +43,12 @@ export default function GameCard({ gameId }) {
   const [joinGameId, setJoinGameId] = useState('');
 
   const handleCreateSession = () => {
-    const newGameId = `${gameId}-${Date.now()}`;
-    router.push(`/games/${newGameId}`);
+    if (gameId === 'randomchat') { // If randomchat, go to /video
+      router.push('/video');
+    } else {
+      const newGameId = `${gameId}-${Date.now()}`;
+      router.push(`/games/${newGameId}`);
+    }
   };
 
   const handleJoinGame = () => {
@@ -47,6 +56,9 @@ export default function GameCard({ gameId }) {
         router.push(`/games/${joinGameId.trim()}`);
     }
   }
+
+  // Hide join functionality for randomchat
+  const isRandomChat = gameId === 'randomchat';
 
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 ease-in-out group">
@@ -64,23 +76,25 @@ export default function GameCard({ gameId }) {
           onClick={handleCreateSession}
           className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
         >
-          Create New Game
+          {isRandomChat ? 'Join Random Chat' : 'Create New Game'}
         </button>
-        <div className="flex gap-2">
-          <input
-              type="text"
-              value={joinGameId}
-              onChange={(e) => setJoinGameId(e.target.value)}
-              placeholder="Enter Game ID to Join"
-              className="flex-grow p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark:border-gray-600 dark:placeholder-gray-400"
-          />
-          <button
-              onClick={handleJoinGame}
-              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-          >
-              Join
-          </button>
-        </div>
+        {!isRandomChat && (
+          <div className="flex gap-2">
+            <input
+                type="text"
+                value={joinGameId}
+                onChange={(e) => setJoinGameId(e.target.value)}
+                placeholder="Enter Game ID to Join"
+                className="flex-grow p-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark:border-gray-600 dark:placeholder-gray-400"
+            />
+            <button
+                onClick={handleJoinGame}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+            >
+                Join
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

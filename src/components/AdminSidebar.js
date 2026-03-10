@@ -17,10 +17,10 @@ const AdminSidebar = () => {
   return (
     <aside className="bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-300 w-64 min-h-screen p-4 flex flex-col justify-between border-r dark:border-gray-700">
       <div>
-        <Link href="/dashboard" className="flex items-center gap-2 mb-10">
-          <img src="/logo.png" alt="Intwana Hub Logo" className="w-10 h-10" />
-          <span className="text-xl font-bold text-gray-800 dark:text-white">Intwana Hub</span>
-        </Link>
+        <div  className="flex items-center gap-2 mb-10">
+        
+          <span className="text-xl font-bold text-gray-800 dark:text-white">Admin Panel</span>
+        </div>
         <nav>
           <ul>
             {links.map((link) => {

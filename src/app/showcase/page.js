@@ -63,13 +63,13 @@ export default function ShowcasePage() {
 
           if (!response.ok) {
             let errorMessage = 'Could not update the post as admin.';
+            // Read the body once, then attempt to parse JSON from it.
+            const bodyText = await response.text();
             try {
-              const result = await response.json();
+              const result = JSON.parse(bodyText);
               if (result?.error) errorMessage = result.error;
-            } catch (parseError) {
-              // If the response isn't valid JSON, fallback to raw text
-              const text = await response.text();
-              if (text) errorMessage = text;
+            } catch {
+              if (bodyText) errorMessage = bodyText;
             }
             throw new Error(errorMessage);
           }
@@ -113,12 +113,12 @@ export default function ShowcasePage() {
         });
         if (!response.ok) {
           let errorMessage = 'Failed to delete post.';
+          const bodyText = await response.text();
           try {
-            const json = await response.json();
+            const json = JSON.parse(bodyText);
             if (json?.error) errorMessage = json.error;
           } catch {
-            const text = await response.text();
-            if (text) errorMessage = text;
+            if (bodyText) errorMessage = bodyText;
           }
           throw new Error(errorMessage);
         }
@@ -130,12 +130,12 @@ export default function ShowcasePage() {
         });
         if (!response.ok) {
           let errorMessage = 'Failed to delete post.';
+          const bodyText = await response.text();
           try {
-            const json = await response.json();
+            const json = JSON.parse(bodyText);
             if (json?.error) errorMessage = json.error;
           } catch {
-            const text = await response.text();
-            if (text) errorMessage = text;
+            if (bodyText) errorMessage = bodyText;
           }
           throw new Error(errorMessage);
         }

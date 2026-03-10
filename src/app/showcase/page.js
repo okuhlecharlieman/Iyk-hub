@@ -11,6 +11,7 @@ import { FaPlus } from 'react-icons/fa';
 export default function ShowcasePage() {
   const { user, isAdmin } = useAuth();
   const [posts, setPosts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
@@ -149,26 +150,46 @@ export default function ShowcasePage() {
     }
   };
 
+  const filteredPosts = posts.filter((p) => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return (
+      (p.title || '').toLowerCase().includes(search) ||
+      (p.description || '').toLowerCase().includes(search) ||
+      (p.author?.displayName || '').toLowerCase().includes(search)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
-          <div className="text-center flex-grow">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+          <div className="flex-1">
             <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
           </div>
-          {user && (
-            <button onClick={handleAddPost} className="ml-4 flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-              <FaPlus size={20} />
-            </button>
-          )}
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search posts..."
+              className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {user && (
+              <button onClick={handleAddPost} className="flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <FaPlus size={20} />
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? <LoadingSpinner /> :
           error ? <div className="text-red-500 text-center py-10">{error}</div> :
-          posts.length > 0 ? (
+          filteredPosts.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map(p => (
+              {filteredPosts.map(p => (
                 <ContentCard 
                   key={p.id} 
                   p={p} 
@@ -180,7 +201,7 @@ export default function ShowcasePage() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <p className="text-gray-500 dark:text-gray-400">The showcase is empty. Be the first to post!</p>
+              <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
             </div>
           )
         }

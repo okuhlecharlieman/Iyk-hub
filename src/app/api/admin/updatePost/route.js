@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import admin from 'firebase-admin';
+import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import { authenticate } from '@/lib/firebase/admin';
 
-// This endpoint safely updates a post, converted to the App Router format.
+// This endpoint safely updates a post using the Admin SDK (so it bypasses Firestore security rules).
 export async function POST(req) {
   try {
     // Authenticate the user as an admin.
@@ -26,19 +26,19 @@ export async function POST(req) {
     });
 
     if (Object.keys(allowedUpdates).length === 0) {
-        return NextResponse.json({ error: 'No valid fields provided to update.' }, { status: 400 });
+      return NextResponse.json({ error: 'No valid fields provided to update.' }, { status: 400 });
     }
 
-    allowedUpdates.updatedAt = serverTimestamp();
+    await initializeFirebaseAdmin();
+    const adminDb = admin.firestore();
 
-    const postRef = doc(db, 'wallPosts', postId);
-    await updateDoc(postRef, allowedUpdates);
+    const postRef = adminDb.collection('wallPosts').doc(postId);
+    await postRef.update({ ...allowedUpdates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
 
     return NextResponse.json({ message: 'Post updated successfully' });
 
   } catch (error) {
     console.error('Error updating post:', error);
-    // Return a generic error message to the client
     return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status: error.code || 500 });
   }
 }

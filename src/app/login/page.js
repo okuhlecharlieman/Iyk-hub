@@ -15,9 +15,28 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
+  const validateEmail = (value) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
+  const validatePassword = (value) => {
+    return typeof value === 'string' && value.length >= 6;
+  };
+
   async function onSubmit(e) {
     e.preventDefault();
     setErr('');
+
+    if (!validateEmail(email)) {
+      setErr('Please enter a valid email address.');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setErr('Password must be at least 6 characters long.');
+      return;
+    }
+
     setLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);

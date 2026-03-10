@@ -1,0 +1,102 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      // Safely check if the user exists and has an 'admin' role.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Admins can read any user document.
+      // Users can only read their own document.
+      allow get: if request.auth.uid == userId || isAdmin();
+
+      // Admins can list all users.
+      // Public leaderboard reads are served via a server endpoint that returns
+      // only public profile fields (displayName, photoURL, points).
+      // Listing all users directly is admin-only.
+      allow list: if isAdmin();
+
+      // Users can create their own document upon signup.
+      allow create: if request.auth.uid == userId;
+
+      // Users can update their own document, but cannot change their role.
+      // Admins can update any user document, including changing the role.
+      allow update: if (request.auth.uid == userId && request.resource.data.role == resource.data.role) || isAdmin();
+
+      // Only admins can delete users.
+      allow delete: if isAdmin();
+    }
+
+    // Rules for the 'opportunities' collection
+    match /opportunities/{opportunityId} {
+      // Admins can read any opportunity.
+      // Authenticated users can read approved opportunities.
+      // Users can read their own submitted opportunities.
+      allow get: if isAdmin() || resource.data.status == 'approved' || resource.data.ownerId == request.auth.uid;
+
+      // Admins can list all opportunities.
+      // Authenticated users may only list approved opportunities or their
+      // own documents — this prevents exposing other users' pending items.
+      allow list: if isAdmin()
+        || (
+          request.auth.uid != null && (
+            request.query.where('status','==','approved') ||
+            request.query.where('ownerId','==', request.auth.uid)
+          )
+        );
+
+
+      // Authenticated users can create new opportunities.
+      allow create: if request.auth.uid != null;
+
+      // Admins can update any opportunity.
+      // The owner of an opportunity can update it if it's still pending.
+      allow update: if isAdmin() || (resource.data.ownerId == request.auth.uid && resource.data.status == 'pending');
+
+      // Admins or the owner can delete an opportunity.
+      allow delete: if isAdmin() || resource.data.ownerId == request.auth.uid;
+    }
+
+    // Wall Posts
+    match /wallPosts/{postId} {
+      // Allow anyone to read
+      allow read: if true;
+
+      // Allow authenticated users to create
+      allow create: if request.auth.uid != null;
+
+      // Allow owner or admin to update/delete
+      allow update, delete: if resource.data.uid == request.auth.uid || isAdmin();
+    }
+
+    // Quotes
+    match /quotes/{quoteId} {
+        // Allow anyone to read
+        allow read: if true;
+        // Restrict writes to admins
+        allow write: if isAdmin();
+    }
+
+    // Rules for the 'games' collection
+    match /games/{gameId} {
+      allow read, write: if request.auth.uid != null;
+    }
+    
+    // Rules for video chat
+    match /videoRooms/{roomId} {
+      // Allow authenticated users to create, read, update, and delete rooms.
+      allow read, write: if request.auth.uid != null;
+
+      // Rules for the 'signals' subcollection for WebRTC
+      match /signals/{signalId} {
+        // Allow authenticated users to exchange signaling messages.
+        allow read, write: if request.auth.uid != null;
+      }
+    }
+  }
+}

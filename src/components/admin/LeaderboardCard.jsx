@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 
-export default function LeaderboardCard({ users }) {
+export default function LeaderboardCard({ users = [] }) {
+  const leaderboard = Array.isArray(users) ? users : [];
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
       <div className="flex justify-between items-center mb-4">
@@ -11,7 +13,7 @@ export default function LeaderboardCard({ users }) {
         </Link>
       </div>
       <ol className="space-y-3">
-        {users.slice(0, 5).map((u, i) => (
+        {leaderboard.slice(0, 5).map((u, i) => (
           <li key={u.id} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="font-bold text-gray-500 dark:text-gray-400 w-6">{i + 1}.</span>

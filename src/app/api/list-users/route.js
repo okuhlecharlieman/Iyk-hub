@@ -72,14 +72,12 @@ export async function GET(request) {
         (user.email ? authUserByEmailMap.get(user.email.toLowerCase()) : null);
       return {
         id: user.id,
-        uid: authUser?.uid || user.id,
-        authUid: authUser?.uid || null,
         email: user.email || authUser?.email || 'N/A',
         displayName: user.displayName || authUser?.displayName || null,
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
-        createdAt: serializeTimestamp(user.createdAt),
+        createdAt: user.createdAt || null,
         authExists: !!authUser,
       };
     });

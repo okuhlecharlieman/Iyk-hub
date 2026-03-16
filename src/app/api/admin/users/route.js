@@ -1,39 +1,31 @@
 
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { authenticate } from '../../../../lib/firebase/admin';
 import { listAllUsers } from '../../../../lib/firebase/admin';
 
-// This function verifies the admin status of the caller.
+// Re-uses centralized admin authentication logic (token + role/claim check).
 async function verifyAdmin(req) {
-    await initializeFirebaseAdmin(); // Ensures Firebase Admin is initialized
-    const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
-
-    if (!idToken) {
-        return { error: 'Unauthorized', status: 401 };
-    }
-
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const callerUid = decodedToken.uid;
-
-        const adminDb = admin.firestore();
-        const callerDocSnap = await adminDb.collection('users').doc(callerUid).get();
-
-        // Check if the user document exists and has the 'admin' role.
-        if (!callerDocSnap.exists || callerDocSnap.data().role !== 'admin') {
-            return { error: 'Forbidden', status: 403 };
-        }
-        return { success: true }; // User is verified as an admin
+        await authenticate(req);
+        return { success: true };
     } catch (error) {
+        if (error?.code === 401 || error?.code === 403) {
+            return { error: error.message, status: error.code };
+        }
         console.error('Error verifying admin:', error);
         return { error: 'Internal Server Error', status: 500 };
     }
 }
 
 // GET handler to retrieve all users.
-export async function GET() {
+export async function GET(req) {
     try {
+        const adminVerification = await verifyAdmin(req);
+        if (adminVerification.error) {
+            return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
+        }
+
         const users = await listAllUsers();
         return NextResponse.json(users);
     } catch (error) {
@@ -55,20 +47,40 @@ export async function PUT(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-        // Update user in Firebase Authentication (handles displayName, etc.)
-        await admin.auth().updateUser(uid, updateData);
+        const authUpdateData = {};
+        const allowedAuthFields = ['displayName', 'email', 'photoURL', 'password', 'phoneNumber', 'disabled', 'emailVerified'];
+        allowedAuthFields.forEach((field) => {
+            if (Object.prototype.hasOwnProperty.call(updateData, field)) {
+                authUpdateData[field] = updateData[field];
+            }
+        });
 
-        const adminDb = admin.firestore();
-
-        // Update the user document in Firestore to keep data consistent.
-        await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
-
-        // If a role is being updated, also set custom claims for security rules.
-        if (updateData.role) {
-             await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
+        let authExists = true;
+        try {
+            await admin.auth().getUser(uid);
+        } catch (error) {
+            if (error?.code === 'auth/user-not-found') {
+                authExists = false;
+            } else {
+                throw error;
+            }
         }
 
-        return NextResponse.json({ message: `User ${uid} updated successfully` });
+        if (authExists && Object.keys(authUpdateData).length > 0) {
+            await admin.auth().updateUser(uid, authUpdateData);
+        }
+
+        const adminDb = admin.firestore();
+        await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'role')) {
+            if (!authExists) {
+                return NextResponse.json({ error: `User ${uid} has no Firebase Auth account; cannot set role claims.` }, { status: 400 });
+            }
+            await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
+        }
+
+        return NextResponse.json({ message: `User ${uid} updated successfully`, authExists });
     } catch (error) {
         console.error('Error updating user:', error);
         return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
@@ -83,16 +95,21 @@ export async function DELETE(req) {
             return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
         }
 
-        const { uid } = await req.json(); 
-
+        const { uid } = await req.json();
         if (!uid) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
         const adminDb = admin.firestore();
 
-        // Delete user from Firebase Authentication, Firestore users collection, and leaderboard collection.
-        await admin.auth().deleteUser(uid);
+        try {
+            await admin.auth().deleteUser(uid);
+        } catch (error) {
+            if (error?.code !== 'auth/user-not-found') {
+                throw error;
+            }
+        }
+
         await adminDb.collection('users').doc(uid).delete();
         await adminDb.collection('leaderboard').doc(uid).delete();
 

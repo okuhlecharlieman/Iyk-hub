@@ -1,10 +1,8 @@
-
 import { NextResponse } from 'next/server';
 import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 
 export const runtime = 'nodejs';
 
-// Lazily parse service account JSON (accept both legacy and canonical env names)
 let serviceAccount = null;
 const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
 if (rawServiceAccount) {
@@ -15,6 +13,9 @@ if (rawServiceAccount) {
   }
 }
 
+function normalizeEmail(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : null;
+}
 
 function serializeTimestamp(value) {
   if (value && typeof value.toDate === 'function') {
@@ -31,6 +32,17 @@ export async function GET(request) {
     console.log("Build-time: Returning empty list for /api/list-users.");
     return NextResponse.json({ success: true, users: [] });
   }
+  return value || null;
+}
+
+function toAuthUserRecord(userRecord) {
+  return {
+    uid: userRecord.uid,
+    email: userRecord.email || null,
+    displayName: userRecord.displayName || null,
+    photoURL: userRecord.photoURL || null,
+  };
+}
 
   try {
     // Explicit server-side authorization to prevent data exposure.
@@ -41,9 +53,8 @@ export async function GET(request) {
     const firestore = admin.firestore();
     const auth = admin.auth();
 
-    const usersCollection = firestore.collection('users');
-    const usersSnapshot = await usersCollection.orderBy('createdAt', 'desc').get();
-    const firestoreUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const usersSnapshot = await firestore.collection('users').orderBy('createdAt', 'desc').get();
+    const firestoreUsers = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     const listUsersResult = await auth.listUsers(1000);
     const authUserMap = new Map();
@@ -83,7 +94,6 @@ export async function GET(request) {
     });
 
     return NextResponse.json({ success: true, users: combinedUsers });
-
   } catch (error) {
     console.error('Error in /api/list-users:', error);
     if (error?.code === 401 || error?.code === 403) {

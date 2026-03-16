@@ -58,7 +58,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
           <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.uid, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
+          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
         </div>
       </Modal>
 
@@ -80,7 +80,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                 <Button variant="primary" size="sm" onClick={async (e) => {
                     const newDisplayName = e.target.closest('.flex-col').querySelector('#displayName').value;
                     setEditOpen(false);
-                    await onRequestUpdate(user.uid, { displayName: newDisplayName });
+                    await onRequestUpdate(user.authUid || user.uid || user.id, { displayName: newDisplayName });
                 }}>Save</Button>
             </div>
         </div>
@@ -90,7 +90,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>delete</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
             <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="danger" size="sm" onClick={async () => { setDeleteOpen(false); await onRequestDelete(user.uid); }}>Confirm</Button>
+            <Button variant="danger" size="sm" onClick={async () => { setDeleteOpen(false); await onRequestDelete(user.authUid || user.uid || user.id); }}>Confirm</Button>
         </div>
       </Modal>
     </>

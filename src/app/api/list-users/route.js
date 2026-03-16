@@ -24,13 +24,9 @@ function serializeTimestamp(value) {
   return value || null;
 }
 
-export async function GET(request) {
-  // During the build process, there's no real request or user.
-  // We can skip the logic and return an empty array.
-  // The actual data fetching will happen client-side after the admin logs in.
-  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log("Build-time: Returning empty list for /api/list-users.");
-    return NextResponse.json({ success: true, users: [] });
+function serializeTimestamp(value) {
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate().toISOString();
   }
   return value || null;
 }

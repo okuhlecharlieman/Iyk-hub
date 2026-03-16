@@ -103,15 +103,16 @@ export default function AdminUsersPage() {
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
-    if (userProfile?.role === 'admin') {
+    if (userProfile?.role === 'admin' && user) {
       let unsubscribe;
 
       (async () => {
         setLoading(true);
         try {
-          const initial = await listAllUsers();
+          const idToken = await user.getIdToken();
+          const initial = await listAllUsers(idToken);
           if (Array.isArray(initial)) {
-            setUsers(initial.map(u => ({ ...u, uid: u.uid || u.id })));
+            setUsers(initial.map(u => ({ ...u, uid: u.uid || u.authUid || u.id })));
           } else {
             setUsers([]);
           }
@@ -125,13 +126,13 @@ export default function AdminUsersPage() {
         unsubscribe = onUsersUpdate((docs) => {
             setUsers((prevUsers) => {
                 const newUsersMap = new Map();
-                const prevUsersMap = new Map(prevUsers.map(u => [u.uid, u]));
+                const prevUsersMap = new Map(prevUsers.map(u => [(u.uid || u.id), u]));
 
                 // Rebuild the list from the Firestore snapshot, preserving Auth data.
                 docs.forEach(userDoc => {
-                    const uid = userDoc.id;
+                    const uid = userDoc.uid || userDoc.authUid || userDoc.id;
                     const existingUser = prevUsersMap.get(uid) || {}; // has auth data
-                    newUsersMap.set(uid, { ...existingUser, ...userDoc, uid });
+                    newUsersMap.set(uid, { ...existingUser, ...userDoc, uid, id: userDoc.id || existingUser.id || uid });
                 });
 
                 // Add back auth-only users from the previous state.
@@ -152,7 +153,7 @@ export default function AdminUsersPage() {
 
       return () => unsubscribe && unsubscribe();
     }
-  }, [userProfile]);
+  }, [userProfile, user]);
 
   const [processingUid, setProcessingUid] = useState(null);
   const toast = useToast();
@@ -262,9 +263,18 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
-                <UserRow key={user.uid} user={user} onRequestUpdate={handleUpdateUser} onRequestDelete={handleDeleteUser} isProcessing={processingUid === user.uid} />
-              ))}
+              {users.map((user) => {
+                const userKey = user.uid || user.authUid || user.id;
+                return (
+                  <UserRow
+                    key={userKey}
+                    user={{ ...user, uid: userKey }}
+                    onRequestUpdate={handleUpdateUser}
+                    onRequestDelete={handleDeleteUser}
+                    isProcessing={processingUid === userKey}
+                  />
+                );
+              })}
             </tbody>
           </table>
         </div>

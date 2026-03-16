@@ -47,20 +47,40 @@ export async function PUT(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-        // Update user in Firebase Authentication (handles displayName, etc.)
-        await admin.auth().updateUser(uid, updateData);
+        const authUpdateData = {};
+        const allowedAuthFields = ['displayName', 'email', 'photoURL', 'password', 'phoneNumber', 'disabled', 'emailVerified'];
+        allowedAuthFields.forEach((field) => {
+            if (Object.prototype.hasOwnProperty.call(updateData, field)) {
+                authUpdateData[field] = updateData[field];
+            }
+        });
 
-        const adminDb = admin.firestore();
-
-        // Update the user document in Firestore to keep data consistent.
-        await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
-
-        // If a role is being updated, also set custom claims for security rules.
-        if (updateData.role) {
-             await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
+        let authExists = true;
+        try {
+            await admin.auth().getUser(uid);
+        } catch (error) {
+            if (error?.code === 'auth/user-not-found') {
+                authExists = false;
+            } else {
+                throw error;
+            }
         }
 
-        return NextResponse.json({ message: `User ${uid} updated successfully` });
+        if (authExists && Object.keys(authUpdateData).length > 0) {
+            await admin.auth().updateUser(uid, authUpdateData);
+        }
+
+        const adminDb = admin.firestore();
+        await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
+
+        if (Object.prototype.hasOwnProperty.call(updateData, 'role')) {
+            if (!authExists) {
+                return NextResponse.json({ error: `User ${uid} has no Firebase Auth account; cannot set role claims.` }, { status: 400 });
+            }
+            await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
+        }
+
+        return NextResponse.json({ message: `User ${uid} updated successfully`, authExists });
     } catch (error) {
         console.error('Error updating user:', error);
         return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
@@ -75,16 +95,21 @@ export async function DELETE(req) {
             return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
         }
 
-        const { uid } = await req.json(); 
-
+        const { uid } = await req.json();
         if (!uid) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
         const adminDb = admin.firestore();
 
-        // Delete user from Firebase Authentication, Firestore users collection, and leaderboard collection.
-        await admin.auth().deleteUser(uid);
+        try {
+            await admin.auth().deleteUser(uid);
+        } catch (error) {
+            if (error?.code !== 'auth/user-not-found') {
+                throw error;
+            }
+        }
+
         await adminDb.collection('users').doc(uid).delete();
         await adminDb.collection('leaderboard').doc(uid).delete();
 

@@ -47,16 +47,29 @@ export async function GET(request) {
 
     const listUsersResult = await auth.listUsers(1000);
     const authUserMap = new Map();
+    const authUserByEmailMap = new Map();
     listUsersResult.users.forEach(userRecord => {
       authUserMap.set(userRecord.uid, {
+        uid: userRecord.uid,
         email: userRecord.email,
         displayName: userRecord.displayName,
         photoURL: userRecord.photoURL,
       });
+
+      if (userRecord.email) {
+        authUserByEmailMap.set(userRecord.email.toLowerCase(), {
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          photoURL: userRecord.photoURL,
+        });
+      }
     });
 
     const combinedUsers = firestoreUsers.map(user => {
-      const authUser = authUserMap.get(user.id);
+      const authUser =
+        authUserMap.get(user.id) ||
+        (user.email ? authUserByEmailMap.get(user.email.toLowerCase()) : null);
       return {
         id: user.id,
         email: user.email || authUser?.email || 'N/A',
@@ -64,11 +77,7 @@ export async function GET(request) {
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
-<<<<<<< codex/evaluate-app-scalability-and-robustness-72upem
-        createdAt: serializeTimestamp(user.createdAt),
-=======
         createdAt: user.createdAt || null,
->>>>>>> main
         authExists: !!authUser,
       };
     });

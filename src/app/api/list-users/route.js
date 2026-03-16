@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 
 export const runtime = 'nodejs';
 
@@ -25,19 +25,11 @@ export async function GET(request) {
     return NextResponse.json({ success: true, users: [] });
   }
 
-  // If running in production build-time and no service account, return empty list
-  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log("Build-time: Returning empty list for /api/list-users.");
-    return NextResponse.json({ success: true, users: [] });
-  }
-
-  await initializeFirebaseAdmin();
-  const admin = await import('firebase-admin');
-
   try {
-    // The security check is now implicitly handled by the fact that only an
-    // admin user's client-side code will ever call this API route.
-    // The `verifyAdmin` function has been removed to allow static generation.
+    // Explicit server-side authorization to prevent data exposure.
+    await authenticate(request);
+    await initializeFirebaseAdmin();
+    const admin = await import('firebase-admin');
 
     const firestore = admin.firestore();
     const auth = admin.auth();
@@ -59,10 +51,13 @@ export async function GET(request) {
     const combinedUsers = firestoreUsers.map(user => {
       const authUser = authUserMap.get(user.id);
       return {
-        ...user,
+        id: user.id,
         email: user.email || authUser?.email || 'N/A',
-        displayName: user.displayName || authUser?.displayName,
-        photoURL: user.photoURL || authUser?.photoURL,
+        displayName: user.displayName || authUser?.displayName || null,
+        photoURL: user.photoURL || authUser?.photoURL || null,
+        role: user.role || 'user',
+        points: user.points || { weekly: 0, lifetime: 0 },
+        createdAt: user.createdAt || null,
         authExists: !!authUser,
       };
     });
@@ -71,6 +66,9 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Error in /api/list-users:', error);
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.code });
+    }
     return NextResponse.json({ success: false, error: 'An internal server error occurred.' }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { doc, collection, addDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
@@ -13,22 +13,56 @@ export default function ShowcasePage() {
   const [posts, setPosts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState(null);
   const [error, setError] = useState('');
-  
+
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch('/api/showcase');
+      const response = await fetch('/api/showcase?limit=20');
       if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
       const data = await response.json();
-      setPosts(data);
+
+      if (Array.isArray(data)) {
+        setPosts(data);
+        setNextCursor(null);
+      } else {
+        setPosts(data?.posts || []);
+        setNextCursor(data?.nextCursor || null);
+      }
     } catch (err) {
       console.error(err);
       setError('Could not load the showcase. Please try again later.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMorePosts = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+
+    try {
+      const response = await fetch(`/api/showcase?limit=20&cursor=${encodeURIComponent(nextCursor)}`);
+      if (!response.ok) throw new Error(`Failed to fetch more posts: ${response.statusText}`);
+
+      const data = await response.json();
+      const newPosts = Array.isArray(data) ? data : (data?.posts || []);
+      setNextCursor(Array.isArray(data) ? null : (data?.nextCursor || null));
+
+      setPosts((prev) => {
+        const map = new Map(prev.map((p) => [p.id, p]));
+        newPosts.forEach((p) => map.set(p.id, p));
+        return Array.from(map.values());
+      });
+    } catch (err) {
+      console.error(err);
+      alert(`Failed to load more posts: ${err.message}`);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -53,18 +87,16 @@ export default function ShowcasePage() {
       const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
 
       if (editingPost) {
-        // If user is an admin editing another user's post, use the admin API
         if (isAdmin && isEditingAnotherUsersPost) {
           const token = await user.getIdToken();
           const response = await fetch('/api/admin/updatePost', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ postId: editingPost.id, updates: postData }),
           });
 
           if (!response.ok) {
             let errorMessage = 'Could not update the post as admin.';
-            // Read the body once, then attempt to parse JSON from it.
             const bodyText = await response.text();
             try {
               const result = JSON.parse(bodyText);
@@ -75,12 +107,10 @@ export default function ShowcasePage() {
             throw new Error(errorMessage);
           }
         } else {
-          // User is editing their own post
           const postRef = doc(db, 'wallPosts', editingPost.id);
           await updateDoc(postRef, { ...postData, updatedAt: serverTimestamp() });
         }
       } else {
-        // Create new post
         await addDoc(collection(db, 'wallPosts'), {
           ...postData,
           uid: user.uid,
@@ -89,10 +119,10 @@ export default function ShowcasePage() {
           reactions: { likes: 0, hearts: 0, laughs: 0 },
         });
       }
-      
+
       setIsEditorOpen(false);
       setEditingPost(null);
-      fetchPosts(); // Refresh posts
+      fetchPosts();
     } catch (err) {
       console.error('Error saving post:', err);
       alert(`There was an error saving your post: ${err.message}`);
@@ -104,12 +134,12 @@ export default function ShowcasePage() {
 
     try {
       const isOwner = user.uid === postUid;
-      
+
       if (isAdmin) {
         const token = await user.getIdToken();
         const response = await fetch('/api/admin/deletePost', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ postId }),
         });
         if (!response.ok) {
@@ -125,9 +155,9 @@ export default function ShowcasePage() {
         }
       } else if (isOwner) {
         const response = await fetch('/api/showcase/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ postId }),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ postId }),
         });
         if (!response.ok) {
           let errorMessage = 'Failed to delete post.';
@@ -188,17 +218,30 @@ export default function ShowcasePage() {
         {loading ? <LoadingSpinner /> :
           error ? <div className="text-red-500 text-center py-10">{error}</div> :
           filteredPosts.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredPosts.map(p => (
-                <ContentCard 
-                  key={p.id} 
-                  p={p} 
-                  onEdit={() => handleEditPost(p)} 
-                  onDelete={() => handleDeletePost(p.id, p.uid)} // Pass post UID for permission check
-                  canManage={isAdmin || (user && user.uid === p.uid)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filteredPosts.map(p => (
+                  <ContentCard
+                    key={p.id}
+                    p={p}
+                    onEdit={() => handleEditPost(p)}
+                    onDelete={() => handleDeletePost(p.id, p.uid)}
+                    canManage={isAdmin || (user && user.uid === p.uid)}
+                  />
+                ))}
+              </div>
+              {!searchTerm && nextCursor && (
+                <div className="flex justify-center mt-10">
+                  <button
+                    onClick={loadMorePosts}
+                    disabled={loadingMore}
+                    className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {loadingMore ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-10">
               <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
@@ -206,9 +249,9 @@ export default function ShowcasePage() {
           )
         }
       </div>
-      
+
       {isEditorOpen && (
-        <PostEditor 
+        <PostEditor
           post={editingPost}
           onSave={handleSavePost}
           onClose={() => setIsEditorOpen(false)}

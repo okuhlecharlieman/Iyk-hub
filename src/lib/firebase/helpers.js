@@ -45,15 +45,13 @@ export async function listTopUsers(limitN = 10, filter = 'lifetime') {
 }
 
 // Admin function to get all users (server-composed — includes whether the user exists in Auth)
-export async function listAllUsers(idToken) {
-  let token = idToken;
-  if (!token) {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      throw new Error('Not authenticated');
-    }
-    token = await currentUser.getIdToken();
+export async function listAllUsers() {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Not authenticated');
   }
+
+  const token = await currentUser.getIdToken();
   const res = await fetch('/api/list-users', {
     headers: {
       Authorization: `Bearer ${token}`,

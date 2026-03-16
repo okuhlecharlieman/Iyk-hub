@@ -16,6 +16,13 @@ if (rawServiceAccount) {
 }
 
 
+function serializeTimestamp(value) {
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate().toISOString();
+  }
+  return value || null;
+}
+
 export async function GET(request) {
   // During the build process, there's no real request or user.
   // We can skip the logic and return an empty array.
@@ -57,7 +64,11 @@ export async function GET(request) {
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
+<<<<<<< codex/evaluate-app-scalability-and-robustness-72upem
+        createdAt: serializeTimestamp(user.createdAt),
+=======
         createdAt: user.createdAt || null,
+>>>>>>> main
         authExists: !!authUser,
       };
     });

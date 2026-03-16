@@ -1,39 +1,31 @@
 
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { authenticate } from '../../../../lib/firebase/admin';
 import { listAllUsers } from '../../../../lib/firebase/admin';
 
-// This function verifies the admin status of the caller.
+// Re-uses centralized admin authentication logic (token + role/claim check).
 async function verifyAdmin(req) {
-    await initializeFirebaseAdmin(); // Ensures Firebase Admin is initialized
-    const idToken = req.headers.get('authorization')?.split('Bearer ')[1];
-
-    if (!idToken) {
-        return { error: 'Unauthorized', status: 401 };
-    }
-
     try {
-        const decodedToken = await admin.auth().verifyIdToken(idToken);
-        const callerUid = decodedToken.uid;
-
-        const adminDb = admin.firestore();
-        const callerDocSnap = await adminDb.collection('users').doc(callerUid).get();
-
-        // Check if the user document exists and has the 'admin' role.
-        if (!callerDocSnap.exists || callerDocSnap.data().role !== 'admin') {
-            return { error: 'Forbidden', status: 403 };
-        }
-        return { success: true }; // User is verified as an admin
+        await authenticate(req);
+        return { success: true };
     } catch (error) {
+        if (error?.code === 401 || error?.code === 403) {
+            return { error: error.message, status: error.code };
+        }
         console.error('Error verifying admin:', error);
         return { error: 'Internal Server Error', status: 500 };
     }
 }
 
 // GET handler to retrieve all users.
-export async function GET() {
+export async function GET(req) {
     try {
+        const adminVerification = await verifyAdmin(req);
+        if (adminVerification.error) {
+            return NextResponse.json({ error: adminVerification.error }, { status: adminVerification.status });
+        }
+
         const users = await listAllUsers();
         return NextResponse.json(users);
     } catch (error) {

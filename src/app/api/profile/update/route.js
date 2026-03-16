@@ -1,56 +1,57 @@
 import { NextResponse } from 'next/server';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { authenticateAndGetUid } from '@/lib/firebase/admin';
+import admin from 'firebase-admin';
+import { authenticateAndGetUid, initializeFirebaseAdmin } from '@/lib/firebase/admin';
 
-// This endpoint safely updates a user's profile, converted to the App Router format.
+export const runtime = 'nodejs';
+
+// This endpoint safely updates a user's profile.
 export async function POST(req) {
   let uid;
   try {
-    // Authenticate the user and get their UID.
     uid = await authenticateAndGetUid(req);
     if (!uid) {
-        // This case should ideally not be hit if authenticateAndGetUid throws on failure.
-        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
   } catch (error) {
     return NextResponse.json({ error: error.message || 'Authentication failed' }, { status: 401 });
   }
 
   try {
+    await initializeFirebaseAdmin();
     const { updates } = await req.json();
 
     if (!updates || typeof updates !== 'object') {
       return NextResponse.json({ error: 'A valid updates object is required' }, { status: 400 });
     }
 
-    // Sanitize the updates to only allow specific, user-editable fields.
+    // Sanitize updates to only allow specific user-editable fields.
     const allowedUpdates = {};
     const editableFields = ['displayName', 'bio', 'skills'];
 
-    editableFields.forEach(field => {
-      if (Object.prototype.hasOwnProperty.call(updates, field)) {
-        if (field === 'skills') {
-          const skills = updates[field];
-          if (Array.isArray(skills) && skills.every(s => typeof s === 'string')) {
-            allowedUpdates[field] = skills;
-          }
-        } else {
-          allowedUpdates[field] = updates[field];
+    editableFields.forEach((field) => {
+      if (!Object.prototype.hasOwnProperty.call(updates, field)) return;
+
+      if (field === 'skills') {
+        const skills = updates[field];
+        if (Array.isArray(skills) && skills.every((s) => typeof s === 'string')) {
+          allowedUpdates[field] = skills.slice(0, 50);
         }
+        return;
+      }
+
+      if (typeof updates[field] === 'string') {
+        allowedUpdates[field] = updates[field].trim();
       }
     });
 
     if (Object.keys(allowedUpdates).length === 0) {
-        return NextResponse.json({ error: 'No valid fields provided to update.' }, { status: 400 });
+      return NextResponse.json({ error: 'No valid fields provided to update.' }, { status: 400 });
     }
 
-    // Use the authenticated UID for the document reference.
-    const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, allowedUpdates);
+    const userRef = admin.firestore().collection('users').doc(uid);
+    await userRef.set(allowedUpdates, { merge: true });
 
     return NextResponse.json({ message: 'Profile updated successfully' });
-
   } catch (error) {
     console.error('Error updating profile:', error);
     return NextResponse.json({ error: 'An internal error occurred while updating the profile.' }, { status: 500 });

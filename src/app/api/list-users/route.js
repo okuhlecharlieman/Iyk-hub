@@ -1,10 +1,8 @@
-
 import { NextResponse } from 'next/server';
-import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 
 export const runtime = 'nodejs';
 
-// Lazily parse service account JSON (accept both legacy and canonical env names)
 let serviceAccount = null;
 const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;
 if (rawServiceAccount) {
@@ -15,62 +13,88 @@ if (rawServiceAccount) {
   }
 }
 
+function normalizeEmail(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : null;
+}
+
+function serializeTimestamp(value) {
+  if (value && typeof value.toDate === 'function') {
+    return value.toDate().toISOString();
+  }
+  return value || null;
+}
+
+function toAuthUserRecord(userRecord) {
+  return {
+    uid: userRecord.uid,
+    email: userRecord.email || null,
+    displayName: userRecord.displayName || null,
+    photoURL: userRecord.photoURL || null,
+  };
+}
 
 export async function GET(request) {
-  // During the build process, there's no real request or user.
-  // We can skip the logic and return an empty array.
-  // The actual data fetching will happen client-side after the admin logs in.
   if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log("Build-time: Returning empty list for /api/list-users.");
+    console.log('Build-time: Returning empty list for /api/list-users.');
     return NextResponse.json({ success: true, users: [] });
   }
-
-  // If running in production build-time and no service account, return empty list
-  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log("Build-time: Returning empty list for /api/list-users.");
-    return NextResponse.json({ success: true, users: [] });
-  }
-
-  await initializeFirebaseAdmin();
-  const admin = await import('firebase-admin');
 
   try {
-    // The security check is now implicitly handled by the fact that only an
-    // admin user's client-side code will ever call this API route.
-    // The `verifyAdmin` function has been removed to allow static generation.
+    await authenticate(request);
+    await initializeFirebaseAdmin();
+    const admin = await import('firebase-admin');
 
     const firestore = admin.firestore();
     const auth = admin.auth();
 
-    const usersCollection = firestore.collection('users');
-    const usersSnapshot = await usersCollection.orderBy('createdAt', 'desc').get();
-    const firestoreUsers = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const usersSnapshot = await firestore.collection('users').orderBy('createdAt', 'desc').get();
+    const firestoreUsers = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
     const listUsersResult = await auth.listUsers(1000);
     const authUserMap = new Map();
-    listUsersResult.users.forEach(userRecord => {
-      authUserMap.set(userRecord.uid, {
-        email: userRecord.email,
-        displayName: userRecord.displayName,
-        photoURL: userRecord.photoURL,
-      });
+    const authUserByEmailMap = new Map();
+
+    listUsersResult.users.forEach((userRecord) => {
+      const normalized = toAuthUserRecord(userRecord);
+      authUserMap.set(normalized.uid, normalized);
+
+      const emailKey = normalizeEmail(normalized.email);
+      if (emailKey) {
+        authUserByEmailMap.set(emailKey, normalized);
+      }
     });
 
-    const combinedUsers = firestoreUsers.map(user => {
-      const authUser = authUserMap.get(user.id);
+    const combinedUsers = firestoreUsers.map((user) => {
+      const emailKey = normalizeEmail(user.email);
+      const authUser =
+        authUserMap.get(user.authUid) ||
+        authUserMap.get(user.uid) ||
+        authUserMap.get(user.id) ||
+        (emailKey ? authUserByEmailMap.get(emailKey) : null);
+
+      const resolvedUid = authUser?.uid || user.authUid || user.uid || user.id;
+
       return {
-        ...user,
+        id: user.id,
+        uid: resolvedUid,
+        authUid: authUser?.uid || user.authUid || null,
+        firestoreUid: user.uid || null,
         email: user.email || authUser?.email || 'N/A',
-        displayName: user.displayName || authUser?.displayName,
-        photoURL: user.photoURL || authUser?.photoURL,
-        authExists: !!authUser,
+        displayName: user.displayName || authUser?.displayName || null,
+        photoURL: user.photoURL || authUser?.photoURL || null,
+        role: user.role || 'user',
+        points: user.points || { weekly: 0, lifetime: 0 },
+        createdAt: serializeTimestamp(user.createdAt),
+        authExists: Boolean(authUser || user.authUid),
       };
     });
 
     return NextResponse.json({ success: true, users: combinedUsers });
-
   } catch (error) {
     console.error('Error in /api/list-users:', error);
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.code });
+    }
     return NextResponse.json({ success: false, error: 'An internal server error occurred.' }, { status: 500 });
   }
 }

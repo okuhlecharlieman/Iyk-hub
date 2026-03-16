@@ -36,7 +36,7 @@ export default function ProfilePage() {
       setForm({
         displayName: userDoc?.displayName || user?.displayName || '',
         bio: userDoc?.bio || '',
-        skills: (userDoc?.skills || []).join(', '),
+        skills: (Array.isArray(userDoc?.skills) ? userDoc.skills : (typeof userDoc?.skills === 'string' ? userDoc.skills.split(',') : [])).map((skill) => String(skill).trim()).filter(Boolean).join(', '),
       });
     } catch (err) {
       console.error("Error loading profile data:", err);
@@ -123,9 +123,9 @@ export default function ProfilePage() {
                           </Link>
                       )}
                       <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto pt-2">{doc?.bio || 'No bio yet.'}</p>
-                      {doc?.skills?.length > 0 && (
+                      {(Array.isArray(doc?.skills) ? doc.skills : []).length > 0 && (
                         <div className="flex flex-wrap justify-center gap-2 pt-3">
-                          {doc.skills.map(skill => <span key={skill} className="chip">{skill}</span>)}
+                          {(Array.isArray(doc?.skills) ? doc.skills : []).map((skill) => <span key={skill} className="chip">{skill}</span>)}
                         </div>
                       )}
                     </div>
@@ -147,7 +147,7 @@ export default function ProfilePage() {
                         ))}
                     </div>
                 ) : (
-                  <p className="text-center text-gray-500 dark:text-gray-400 py-4">You haven't showcased any projects yet.</p>
+                  <p className="text-center text-gray-500 dark:text-gray-400 py-4">You haven’t showcased any projects yet.</p>
                 )}
               </div>
             </div>

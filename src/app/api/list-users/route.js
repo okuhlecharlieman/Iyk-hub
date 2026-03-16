@@ -24,6 +24,17 @@ function serializeTimestamp(value) {
   return value || null;
 }
 
+export async function GET(request) {
+  // During the build process, there's no real request or user.
+  // We can skip the logic and return an empty array.
+  // The actual data fetching will happen client-side after the admin logs in.
+  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
+    console.log("Build-time: Returning empty list for /api/list-users.");
+    return NextResponse.json({ success: true, users: [] });
+  }
+  return value || null;
+}
+
 function toAuthUserRecord(userRecord) {
   return {
     uid: userRecord.uid,
@@ -33,13 +44,8 @@ function toAuthUserRecord(userRecord) {
   };
 }
 
-export async function GET(request) {
-  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log('Build-time: Returning empty list for /api/list-users.');
-    return NextResponse.json({ success: true, users: [] });
-  }
-
   try {
+    // Explicit server-side authorization to prevent data exposure.
     await authenticate(request);
     await initializeFirebaseAdmin();
     const admin = await import('firebase-admin');
@@ -53,39 +59,37 @@ export async function GET(request) {
     const listUsersResult = await auth.listUsers(1000);
     const authUserMap = new Map();
     const authUserByEmailMap = new Map();
+    listUsersResult.users.forEach(userRecord => {
+      authUserMap.set(userRecord.uid, {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoURL,
+      });
 
-    listUsersResult.users.forEach((userRecord) => {
-      const normalized = toAuthUserRecord(userRecord);
-      authUserMap.set(normalized.uid, normalized);
-
-      const emailKey = normalizeEmail(normalized.email);
-      if (emailKey) {
-        authUserByEmailMap.set(emailKey, normalized);
+      if (userRecord.email) {
+        authUserByEmailMap.set(userRecord.email.toLowerCase(), {
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          photoURL: userRecord.photoURL,
+        });
       }
     });
 
-    const combinedUsers = firestoreUsers.map((user) => {
-      const emailKey = normalizeEmail(user.email);
+    const combinedUsers = firestoreUsers.map(user => {
       const authUser =
-        authUserMap.get(user.authUid) ||
-        authUserMap.get(user.uid) ||
         authUserMap.get(user.id) ||
-        (emailKey ? authUserByEmailMap.get(emailKey) : null);
-
-      const resolvedUid = authUser?.uid || user.authUid || user.uid || user.id;
-
+        (user.email ? authUserByEmailMap.get(user.email.toLowerCase()) : null);
       return {
         id: user.id,
-        uid: resolvedUid,
-        authUid: authUser?.uid || user.authUid || null,
-        firestoreUid: user.uid || null,
         email: user.email || authUser?.email || 'N/A',
         displayName: user.displayName || authUser?.displayName || null,
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
-        createdAt: serializeTimestamp(user.createdAt),
-        authExists: Boolean(authUser || user.authUid),
+        createdAt: user.createdAt || null,
+        authExists: !!authUser,
       };
     });
 

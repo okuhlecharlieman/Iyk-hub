@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
-import { enforceRateLimit } from '@/lib/api/rate-limit';
 
 export const runtime = 'nodejs';
 

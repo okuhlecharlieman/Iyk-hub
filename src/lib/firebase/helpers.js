@@ -34,14 +34,25 @@ export async function updateUserDoc(uid, data) {
 }
 
 export async function listTopUsers(limitN = 10, filter = 'lifetime') {
-  // Use the server-side `/api/leaderboard` endpoint so the client doesn't
-  // need direct read access to the full `users` collection.
-  const res = await fetch(`/api/leaderboard?limit=${limitN}&filter=${encodeURIComponent(filter)}`);
+  const page = await listTopUsersPage({ limit: limitN, filter });
+  return page.users;
+}
+
+export async function listTopUsersPage({ limit = 10, filter = 'lifetime', cursor = null } = {}) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    filter,
+  });
+
+  if (cursor) params.set('cursor', cursor);
+
+  const res = await fetch(`/api/leaderboard?${params.toString()}`);
   const json = await res.json();
   if (!res.ok || !json.success) {
     throw new Error(json.error || json?.message || 'Failed to fetch leaderboard');
   }
-  return json.users;
+
+  return { users: json.users || [], nextCursor: json.nextCursor || null };
 }
 
 // Admin function to get all users (server-composed — includes whether the user exists in Auth)
@@ -168,6 +179,30 @@ export async function getApprovedOpportunities(limitN = 50) {
   const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listOpportunitiesPage({ limit = 12, cursor = null } = {}) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Not authenticated');
+  }
+
+  const token = await user.getIdToken();
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+
+  const res = await fetch(`/api/opportunities?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to fetch opportunities');
+  }
+
+  return { opportunities: json.opportunities || [], nextCursor: json.nextCursor || null };
 }
 
 // Client-side real-time listener

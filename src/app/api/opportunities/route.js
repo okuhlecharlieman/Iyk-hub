@@ -78,7 +78,7 @@ export async function GET(request) {
 
       const visible = snap.docs.filter((doc) => {
         const data = doc.data();
-        return (data.status === 'approved' && (!data.moderationStatus || data.moderationStatus === 'approved')) || data.ownerId === uid;
+        return data.status === 'approved' || data.ownerId === uid;
       });
 
       collected.push(...visible.map((doc) => ({ id: doc.id, ...doc.data() })));

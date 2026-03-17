@@ -1,39 +1,54 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { listTopUsers } from '../../lib/firebase/helpers';
-import LoadingSpinner from '../../components/LoadingSpinner';
+
+import { useState, useEffect, useCallback } from 'react';
+import { listTopUsersPage } from '../../lib/firebase/helpers';
 import Podium from '../../components/Podium';
 import LeaderboardItem from '../../components/LeaderboardItem';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { FaSync } from 'react-icons/fa';
+import Button from '../../components/ui/Button';
+
+const PAGE_SIZE = 20;
 
 export default function LeaderboardPage() {
   const [users, setUsers] = useState([]);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('lifetime'); // 'lifetime' or 'weekly'
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState('lifetime');
+  const [nextCursor, setNextCursor] = useState(null);
 
-  const loadLeaderboard = useCallback(async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const top = await listTopUsers(20, filter);
-      setUsers(Array.isArray(top) ? top : []);
-    } catch (err) {
-      if (err?.message?.includes("index")) {
-        setError("Leaderboard unavailable: Firestore index missing. Please contact admin.");
-      } else if (err?.message?.toLowerCase().includes("permission")) {
-        setError("Leaderboard unavailable: Permission denied. Please contact admin.");
-      } else {
-        setError("Unable to load leaderboard. Please try again later.");
-      }
+  const loadLeaderboard = useCallback(async ({ cursor = null, append = false } = {}) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setError('');
     }
 
-    setLoading(false);
+    try {
+      const page = await listTopUsersPage({ limit: PAGE_SIZE, filter, cursor });
+      setUsers((prev) => (append ? [...prev, ...page.users] : page.users));
+      setNextCursor(page.nextCursor);
+    } catch (err) {
+      console.error('Error loading leaderboard:', err);
+      if (err?.message?.includes('index')) {
+        setError('Leaderboard unavailable: Firestore index missing. Please contact admin.');
+      } else if (err?.message?.toLowerCase().includes('permission')) {
+        setError('Leaderboard unavailable: Permission denied. Please contact admin.');
+      } else {
+        setError('Unable to load leaderboard. Please try again later.');
+      }
+    } finally {
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
   }, [filter]);
 
   useEffect(() => {
-    // Ensure this runs only in the browser
     if (typeof window !== 'undefined') {
       loadLeaderboard();
     }
@@ -67,8 +82,8 @@ export default function LeaderboardPage() {
               </button>
             </div>
             <button
-              className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors" 
-              onClick={() => { if (typeof window !== 'undefined') loadLeaderboard(); }} 
+              className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              onClick={() => { if (typeof window !== 'undefined') loadLeaderboard(); }}
               disabled={loading}
               aria-label="Refresh leaderboard"
             >
@@ -78,20 +93,28 @@ export default function LeaderboardPage() {
 
           {loading ? <LoadingSpinner /> :
             error ? <div className="text-red-500 text-center py-10">{error}</div> :
-            users.length > 0 ? (
-              <>
-                <Podium users={topThree} filter={filter} />
-                <ol className="space-y-4 mt-8">
-                  {restOfUsers.map((u, idx) => (
-                    <LeaderboardItem key={u.id} user={u} rank={idx + 4} filter={filter} />
-                  ))}
-                </ol>
-              </> 
-            ) : (
-              <div className="text-center py-10">
-                <p className="text-gray-500 dark:text-gray-400">The leaderboard is empty. Start playing to get on the board!</p>
-              </div>
-            )
+              users.length > 0 ? (
+                <>
+                  <Podium users={topThree} filter={filter} />
+                  <ol className="space-y-4 mt-8">
+                    {restOfUsers.map((u, idx) => (
+                      <LeaderboardItem key={u.id} user={u} rank={idx + 4} filter={filter} />
+                    ))}
+                  </ol>
+
+                  {nextCursor && (
+                    <div className="mt-8 flex justify-center">
+                      <Button onClick={() => loadLeaderboard({ cursor: nextCursor, append: true })} disabled={loadingMore}>
+                        {loadingMore ? 'Loading...' : 'Load More'}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-10">
+                  <p className="text-gray-500 dark:text-gray-400">The leaderboard is empty. Start playing to get on the board!</p>
+                </div>
+              )
           }
         </div>
       </div>

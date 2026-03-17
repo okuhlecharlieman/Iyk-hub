@@ -11,7 +11,7 @@ import { Menu, Transition } from '@headlessui/react';
 
 const NavLink = ({ href, children }) => {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const isActive = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
 
   return (
     <Link href={href} className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${isActive ? 'bg-blue-600 text-white shadow-md' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
@@ -22,7 +22,7 @@ const NavLink = ({ href, children }) => {
 
 const MobileNavLink = ({ href, children, onClick }) => {
     const pathname = usePathname();
-    const isActive = pathname === href;
+    const isActive = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
   
     return (
       <Link href={href} onClick={onClick} className={`block px-4 py-3 rounded-lg text-base font-medium ${isActive ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
@@ -32,14 +32,15 @@ const MobileNavLink = ({ href, children, onClick }) => {
   };
 
 export default function Navbar() {
-  const { user, isAdmin, loading } = useAuth(); // Correctly use isAdmin from context
+  const { user, isAdmin, loading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/games", label: "Games" },
-    { href: "/showcase", label: "Showcase" },
-    { href: "/opportunities", label: "Opportunities" },
-    { href: "/leaderboard", label: "Leaderboard" },
+    ...(user ? [{ href: '/dashboard', label: 'Dashboard' }] : []),
+    { href: '/games', label: 'Games' },
+    { href: '/showcase', label: 'Showcase' },
+    { href: '/opportunities', label: 'Opportunities' },
+    { href: '/leaderboard', label: 'Leaderboard' },
   ];
 
   return (
@@ -78,14 +79,12 @@ export default function Navbar() {
                                <div className="px-1 py-1">
                                 <Menu.Item>
                                     {({ active }) => (
-                                        // FIX: Use dynamic user.uid for the profile link
                                         <Link href={`/profile/${user.uid}`} className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex rounded-md items-center w-full px-2 py-2 text-sm text-gray-900 dark:text-gray-200`}>
                                            <FaUserCircle className="mr-2"/> Profile
                                         </Link>
                                     )}
                                 </Menu.Item>
-                                {/* FIX: Use isAdmin boolean for the admin link */}
-                                {isAdmin && (
+                                                                {isAdmin && (
                                     <Menu.Item>
                                         {({ active }) => (
                                             <Link href="/admin" className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex rounded-md items-center w-full px-2 py-2 text-sm text-gray-900 dark:text-gray-200`}>
@@ -140,8 +139,7 @@ export default function Navbar() {
       >
           <div className="px-2 pt-2 pb-6 space-y-1 sm:px-3">
             {navLinks.map(link => <MobileNavLink key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)}>{link.label}</MobileNavLink>)}
-            {/* FIX: Use isAdmin boolean for the mobile admin link */}
-            {isAdmin && <MobileNavLink href="/admin" onClick={() => setIsMenuOpen(false)}>Admin</MobileNavLink>}
+                        {isAdmin && <MobileNavLink href="/admin" onClick={() => setIsMenuOpen(false)}>Admin</MobileNavLink>}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-3">
               {!loading && user ? (
                 <div className="px-2">
@@ -152,8 +150,7 @@ export default function Navbar() {
                             <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                         </div>
                     </div>
-                    {/* FIX: Use dynamic user.uid for the mobile profile link */}
-                    <MobileNavLink href={`/profile/${user.uid}`} onClick={() => setIsMenuOpen(false)}>My Profile</MobileNavLink>
+                                        <MobileNavLink href={`/profile/${user.uid}`} onClick={() => setIsMenuOpen(false)}>My Profile</MobileNavLink>
                     <button onClick={() => { signOut(auth); setIsMenuOpen(false); }} className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50">Logout</button>
                 </div>
               ) : (

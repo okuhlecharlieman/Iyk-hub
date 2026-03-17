@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticate, listAllOpportunities, updateOpportunity } from '../../../../lib/firebase/admin';
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
@@ -21,6 +22,9 @@ const validateOpportunityUpdatePayload = (payload) => {
   return { id: payload.id.trim(), status: payload.status };
 };
 
+=======
+
+>>>>>>> main
 export async function GET(request) {
   try {
     await authenticate(request);
@@ -36,6 +40,7 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:update', limit: 40, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
   try {
@@ -54,6 +59,15 @@ export async function PUT(request) {
       metadata: { status },
     });
 
+=======
+  try {
+    await authenticate(request);
+    const { id, status } = await request.json();
+    if (!id || !status) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+
+    await updateOpportunity(id, { status });
+
+>>>>>>> main
     const adminDb = (await import('firebase-admin')).firestore();
     const snap = await adminDb.collection('opportunities').doc(id).get();
     const title = snap.exists ? snap.data().title : null;
@@ -63,9 +77,12 @@ export async function PUT(request) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     if (error instanceof RequestValidationError) {
       return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
     }
+=======
+>>>>>>> main
     console.error('Error in PUT /api/admin/opportunities:', error?.message || error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

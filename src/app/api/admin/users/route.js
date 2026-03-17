@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, listAllUsers } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
+=======
+>>>>>>> main
 
 const validateUidPayload = (payload) => {
   ensurePlainObject(payload);
@@ -42,6 +45,7 @@ const validateUpdatePayload = (payload) => {
   if (payload.photoURL !== undefined) {
     if (typeof payload.photoURL !== 'string' || payload.photoURL.trim().length === 0) {
       throw new RequestValidationError('Invalid request payload.', [{ path: 'photoURL', message: 'photoURL must be a non-empty string.' }]);
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     }
     updateData.photoURL = payload.photoURL.trim();
   }
@@ -71,6 +75,37 @@ const validateUpdatePayload = (payload) => {
     if (typeof payload.emailVerified !== 'boolean') {
       throw new RequestValidationError('Invalid request payload.', [{ path: 'emailVerified', message: 'emailVerified must be boolean.' }]);
     }
+=======
+    }
+    updateData.photoURL = payload.photoURL.trim();
+  }
+
+  if (payload.password !== undefined) {
+    if (typeof payload.password !== 'string' || payload.password.length < 6 || payload.password.length > 128) {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'password', message: 'password must be 6-128 chars.' }]);
+    }
+    updateData.password = payload.password;
+  }
+
+  if (payload.phoneNumber !== undefined) {
+    if (typeof payload.phoneNumber !== 'string' || payload.phoneNumber.trim().length < 6 || payload.phoneNumber.trim().length > 20) {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'phoneNumber', message: 'phoneNumber must be 6-20 chars.' }]);
+    }
+    updateData.phoneNumber = payload.phoneNumber.trim();
+  }
+
+  if (payload.disabled !== undefined) {
+    if (typeof payload.disabled !== 'boolean') {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'disabled', message: 'disabled must be boolean.' }]);
+    }
+    updateData.disabled = payload.disabled;
+  }
+
+  if (payload.emailVerified !== undefined) {
+    if (typeof payload.emailVerified !== 'boolean') {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'emailVerified', message: 'emailVerified must be boolean.' }]);
+    }
+>>>>>>> main
     updateData.emailVerified = payload.emailVerified;
   }
 
@@ -98,6 +133,10 @@ const validateUpdatePayload = (payload) => {
   return { uid, updateData };
 };
 
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
+=======
+
+>>>>>>> main
 export async function GET(req) {
   try {
     await authenticate(req);
@@ -107,17 +146,25 @@ export async function GET(req) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
 
+=======
+>>>>>>> main
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
 
 export async function PUT(req) {
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
   try {
     const actor = await authenticate(req);
+=======
+  try {
+    await authenticate(req);
+>>>>>>> main
 
     const payload = await parseJsonBody(req);
     const { uid, updateData } = validateUpdatePayload(payload);
@@ -155,6 +202,7 @@ export async function PUT(req) {
       await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
     }
 
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     await logAdminAction({
       request: req,
       actor,
@@ -164,6 +212,8 @@ export async function PUT(req) {
       metadata: { updatedFields: Object.keys(updateData), authExists },
     });
 
+=======
+>>>>>>> main
     return NextResponse.json({ message: `User ${uid} updated successfully`, authExists });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
@@ -179,10 +229,15 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
   try {
     const actor = await authenticate(req);
+=======
+  try {
+    await authenticate(req);
+>>>>>>> main
 
     const payload = await parseJsonBody(req);
     const { uid } = validateUidPayload(payload);
@@ -199,6 +254,7 @@ export async function DELETE(req) {
     await adminDb.collection('users').doc(uid).delete();
     await adminDb.collection('leaderboard').doc(uid).delete();
 
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     await logAdminAction({
       request: req,
       actor,
@@ -207,14 +263,23 @@ export async function DELETE(req) {
       targetId: uid,
     });
 
+=======
+>>>>>>> main
     return NextResponse.json({ message: `User ${uid} deleted successfully` });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     }
     if (error instanceof RequestValidationError) {
       return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
     }
+=======
+    }
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
+    }
+>>>>>>> main
 
     console.error('Error deleting user:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });

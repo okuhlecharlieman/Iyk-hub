@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, listAllUsers } from '../../../../lib/firebase/admin';
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-cr2261
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 
 const validateUidPayload = (payload) => {
@@ -105,6 +106,19 @@ export async function GET(req) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
+=======
+
+// GET handler to retrieve all users.
+export async function GET(req) {
+  try {
+    await authenticate(req);
+    const users = await listAllUsers();
+    return NextResponse.json(users);
+  } catch (error) {
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.code });
+    }
+>>>>>>> main
 
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
@@ -115,8 +129,15 @@ export async function PUT(req) {
   try {
     await authenticate(req);
 
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-cr2261
     const payload = await parseJsonBody(req);
     const { uid, updateData } = validateUpdatePayload(payload);
+=======
+    const { uid, ...updateData } = await req.json();
+    if (!uid) {
+      return NextResponse.json({ error: 'UID is required' }, { status: 400 });
+    }
+>>>>>>> main
 
     const authUpdateData = {};
     const allowedAuthFields = ['displayName', 'email', 'photoURL', 'password', 'phoneNumber', 'disabled', 'emailVerified'];
@@ -139,6 +160,7 @@ export async function PUT(req) {
 
     if (authExists && Object.keys(authUpdateData).length > 0) {
       await admin.auth().updateUser(uid, authUpdateData);
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-cr2261
     }
 
     const adminDb = admin.firestore();
@@ -151,14 +173,31 @@ export async function PUT(req) {
       await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
     }
 
+=======
+    }
+
+    const adminDb = admin.firestore();
+    await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
+
+    if (Object.prototype.hasOwnProperty.call(updateData, 'role')) {
+      if (!authExists) {
+        return NextResponse.json({ error: `User ${uid} has no Firebase Auth account; cannot set role claims.` }, { status: 400 });
+      }
+      await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
+    }
+
+>>>>>>> main
     return NextResponse.json({ message: `User ${uid} updated successfully`, authExists });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-cr2261
     if (error instanceof RequestValidationError) {
       return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
     }
+=======
+>>>>>>> main
 
     console.error('Error updating user:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
@@ -169,8 +208,15 @@ export async function DELETE(req) {
   try {
     await authenticate(req);
 
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-cr2261
     const payload = await parseJsonBody(req);
     const { uid } = validateUidPayload(payload);
+=======
+    const { uid } = await req.json();
+    if (!uid) {
+      return NextResponse.json({ error: 'UID is required' }, { status: 400 });
+    }
+>>>>>>> main
 
     try {
       await admin.auth().deleteUser(uid);
@@ -178,6 +224,7 @@ export async function DELETE(req) {
       if (error?.code !== 'auth/user-not-found') {
         throw error;
       }
+<<<<<<< codex/secure-admin-apis-with-role-based-access-control-cr2261
     }
 
     const adminDb = admin.firestore();
@@ -193,6 +240,20 @@ export async function DELETE(req) {
       return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
     }
 
+=======
+    }
+
+    const adminDb = admin.firestore();
+    await adminDb.collection('users').doc(uid).delete();
+    await adminDb.collection('leaderboard').doc(uid).delete();
+
+    return NextResponse.json({ message: `User ${uid} deleted successfully` });
+  } catch (error) {
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.code });
+    }
+
+>>>>>>> main
     console.error('Error deleting user:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }

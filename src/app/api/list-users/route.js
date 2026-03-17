@@ -25,12 +25,6 @@ export async function GET(request) {
     return NextResponse.json({ success: true, users: [] });
   }
 
-  // If running in production build-time and no service account, return empty list
-  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log("Build-time: Returning empty list for /api/list-users.");
-    return NextResponse.json({ success: true, users: [] });
-  }
-
   await initializeFirebaseAdmin();
   const admin = await import('firebase-admin');
 

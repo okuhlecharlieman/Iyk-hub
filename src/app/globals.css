@@ -6,107 +6,32 @@
   --brand-yellow: #ffd166;
   --brand-teal: #00b5ad;
   --brand-blue: #0b5567;
-  --accent-red: #ff6b6b;
-  --radius-lg: 1rem;
-  --radius-md: 0.75rem;
-  --container-max-width: 1200px;
+  --surface-light: #ffffff;
+  --surface-dark: #111827;
   --text-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
+
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   font-family: var(--text-sans);
-  background: linear-gradient(135deg, #fffbe6 0%, #e0f7fa 50%, #e0f2f1 100%);
-  color: #1e293b;
-}
-.dark body {
-  background: linear-gradient(135deg, #0f172a 0%, #0b5567 100%);
-  color: #f1f5f9;
+  @apply antialiased bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100;
 }
 
-/* Navbar */
-header {
-  background: linear-gradient(90deg, #ffd166 0%, #e0f7fa 100%);
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.04);
+main {
+  @apply min-h-[calc(100vh-9rem)];
 }
 
-/* Footer */
-footer {
-  background: linear-gradient(90deg, #e0f7fa 0%, #ffd166 100%);
-  border-top: 1px solid #e0e0e0;
+/* Shared focus ring for keyboard users */
+:focus-visible {
+  outline: 3px solid rgba(14, 116, 144, 0.35);
+  outline-offset: 2px;
 }
 
-/* Card styles */
-.bg-white, .rounded-lg, .shadow {
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.07);
-  border-radius: var(--radius-md);
-}
-
-/* Buttons */
-button, .btn {
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-}
-.bg-neutral-900, .btn-primary {
-  background: linear-gradient(90deg, var(--brand-blue), var(--brand-teal));
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px 0 rgba(11,85,103,0.08);
-}
-.bg-blue-600, .btn-blue {
-  background: linear-gradient(90deg, #2563eb, #00b5ad);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px 0 rgba(37,99,235,0.08);
-}
-.bg-yellow-400, .btn-yellow {
-  background: linear-gradient(90deg, #ffd166, #ffe066);
-  color: #0b5567;
-  font-weight: 600;
-  box-shadow: 0 2px 8px 0 rgba(255,209,102,0.08);
-}
-.bg-red-600, .btn-red {
-  background: linear-gradient(90deg, #ff6b6b, #ffb6b6);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px 0 rgba(255,107,107,0.08);
-}
-
-/* Inputs */
-input, textarea, select {
-  border: 2px solid #bae6fd;
-  border-radius: 0.5rem;
-  transition: border 0.2s, box-shadow 0.2s;
-}
-input:focus, textarea:focus, select:focus {
-  border-color: #00b5ad;
-  box-shadow: 0 0 0 2px #99f6e4;
-}
-
-/* Headings */
-h1, h2, h3, h4 {
-  font-weight: bold;
-  color: #0b5567;
-}
-
-/* Links */
-a, .underline {
-  color: #00b5ad;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.2s;
-}
-a:hover, .underline:hover {
-  color: #2563eb;
-}
-
-/* Focus styles for keyboard users */
-:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-  outline: 3px solid rgba(0,181,173,0.18);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 4px rgba(0,181,173,0.06);
-}
-
-/* Skip link for keyboard users */
+/* Skip link for accessibility */
 .skip-link {
   position: absolute;
   left: -9999px;
@@ -115,31 +40,32 @@ a:hover, .underline:hover {
   height: 1px;
   overflow: hidden;
 }
+
 .skip-link:focus {
   left: 1rem;
   top: 1rem;
   width: auto;
   height: auto;
   padding: 0.5rem 0.75rem;
-  background: #00b5ad;
+  background: #0b5567;
   color: white;
   border-radius: 0.375rem;
   z-index: 9999;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.2);
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.2);
 }
 
-/* Emoji buttons */
-button.text-xl {
-  transition: transform 0.15s, background 0.15s;
-  border-radius: 9999px;
-  padding: 0.25rem 0.5rem;
-}
-button.text-xl:hover {
-  transform: scale(1.25);
-  background: #fffbe6;
+/* App-level reusable surfaces */
+.app-surface {
+  @apply bg-white/80 dark:bg-gray-800/70 backdrop-blur border border-gray-200 dark:border-gray-700;
 }
 
-/* Misc */
-.shadow {
-  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.07);
+.app-panel {
+  @apply app-surface rounded-2xl shadow-sm;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, var(--brand-yellow), var(--brand-teal), #3b82f6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

@@ -1,192 +1,239 @@
-// components/games/XOGame.jsx
-// Multiplayer TicTacToe with Firestore sync
+'use client';
 
-"use client";
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
-import { useAuth } from "../../context/AuthContext";
+import { useEffect, useMemo, useState } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { useAuth } from '../../context/AuthContext';
 
-export default function XOGame({ gameId, onEnd }) {
+const WIN_LINES = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6],
+];
+
+const createInitialState = () => ({
+  board: Array(9).fill(''),
+  currentPlayer: 'X',
+  winner: '',
+  players: { X: { displayName: 'You' }, O: { displayName: 'CPU' } },
+});
+
+const calculateWinner = (board) => {
+  for (const [a, b, c] of WIN_LINES) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  }
+  if (board.every(Boolean)) return 'draw';
+  return '';
+};
+
+const pickComputerMove = (board) => {
+  const open = board
+    .map((v, i) => (v ? null : i))
+    .filter((v) => v !== null);
+  if (!open.length) return null;
+  return open[Math.floor(Math.random() * open.length)];
+};
+
+export default function XOGame({ gameId, onEnd, mode = 'multiplayer' }) {
   const { user } = useAuth();
-  const [gameState, setGameState] = useState(null);
-  const [playerSymbol, setPlayerSymbol] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [onEndCalled, setOnEndCalled] = useState(false);
-  const gameDocRef = doc(db, "games", gameId);
+  const isSinglePlayer = mode === 'single';
 
-  // Join or create game room
+  const [gameState, setGameState] = useState(createInitialState());
+  const [playerSymbol, setPlayerSymbol] = useState('X');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(!isSinglePlayer);
+  const [onEndCalled, setOnEndCalled] = useState(false);
+
+  const gameDocRef = useMemo(() => doc(db, 'games', gameId), [gameId]);
+
   useEffect(() => {
-    if (!user) {
-      setError("You must be logged in to play.");
+    if (isSinglePlayer) {
       setLoading(false);
       return;
     }
+
+    if (!user) {
+      setError('You must be logged in to play.');
+      setLoading(false);
+      return;
+    }
+
     async function joinGame() {
       try {
         const snap = await getDoc(gameDocRef);
         if (!snap.exists()) {
           await setDoc(gameDocRef, {
-            board: Array(9).fill(""),
-            currentPlayer: "X",
-            winner: "",
-            players: { X: { uid: user.uid, displayName: user.displayName }, O: null }
+            board: Array(9).fill(''),
+            currentPlayer: 'X',
+            winner: '',
+            players: { X: { uid: user.uid, displayName: user.displayName || 'Player X' }, O: null },
           });
-          setPlayerSymbol("X");
+          setPlayerSymbol('X');
         } else {
           const data = snap.data();
           if (!data.players.O && data.players.X?.uid !== user.uid) {
-            await updateDoc(gameDocRef, { "players.O": { uid: user.uid, displayName: user.displayName } });
-            setPlayerSymbol("O");
+            await updateDoc(gameDocRef, { 'players.O': { uid: user.uid, displayName: user.displayName || 'Player O' } });
+            setPlayerSymbol('O');
           } else if (data.players.X?.uid === user.uid) {
-            setPlayerSymbol("X");
+            setPlayerSymbol('X');
           } else if (data.players.O?.uid === user.uid) {
-            setPlayerSymbol("O");
-          } else {
-            // Spectator
+            setPlayerSymbol('O');
           }
         }
       } catch (e) {
-        setError("Failed to join game: " + e.message);
+        setError(`Failed to join game: ${e.message}`);
         setLoading(false);
       }
     }
-    joinGame();
-  }, [gameId, user]);
 
-  // Listen for game state
+    joinGame();
+  }, [gameDocRef, isSinglePlayer, user]);
+
   useEffect(() => {
-    if (!gameId) return;
+    if (isSinglePlayer) return;
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.data();
-        setGameState(data);
-        if (!data.winner) {
-          setOnEndCalled(false); // Reset when game is reset
-        }
-        setLoading(false);
-      } else {
-        // Game creating...
+        setGameState(snapshot.data());
       }
+      setLoading(false);
     }, (e) => {
-        setError("Game sync error: " + e.message);
-        setLoading(false);
+      setError(`Game sync error: ${e.message}`);
+      setLoading(false);
     });
+
     return () => unsubscribe();
-  }, [gameId]);
+  }, [gameDocRef, isSinglePlayer]);
 
-  // Effect to call onEnd when game is over
   useEffect(() => {
-    if (gameState?.winner && onEnd && !onEndCalled) {
-      let finalScore = 0;
-      if (gameState.winner === 'draw') {
-        finalScore = 5;
-      } else if (gameState.winner === playerSymbol) {
-        finalScore = 10; // win
-      } else {
-        finalScore = 2; // loss
-      }
-      
-      if (playerSymbol) { // only call onEnd for players, not spectators
-        onEnd({ score: finalScore });
-        setOnEndCalled(true);
-      }
+    if (!gameState?.winner) {
+      setOnEndCalled(false);
+      return;
     }
-  }, [gameState, onEnd, onEndCalled, playerSymbol]);
 
-  function calculateWinner(bd) {
-    const lines = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
-    ];
-    for (const [a,b,c] of lines) {
-      if (bd[a] && bd[a] === bd[b] && bd[a] === bd[c]) return bd[a];
+    if (!onEnd || onEndCalled) return;
+
+    let finalScore = 0;
+    if (gameState.winner === 'draw') finalScore = 5;
+    else if (gameState.winner === playerSymbol) finalScore = isSinglePlayer ? 8 : 12;
+    else finalScore = 2;
+
+    onEnd({ score: finalScore });
+    setOnEndCalled(true);
+  }, [gameState, onEnd, onEndCalled, playerSymbol, isSinglePlayer]);
+
+  useEffect(() => {
+    if (!isSinglePlayer) return;
+    if (gameState.winner || gameState.currentPlayer !== 'O') return;
+
+    const timer = setTimeout(() => {
+      const move = pickComputerMove(gameState.board);
+      if (move === null) return;
+      const nextBoard = [...gameState.board];
+      nextBoard[move] = 'O';
+      const winner = calculateWinner(nextBoard);
+      setGameState((prev) => ({
+        ...prev,
+        board: nextBoard,
+        currentPlayer: winner ? '' : 'X',
+        winner,
+      }));
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [gameState, isSinglePlayer]);
+
+  const handleClick = async (idx) => {
+    if (gameState.board[idx] || gameState.winner) return;
+
+    if (isSinglePlayer) {
+      if (gameState.currentPlayer !== 'X') return;
+      const nextBoard = [...gameState.board];
+      nextBoard[idx] = 'X';
+      const winner = calculateWinner(nextBoard);
+      setGameState((prev) => ({
+        ...prev,
+        board: nextBoard,
+        currentPlayer: winner ? '' : 'O',
+        winner,
+      }));
+      return;
     }
-    if (bd.every(cell => cell)) return "draw";
-    return "";
-  }
 
-  async function handleClick(idx) {
-    if (gameState.board[idx] !== "" || gameState.winner !== "" || gameState.currentPlayer !== playerSymbol) return;
-    const newBoard = [...gameState.board];
-    newBoard[idx] = playerSymbol;
-    const newWinner = calculateWinner(newBoard);
-    const nextPlayer = (playerSymbol === "X") ? "O" : "X";
+    if (gameState.currentPlayer !== playerSymbol || !['X', 'O'].includes(playerSymbol)) return;
+
+    const nextBoard = [...gameState.board];
+    nextBoard[idx] = playerSymbol;
+    const winner = calculateWinner(nextBoard);
+    const nextPlayer = playerSymbol === 'X' ? 'O' : 'X';
+
     try {
       await updateDoc(gameDocRef, {
-        board: newBoard,
-        currentPlayer: newWinner ? "" : nextPlayer,
-        winner: newWinner
+        board: nextBoard,
+        currentPlayer: winner ? '' : nextPlayer,
+        winner,
       });
     } catch (e) {
-      setError("Move failed: " + e.message);
+      setError(`Move failed: ${e.message}`);
     }
-  }
+  };
 
-  async function handleReset() {
+  const handleReset = async () => {
+    if (isSinglePlayer) {
+      setGameState(createInitialState());
+      return;
+    }
     try {
       await updateDoc(gameDocRef, {
-        board: Array(9).fill(""),
-        currentPlayer: "X",
-        winner: ""
+        board: Array(9).fill(''),
+        currentPlayer: 'X',
+        winner: '',
       });
     } catch (e) {
-      setError("Reset failed: " + e.message);
+      setError(`Reset failed: ${e.message}`);
     }
-  }
+  };
 
   if (loading) return <p>Loading game...</p>;
   if (error) return <div className="text-red-600">{error}</div>;
-  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
-  
-  const { board, currentPlayer, winner, players } = gameState;
 
-  const getStatusMessage = () => {
-      if(winner) return "Game Over";
-      if(!players.X || !players.O) return "Waiting for opponent...";
-      return `Turn: ${currentPlayer}`;
-  }
+  const { board, currentPlayer, winner, players } = gameState;
+  const statusMessage = winner
+    ? `Game over: ${winner === 'draw' ? 'Draw' : `${winner} wins`}`
+    : isSinglePlayer
+      ? `Turn: ${currentPlayer === 'X' ? 'You' : 'CPU'}`
+      : (!players?.X || !players?.O)
+        ? 'Waiting for opponent...'
+        : `Turn: ${currentPlayer}`;
 
   return (
-    <div>
-      <h2 className="mb-2">Room: {gameId}</h2>
-      <div className="grid grid-cols-2 gap-8 w-full max-w-md text-center mb-4">
-          <p>X: {players.X ? players.X.displayName : "..."}</p>
-          <p>O: {players.O ? players.O.displayName : "..."}</p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Mode: {isSinglePlayer ? 'Single Player' : 'Multiplayer'}</p>
+        <p className="text-sm font-semibold">{statusMessage}</p>
       </div>
-      <h3 className="mb-2 font-semibold">{getStatusMessage()}</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 80px)", gap: "8px" }}>
+
+      <div className="grid grid-cols-2 gap-4 w-full max-w-md text-center mb-2">
+        <p>X: {players?.X?.displayName || '...'}</p>
+        <p>O: {players?.O?.displayName || (isSinglePlayer ? 'CPU' : '...')}</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 w-[252px]">
         {board.map((cell, idx) => (
           <button
             key={idx}
             onClick={() => handleClick(idx)}
-            style={{ width: 80, height: 80, fontSize: 32 }}
-            className="border rounded disabled:opacity-50"
-            disabled={
-              winner !== "" ||
-              currentPlayer !== playerSymbol ||
-              !playerSymbol ||
-              (playerSymbol !== "X" && playerSymbol !== "O")
-            }
+            className="h-20 w-20 rounded-xl border border-gray-300 dark:border-gray-600 text-3xl font-bold bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+            disabled={!!winner || (!isSinglePlayer && currentPlayer !== playerSymbol)}
           >
             {cell}
           </button>
         ))}
       </div>
+
       {winner && (
-        <div className="mt-4">
-          <p className="text-xl font-bold">{winner === "draw" ? "Draw game!" : `Winner: ${winner}`}</p>
-          {(playerSymbol === "X" || playerSymbol === "O") && (
-            <button
-              onClick={handleReset}
-              className="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
-            >
-              Reset Game
-            </button>
-          )}
-        </div>
+        <button onClick={handleReset} className="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-white font-semibold hover:bg-blue-700">
+          Play Again
+        </button>
       )}
     </div>
   );

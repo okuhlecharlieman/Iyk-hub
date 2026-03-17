@@ -1,5 +1,5 @@
 'use client';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
@@ -24,31 +24,33 @@ const GAME_DETAILS = {
 
 export default function GamePage() {
   const { gameId } = useParams();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const baseGameId = gameId.split('-')[0];
+  const mode = searchParams.get('mode') === 'single' ? 'single' : 'multiplayer';
 
   async function finishGame(finalScore = 1, duration = 0) {
     if (!user) return;
+    const numericScore = Math.max(0, Number(finalScore) || 0);
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
-        'points.lifetime': increment(finalScore),
-        'points.weekly': increment(finalScore),
+        'points.lifetime': increment(numericScore),
+        'points.weekly': increment(numericScore),
       });
 
       const sessionsCollection = collection(db, 'sessions');
       await addDoc(sessionsCollection, {
         userId: user.uid,
-        gameId: gameId,
-        baseGameId: baseGameId,
-        score: finalScore,
-        duration: duration,
+        gameId,
+        baseGameId,
+        mode,
+        score: numericScore,
+        duration,
         completedAt: serverTimestamp(),
       });
-      
-      console.log(`Game session logged for user ${user.uid}. Score: ${finalScore}`);
     } catch (error) {
-      console.error("Error updating points or logging session:", error);
+      console.error('Error updating points or logging session:', error);
     }
   }
 
@@ -56,14 +58,20 @@ export default function GamePage() {
     const onEnd = (score) => finishGame(score);
 
     switch (baseGameId) {
-      case 'tictactoe': return <XOGame gameId={gameId} onEnd={(res) => finishGame(res?.score || 5)} />;
-      case 'rps': return <RPSGame gameId={gameId} onEnd={onEnd} />;
-      case 'memory': return <MemoryGame gameId={gameId} onEnd={onEnd} />;
-      case 'hangman': return <HangmanGame gameId={gameId} onEnd={onEnd} />;
-      case 'quiz': return <QuizGame gameId={gameId} onEnd={onEnd} />;
-      default: return null;
+      case 'tictactoe':
+        return <XOGame gameId={gameId} mode={mode} onEnd={(res) => finishGame(res?.score || 5)} />;
+      case 'rps':
+        return <RPSGame gameId={gameId} mode={mode} onEnd={onEnd} />;
+      case 'memory':
+        return <MemoryGame gameId={gameId} onEnd={onEnd} />;
+      case 'hangman':
+        return <HangmanGame gameId={gameId} onEnd={onEnd} />;
+      case 'quiz':
+        return <QuizGame gameId={gameId} onEnd={onEnd} />;
+      default:
+        return null;
     }
-  }, [gameId, user, baseGameId]);
+  }, [gameId, baseGameId, mode]);
 
   const gameDetails = GAME_DETAILS[baseGameId];
 
@@ -78,19 +86,22 @@ export default function GamePage() {
             </Link>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4">
-              <div className="text-blue-500 dark:text-blue-400">
-                {gameDetails?.icon}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="text-blue-500 dark:text-blue-400">{gameDetails?.icon}</div>
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{gameDetails?.name || 'Game'}</h1>
               </div>
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{gameDetails?.name || 'Game'}</h1>
+              <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+                {mode}
+              </span>
             </div>
             <div className="p-6">
-              {GameComponent ? GameComponent : 
+              {GameComponent ? GameComponent : (
                 <div className="text-center py-10">
                   <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300">Game Not Found</h2>
                   <p className="text-gray-500 dark:text-gray-400 mt-2">The game you are looking for does not exist or is currently unavailable.</p>
                 </div>
-              }
+              )}
             </div>
           </div>
         </div>

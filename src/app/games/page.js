@@ -19,7 +19,11 @@ export default function GamesPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Intwana Games</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Test your skills, challenge friends, and earn points!</p>
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Play solo or multiplayer, challenge friends, and earn boosted points for wins.</p>
+        </div>
+
+        <div className="mb-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-900/20 p-4 text-sm text-blue-900 dark:text-blue-100">
+          <p><strong>Scoring:</strong> Multiplayer wins give higher rewards. Solo wins still earn points and practice progress.</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">

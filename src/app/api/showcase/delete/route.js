@@ -1,18 +1,31 @@
 import { NextResponse } from 'next/server';
-import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import admin from 'firebase-admin';
+import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
 
-// This endpoint allows an authenticated user to delete their OWN post.
+const validateDeleteShowcasePostPayload = (payload) => {
+  ensurePlainObject(payload);
+  validateNoExtraFields(payload, ['postId']);
+
+  if (typeof payload.postId !== 'string' || payload.postId.trim().length === 0) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'postId', message: 'Post ID is required.' }]);
+  }
+
+  return { postId: payload.postId.trim() };
+};
+
 export async function POST(request) {
+  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'showcase:delete', limit: 20, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
   try {
     await initializeFirebaseAdmin();
-    const { postId, uid } = await request.json(); // uid is the currently logged-in user
+    const uid = await authenticateAndGetUid(request);
 
-    if (!uid) {
-        return NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
-    }
+    const payload = await parseJsonBody(request);
+    const { postId } = validateDeleteShowcasePostPayload(payload);
 
     const db = admin.firestore();
     const postRef = db.collection('wallPosts').doc(postId);
@@ -24,17 +37,21 @@ export async function POST(request) {
 
     const postData = postDoc.data();
 
-    // Security Check: Ensure the user owns the post
     if (postData.uid !== uid) {
       return NextResponse.json({ error: 'Unauthorized to delete this post' }, { status: 403 });
     }
 
-    // Delete the post
     await postRef.delete();
 
     return NextResponse.json({ message: 'Post deleted successfully' });
-
   } catch (error) {
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
+    }
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.code });
+    }
+
     console.error('Error deleting post:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

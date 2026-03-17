@@ -24,34 +24,32 @@ function missing(v) {
   return !v || v === 'undefined' || v === 'null';
 }
 
-if (typeof window !== 'undefined') {
-  if (missing(firebaseConfig.apiKey) || missing(firebaseConfig.projectId)) {
-    console.error('Firebase env vars are missing. Check .env.local (must use NEXT_PUBLIC_ prefixes).', firebaseConfig);
-  }
+function hasUsableClientConfig() {
+  return !missing(firebaseConfig.apiKey) && !missing(firebaseConfig.projectId);
 }
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const isBrowser = typeof window !== 'undefined';
+const canInitializeClientFirebase = isBrowser && hasUsableClientConfig();
 
-let db;
+if (isBrowser && !canInitializeClientFirebase) {
+  console.error('Firebase env vars are missing. Check .env.local (must use NEXT_PUBLIC_ prefixes).', firebaseConfig);
+}
 
-// This is the critical part. We only try to initialize the persistent
-// cache on the client-side. On the server (during build), we just get the standard
-// firestore instance which will use in-memory cache and won't cause permission errors.
-if (typeof window !== 'undefined') {
+const app = canInitializeClientFirebase ? (getApps().length ? getApp() : initializeApp(firebaseConfig)) : null;
+
+let db = null;
+
+if (app) {
   try {
     db = initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     });
   } catch (e) {
-    console.error("Could not initialize persistent Firestore cache. Falling back.", e);
     db = getFirestore(app);
   }
-} else {
-  // For server-side rendering (e.g., during the build), use the standard getFirestore.
-  db = getFirestore(app);
 }
 
-export const auth = getAuth(app);
-export const storage = getStorage(app);
-export const rtdb = getDatabase(app);
+export const auth = app ? getAuth(app) : null;
+export const storage = app ? getStorage(app) : null;
+export const rtdb = app ? getDatabase(app) : null;
 export { db };

@@ -139,9 +139,3 @@ Set `CRON_SECRET` in Vercel environment variables. The cron route requires:
 
 The job resets `users.points.weekly` to `0` and records metadata in `systemJobs/weeklyLeaderboardReset`.
 
-A creator-boost lifecycle cron is also configured:
-
-- `GET /api/jobs/creator-boost-lifecycle` every 6 hours to auto-activate paid pending boosts and expire overdue active boosts.
-
-This job records metadata in `systemJobs/creatorBoostLifecycle`.
-

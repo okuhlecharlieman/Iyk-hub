@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import admin from 'firebase-admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
-import { buildCacheKey, getOrSetCache } from '../../../lib/api/cache';
 
 export const runtime = 'nodejs';
 
@@ -71,9 +70,7 @@ export async function GET(request) {
           };
         });
 
-        const visiblePosts = posts.filter((post) => !post.moderationStatus || post.moderationStatus === 'approved');
-
-        const authorUids = [...new Set(visiblePosts.map((p) => p.uid).filter(Boolean))];
+        const authorUids = [...new Set(posts.map((p) => p.uid).filter(Boolean))];
         const authors = {};
 
         if (authorUids.length > 0) {
@@ -96,7 +93,7 @@ export async function GET(request) {
           );
         }
 
-        const postsWithAuthors = visiblePosts.map((post) => ({
+        const postsWithAuthors = posts.map((post) => ({
           ...post,
           author: authors[post.uid] || { displayName: 'Anonymous User', photoURL: null },
         }));

@@ -107,7 +107,6 @@ export async function GET(req) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
-
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }

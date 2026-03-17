@@ -8,7 +8,7 @@ import {
   deleteOpportunity,
   approveOpportunity,
   rejectOpportunity,
-  onOpportunitiesUpdate // Import the new real-time listener
+  listOpportunitiesPage,
 } from '../../lib/firebase/helpers';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import OpportunityCard from '../../components/OpportunityCard';
@@ -18,11 +18,14 @@ import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 
 const TABS = { ALL: 'All', PENDING: 'Pending' };
+const PAGE_SIZE = 12;
 
 export default function OpportunitiesPage() {
-  const { user, userProfile } = useAuth(); // Get userProfile from AuthContext
+  const { user, userProfile } = useAuth();
   const [opportunities, setOpportunities] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingOpp, setEditingOpp] = useState(null);
   const [activeTab, setActiveTab] = useState(TABS.ALL);
@@ -32,46 +35,61 @@ export default function OpportunitiesPage() {
 
   const toast = useToast();
 
-  useEffect(() => {
-    // Ensure this runs only in the browser and when a user is present
-    if (user && typeof window !== 'undefined') {
+  const loadOpportunities = useCallback(async ({ cursor = null, append = false } = {}) => {
+    if (!user) return;
+
+    if (append) {
+      setLoadingMore(true);
+    } else {
       setLoading(true);
-      // Set up the real-time listener
-      const unsubscribe = onOpportunitiesUpdate(isAdmin, user, (opps) => {
-        setOpportunities(opps);
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching opportunities:", error);
-        setLoading(false);
-      });
-
-      // Cleanup listener on component unmount
-      return () => unsubscribe();
-    } else if (!user) {
-      // If there's no user, stop loading and show nothing.
-      setLoading(false);
     }
-  }, [user, isAdmin]);
 
+    try {
+      const page = await listOpportunitiesPage({ limit: PAGE_SIZE, cursor });
+      setNextCursor(page.nextCursor);
+      setOpportunities((prev) => (append ? [...prev, ...page.opportunities] : page.opportunities));
+    } catch (error) {
+      console.error('Error fetching opportunities:', error);
+      toast('error', 'Unable to load opportunities right now.');
+    } finally {
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user && typeof window !== 'undefined') {
+      loadOpportunities();
+    } else if (!user) {
+      setLoading(false);
+      setOpportunities([]);
+      setNextCursor(null);
+    }
+  }, [user, loadOpportunities]);
 
   const handleFormSubmit = async (data) => {
     try {
-        const tags = typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : [];
-        let submissionData = { ...data, tags };
+      const tags = typeof data.tags === 'string' ? data.tags.split(',').map((t) => t.trim()) : [];
+      let submissionData = { ...data, tags };
 
-        if (editingOpp) {
-            await updateOpportunity(editingOpp.id, submissionData);
-            toast('success', 'Opportunity updated successfully!');
-        } else {
-            submissionData = { ...submissionData, ownerId: user.uid };
-            await createOpportunity(submissionData);
-            toast('success', 'Opportunity submitted for review!');
-        }
-        setIsFormModalOpen(false);
-        setEditingOpp(null);
+      if (editingOpp) {
+        await updateOpportunity(editingOpp.id, submissionData);
+        toast('success', 'Opportunity updated successfully!');
+      } else {
+        submissionData = { ...submissionData, ownerId: user.uid };
+        await createOpportunity(submissionData);
+        toast('success', 'Opportunity submitted for review!');
+      }
+
+      setIsFormModalOpen(false);
+      setEditingOpp(null);
+      await loadOpportunities();
     } catch (error) {
-        console.error("Error submitting form:", error);
-        toast('error', 'There was an error. Please try again.');
+      console.error('Error submitting form:', error);
+      toast('error', 'There was an error. Please try again.');
     }
   };
 
@@ -81,21 +99,32 @@ export default function OpportunitiesPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this opportunity?")) {
+    if (window.confirm('Are you sure you want to delete this opportunity?')) {
       try {
         await deleteOpportunity(id);
+        await loadOpportunities();
       } catch (error) {
-        console.error("Error deleting:", error);
+        console.error('Error deleting:', error);
       }
     }
   };
 
   const handleApprove = async (id) => {
-    try { await approveOpportunity(id); } catch (e) { console.error(e); }
+    try {
+      await approveOpportunity(id);
+      await loadOpportunities();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleReject = async (id) => {
-    try { await rejectOpportunity(id); } catch (e) { console.error(e); }
+    try {
+      await rejectOpportunity(id);
+      await loadOpportunities();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const filteredOpps = useMemo(() => {
@@ -103,18 +132,13 @@ export default function OpportunitiesPage() {
 
     let items = opportunities;
     if (activeTab === TABS.PENDING) {
-      items = items.filter(o => o.status === 'pending');
+      items = items.filter((o) => o.status === 'pending');
     }
 
     if (!query) return items;
 
     return items.filter((o) => {
-      const haystack = [
-        o.title,
-        o.org,
-        o.description,
-        ...(Array.isArray(o.tags) ? o.tags : []),
-      ]
+      const haystack = [o.title, o.org, o.description, ...(Array.isArray(o.tags) ? o.tags : [])]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
@@ -167,20 +191,30 @@ export default function OpportunitiesPage() {
           </div>
 
           {loading ? <LoadingSpinner /> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredOpps.map(o => (
-                <OpportunityCard
-                  key={o.id}
-                  opportunity={o}
-                  isAdmin={isAdmin}
-                  user={user}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredOpps.map((o) => (
+                  <OpportunityCard
+                    key={o.id}
+                    opportunity={o}
+                    isAdmin={isAdmin}
+                    user={user}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                  />
+                ))}
+              </div>
+
+              {nextCursor && (
+                <div className="mt-8 flex justify-center">
+                  <Button onClick={() => loadOpportunities({ cursor: nextCursor, append: true })} disabled={loadingMore}>
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

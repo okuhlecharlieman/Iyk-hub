@@ -127,12 +127,6 @@ MIT License – free to use and adapt.
 
 
 
-
-## 📚 Documentation
-
-- Developer guide: `docs/DEVELOPER_GUIDE.md`
-- User guide: `docs/USER_GUIDE.md`
-
 ## Background Jobs
 
 A weekly leaderboard reset cron is configured in `vercel.json` to call:
@@ -143,10 +137,5 @@ Set `CRON_SECRET` in Vercel environment variables. The cron route requires:
 
 - `Authorization: Bearer $CRON_SECRET`
 
-The job resets `users.points.weekly` to `0` in batches and records metadata in `systemJobs/weeklyLeaderboardReset`.
+The job resets `users.points.weekly` to `0` and records metadata in `systemJobs/weeklyLeaderboardReset`.
 
-A creator-boost lifecycle cron is also configured:
-
-- `GET /api/jobs/creator-boost-lifecycle` every 6 hours to auto-activate paid pending boosts and expire overdue active boosts.
-
-This job processes records in batches and records metadata in `systemJobs/creatorBoostLifecycle`.

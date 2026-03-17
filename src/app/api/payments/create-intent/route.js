@@ -7,7 +7,7 @@ import { createPaymentIntentRecord, getOrderConfig } from '../../../../lib/monet
 
 const validatePayload = (payload) => {
   ensurePlainObject(payload);
-  validateNoExtraFields(payload, ['orderType', 'orderId', 'idempotencyKey']);
+  validateNoExtraFields(payload, ['orderType', 'orderId']);
 
   if (typeof payload.orderType !== 'string' || payload.orderType.trim().length === 0) {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'orderType', message: 'orderType is required.' }]);
@@ -20,9 +20,6 @@ const validatePayload = (payload) => {
   return {
     orderType: payload.orderType.trim(),
     orderId: payload.orderId.trim(),
-    idempotencyKey: typeof payload.idempotencyKey === 'string' && payload.idempotencyKey.trim().length > 0
-      ? payload.idempotencyKey.trim()
-      : null,
   };
 };
 
@@ -35,7 +32,7 @@ export async function POST(request) {
     const uid = await authenticateAndGetUid(request);
 
     const payload = await parseJsonBody(request);
-    const { orderType, orderId, idempotencyKey } = validatePayload(payload);
+    const { orderType, orderId } = validatePayload(payload);
 
     const config = getOrderConfig(orderType);
     if (!config) {
@@ -60,30 +57,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order has no payable amount.' }, { status: 400 });
     }
 
-    if (idempotencyKey) {
-      const existingSnap = await db.collection('payments')
-        .where('ownerUid', '==', uid)
-        .where('orderType', '==', orderType)
-        .where('orderId', '==', orderId)
-        .where('idempotencyKey', '==', idempotencyKey)
-        .orderBy('createdAt', 'desc')
-        .limit(1)
-        .get();
-
-      if (!existingSnap.empty) {
-        const existing = existingSnap.docs[0];
-        const existingData = existing.data();
-        return NextResponse.json({
-          success: true,
-          paymentId: existing.id,
-          amountCents: existingData.amountCents,
-          status: existingData.status,
-          reused: true,
-          message: 'Existing payment intent reused for idempotent request.',
-        });
-      }
-    }
-
     const paymentRef = await createPaymentIntentRecord({
       db,
       uid,
@@ -91,7 +64,6 @@ export async function POST(request) {
       orderId,
       amountCents,
       metadata: { source: 'create-intent-api' },
-      idempotencyKey,
     });
 
     await db.collection(config.collection).doc(orderId).set({

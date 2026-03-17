@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticate } from '@/lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
-import { enforceRateLimit } from '@/lib/api/rate-limit';
-import { logAdminAction } from '@/lib/api/audit-log';
 
 const allowedPostFields = ['title', 'description', 'link', 'mediaUrl', 'type'];
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
@@ -64,10 +62,8 @@ const validateUpdatePostPayload = (payload) => {
 };
 
 export async function POST(req) {
-  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:posts:update', limit: 40, windowMs: 60 * 1000 });
-  if (rateLimitResponse) return rateLimitResponse;
   try {
-    const actor = await authenticate(req);
+    await authenticate(req);
 
     const payload = await parseJsonBody(req);
     const { postId, updates } = validateUpdatePostPayload(payload);
@@ -77,15 +73,6 @@ export async function POST(req) {
 
     const postRef = adminDb.collection('wallPosts').doc(postId);
     await postRef.update({ ...updates, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
-
-    await logAdminAction({
-      request: req,
-      actor,
-      action: 'showcase.post.updated',
-      targetType: 'wallPost',
-      targetId: postId,
-      metadata: { updatedFields: Object.keys(updates) },
-    });
 
     return NextResponse.json({ message: 'Post updated successfully' });
   } catch (error) {

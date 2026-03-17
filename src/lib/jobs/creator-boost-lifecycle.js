@@ -1,9 +1,6 @@
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../firebase/admin';
 
-const BATCH_LIMIT = 400;
-const PAGE_SIZE = 400;
-
 const toMillis = (value) => {
   if (!value) return null;
   if (typeof value?.toMillis === 'function') return value.toMillis();
@@ -18,90 +15,64 @@ export async function runCreatorBoostLifecycleJob() {
 
   const now = Date.now();
 
+  const paidPendingSnap = await db
+    .collection('creatorBoostOrders')
+    .where('paymentStatus', '==', 'paid')
+    .where('activationStatus', '==', 'pending_activation')
+    .limit(400)
+    .get();
+
+  const activeSnap = await db
+    .collection('creatorBoostOrders')
+    .where('activationStatus', '==', 'active')
+    .limit(400)
+    .get();
+
   let batch = db.batch();
   let opCount = 0;
   let activated = 0;
   let expired = 0;
 
   const commitIfNeeded = async () => {
-    if (opCount >= BATCH_LIMIT) {
+    if (opCount >= 400) {
       await batch.commit();
       batch = db.batch();
       opCount = 0;
     }
   };
 
-  let paidPendingCursor = null;
-  while (true) {
-    let query = db
-      .collection('creatorBoostOrders')
-      .where('paymentStatus', '==', 'paid')
-      .where('activationStatus', '==', 'pending_activation')
-      .limit(PAGE_SIZE);
+  for (const doc of paidPendingSnap.docs) {
+    const data = doc.data();
+    const durationHours = Number(data.durationHours || 0);
+    const expiresAt = new Date(now + Math.max(durationHours, 0) * 60 * 60 * 1000);
 
-    if (paidPendingCursor) {
-      query = query.startAfter(paidPendingCursor);
-    }
+    batch.set(doc.ref, {
+      activationStatus: 'active',
+      activatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
 
-    const pageSnap = await query.get();
-    if (pageSnap.empty) {
-      break;
-    }
-
-    for (const doc of pageSnap.docs) {
-      const data = doc.data();
-      const durationHours = Number(data.durationHours || 0);
-      const expiresAt = new Date(now + Math.max(durationHours, 0) * 60 * 60 * 1000);
-
-      batch.set(doc.ref, {
-        activationStatus: 'active',
-        activatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        expiresAt,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-
-      activated += 1;
-      opCount += 1;
-      await commitIfNeeded();
-    }
-
-    paidPendingCursor = pageSnap.docs[pageSnap.docs.length - 1];
+    activated += 1;
+    opCount += 1;
+    await commitIfNeeded();
   }
 
-  let activeCursor = null;
-  while (true) {
-    let query = db
-      .collection('creatorBoostOrders')
-      .where('activationStatus', '==', 'active')
-      .limit(PAGE_SIZE);
-
-    if (activeCursor) {
-      query = query.startAfter(activeCursor);
+  for (const doc of activeSnap.docs) {
+    const data = doc.data();
+    const expiresAtMillis = toMillis(data.expiresAt);
+    if (!expiresAtMillis || expiresAtMillis > now) {
+      continue;
     }
 
-    const pageSnap = await query.get();
-    if (pageSnap.empty) {
-      break;
-    }
+    batch.set(doc.ref, {
+      activationStatus: 'expired',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
 
-    for (const doc of pageSnap.docs) {
-      const data = doc.data();
-      const expiresAtMillis = toMillis(data.expiresAt);
-      if (!expiresAtMillis || expiresAtMillis > now) {
-        continue;
-      }
-
-      batch.set(doc.ref, {
-        activationStatus: 'expired',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-
-      expired += 1;
-      opCount += 1;
-      await commitIfNeeded();
-    }
-
-    activeCursor = pageSnap.docs[pageSnap.docs.length - 1];
+    expired += 1;
+    opCount += 1;
+    await commitIfNeeded();
   }
 
   if (opCount > 0) {

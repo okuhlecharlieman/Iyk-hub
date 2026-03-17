@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { runCreatorBoostLifecycleJob } from '../../../../lib/jobs/creator-boost-lifecycle';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 
-export const runtime = 'nodejs';
-
 const isAuthorizedCron = (request) => {
   const configuredSecret = process.env.CRON_SECRET;
   if (!configuredSecret) return false;

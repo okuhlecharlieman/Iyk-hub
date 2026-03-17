@@ -29,7 +29,6 @@ export async function createPaymentIntentRecord({
   amountCents,
   currency = 'ZAR',
   metadata = {},
-  idempotencyKey = null,
 }) {
   const paymentRef = await db.collection('payments').add({
     ownerUid: uid,
@@ -40,7 +39,6 @@ export async function createPaymentIntentRecord({
     status: 'pending',
     provider: 'mock',
     providerPaymentId: `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    idempotencyKey,
     metadata,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),

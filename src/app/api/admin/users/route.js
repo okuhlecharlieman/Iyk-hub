@@ -15,8 +15,6 @@ async function verifyAdmin(req) {
         console.error('Error verifying admin:', error);
         return { error: 'Internal Server Error', status: 500 };
     }
-    return { authUid: uid, authExists: false };
-  }
 }
 
 // GET handler to retrieve all users.
@@ -33,13 +31,6 @@ export async function GET(req) {
         console.error('Error fetching users:', error);
         return new NextResponse(error.message, { status: 500 });
     }
-
-    const users = await listAllUsers();
-    return NextResponse.json(users);
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    return new NextResponse(error.message, { status: 500 });
-  }
 }
 
 export async function PUT(req) {
@@ -92,17 +83,6 @@ export async function PUT(req) {
         console.error('Error updating user:', error);
         return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
     }
-
-    return NextResponse.json({
-      message: `User ${uid} updated successfully`,
-      authExists,
-      authUid: authExists ? authUid : null,
-      firestoreDocId: firestoreUser?.docId || uid,
-    });
-  } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
-  }
 }
 
 export async function DELETE(req) {
@@ -117,11 +97,6 @@ export async function DELETE(req) {
             return NextResponse.json({ error: 'UID is required' }, { status: 400 });
         }
 
-    const { uid } = await req.json();
-    if (!uid) {
-      return NextResponse.json({ error: 'UID is required' }, { status: 400 });
-    }
-
         try {
             await admin.auth().deleteUser(uid);
         } catch (error) {
@@ -130,28 +105,13 @@ export async function DELETE(req) {
             }
         }
 
+        const adminDb = admin.firestore();
         await adminDb.collection('users').doc(uid).delete();
         await adminDb.collection('leaderboard').doc(uid).delete();
 
-    try {
-      await admin.auth().deleteUser(authUid);
+        return NextResponse.json({ message: `User ${uid} deleted successfully` });
     } catch (error) {
-      if (error?.code !== 'auth/user-not-found') {
-        throw error;
-      }
+        console.error('Error deleting user:', error);
+        return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
     }
-
-    if (firestoreUser?.docRef) {
-      await firestoreUser.docRef.delete();
-      await adminDb.collection('leaderboard').doc(firestoreUser.docId).delete();
-    } else {
-      await adminDb.collection('users').doc(uid).delete();
-      await adminDb.collection('leaderboard').doc(uid).delete();
-    }
-
-    return NextResponse.json({ message: `User ${uid} deleted successfully` });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
-  }
 }

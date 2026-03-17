@@ -20,11 +20,7 @@ export async function POST(request) {
     await initializeFirebaseAdmin();
 
     const payload = await request.json();
-    const { eventId, paymentId, status } = payload || {};
-
-    if (typeof eventId !== 'string' || eventId.trim().length === 0) {
-      return NextResponse.json({ error: 'eventId is required' }, { status: 400 });
-    }
+    const { paymentId, status } = payload || {};
 
     if (typeof paymentId !== 'string' || paymentId.trim().length === 0) {
       return NextResponse.json({ error: 'paymentId is required' }, { status: 400 });
@@ -35,12 +31,6 @@ export async function POST(request) {
     }
 
     const db = admin.firestore();
-    const eventRef = db.collection('paymentWebhookEvents').doc(eventId.trim());
-    const eventSnap = await eventRef.get();
-    if (eventSnap.exists) {
-      return NextResponse.json({ success: true, deduplicated: true, eventId: eventId.trim() });
-    }
-
     const paymentRef = db.collection('payments').doc(paymentId.trim());
     const paymentSnap = await paymentRef.get();
 
@@ -62,13 +52,7 @@ export async function POST(request) {
       status,
     });
 
-    await eventRef.set({
-      paymentId: paymentId.trim(),
-      status,
-      receivedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return NextResponse.json({ success: true, paymentId: paymentId.trim(), status, eventId: eventId.trim() });
+    return NextResponse.json({ success: true, paymentId: paymentId.trim(), status });
   } catch (error) {
     console.error('Error in /api/payments/webhook:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -43,6 +43,8 @@ const validateProfileUpdatePayload = (payload) => {
 };
 
 export async function POST(req) {
+  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'profile:update', limit: 30, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
   let uid;
   try {
     uid = await authenticateAndGetUid(req);

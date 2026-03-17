@@ -15,6 +15,8 @@ const validateDeletePostPayload = (payload) => {
 };
 
 export async function POST(req) {
+  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:posts:delete', limit: 30, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
   try {
     await authenticate(req);
 

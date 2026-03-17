@@ -52,7 +52,7 @@ function toAuthUserRecord(userRecord) {
     const usersSnapshot = await firestore.collection('users').orderBy('createdAt', 'desc').get();
     const firestoreUsers = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    const listUsersResult = await auth.listUsers(1000);
+    const allAuthUsers = await listAllAuthUsers(auth);
     const authUserMap = new Map();
     const authUserByEmailMap = new Map();
     listUsersResult.users.forEach(userRecord => {

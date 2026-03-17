@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run check:merge-conflicts && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check:merge-conflicts": "node scripts/check-merge-conflicts.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

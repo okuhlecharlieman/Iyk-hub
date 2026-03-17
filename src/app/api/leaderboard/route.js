@@ -17,7 +17,7 @@ if (rawServiceAccount) {
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'leaderboard:get', limit: 120, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
-
+  // During build-time or environments without a service account, return empty list
   if (process.env.NODE_ENV === 'production' && !serviceAccount) {
     return NextResponse.json({ success: true, users: [], nextCursor: null });
   }

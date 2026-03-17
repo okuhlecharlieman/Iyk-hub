@@ -1,18 +1,29 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { initializeFirebaseAdmin } from '@/lib/firebase/admin';
-import { authenticate } from '@/lib/firebase/admin';
+import { initializeFirebaseAdmin, authenticate } from '@/lib/firebase/admin';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
+import { enforceRateLimit } from '@/lib/api/rate-limit';
+import { logAdminAction } from '@/lib/api/audit-log';
 
-// This endpoint deletes a post using the Admin SDK (bypassing Firestore security rules).
+const validateDeletePostPayload = (payload) => {
+  ensurePlainObject(payload);
+  validateNoExtraFields(payload, ['postId']);
+
+  if (typeof payload.postId !== 'string' || payload.postId.trim().length === 0) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'postId', message: 'Post ID is required.' }]);
+  }
+
+  return { postId: payload.postId.trim() };
+};
+
 export async function POST(req) {
+  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:posts:delete', limit: 30, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
   try {
-    await authenticate(req);
+    const actor = await authenticate(req);
 
-    const { postId } = await req.json();
-
-    if (!postId) {
-      return NextResponse.json({ error: 'Post ID is required' }, { status: 400 });
-    }
+    const payload = await parseJsonBody(req);
+    const { postId } = validateDeletePostPayload(payload);
 
     await initializeFirebaseAdmin();
     const adminDb = admin.firestore();
@@ -20,9 +31,20 @@ export async function POST(req) {
     const postRef = adminDb.collection('wallPosts').doc(postId);
     await postRef.delete();
 
-    return NextResponse.json({ message: 'Post deleted successfully' });
+    await logAdminAction({
+      request: req,
+      actor,
+      action: 'showcase.post.deleted',
+      targetType: 'wallPost',
+      targetId: postId,
+    });
 
+    return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
+    }
+
     console.error('Error deleting post:', error);
     return NextResponse.json({ error: error.message || 'An unknown error occurred' }, { status: error.code || 500 });
   }

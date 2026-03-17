@@ -33,58 +33,65 @@ const getBearerToken = (req) => {
   return authHeader.substring(7);
 };
 
-// Authenticates a request and verifies the user is an admin.
-export const authenticate = async (req) => {
+const createHttpError = (message, code) => {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+};
+
+export const verifyIdTokenFromRequest = async (req) => {
   initializeFirebaseAdmin();
   const token = getBearerToken(req);
+
   if (!token) {
-    const err = new Error('Not authenticated. No token provided.');
-    err.code = 401;
-    throw err;
+    throw createHttpError('Not authenticated. No token provided.', 401);
   }
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    return await admin.auth().verifyIdToken(token);
+  } catch (error) {
+    console.error('Authentication error:', error?.message || error);
 
-    // Support both old-style boolean `admin` claim and new `role` claim.
-    const hasAdminClaim = decodedToken.admin === true || decodedToken.role === 'admin';
-
-    if (!hasAdminClaim) {
-      // Fall back to checking Firestore user document role if the custom claim isn't present.
-      const userDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
-      if (userDoc.exists && userDoc.data()?.role === 'admin') {
-        return decodedToken;
-      }
-
-      const err = new Error('Not authorized. User is not an admin.');
-      err.code = 403;
-      throw err;
+    if (error?.code === 'auth/id-token-expired' || error?.code === 'auth/argument-error') {
+      throw createHttpError('Invalid or expired authentication token.', 401);
     }
 
-    return decodedToken;
-  } catch (error) {
-    console.error('Authentication error:', error.message);
-    const err = new Error(error.message);
-    err.code = error.code === 'auth/id-token-expired' ? 401 : 500;
-    throw err;
+    throw createHttpError('Authentication failed.', 500);
   }
 };
 
-// Authenticates a request and returns the user's UID.
-export const authenticateAndGetUid = async (req) => {
-  initializeFirebaseAdmin();
-  const token = getBearerToken(req);
-  if (!token) {
-    throw new Error('Not authenticated. No token provided.');
+export const requireRole = async (req, allowedRoles = ['admin']) => {
+  const decodedToken = await verifyIdTokenFromRequest(req);
+
+  const claimRole = decodedToken.role;
+  const hasLegacyAdminClaim = decodedToken.admin === true;
+
+  if (allowedRoles.includes(claimRole) || (allowedRoles.includes('admin') && hasLegacyAdminClaim)) {
+    return decodedToken;
   }
 
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    return decodedToken.uid;
+    const userDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
+    const firestoreRole = userDoc.exists ? userDoc.data()?.role : null;
+
+    if (allowedRoles.includes(firestoreRole)) {
+      return decodedToken;
+    }
   } catch (error) {
-    console.error('Authentication error:', error.message);
-    throw new Error('Authentication failed: ' + error.message);
+    console.error('Role lookup error:', error?.message || error);
+    throw createHttpError('Failed to verify user role.', 500);
   }
+
+  throw createHttpError('Not authorized for this resource.', 403);
+};
+
+// Authenticates a request and verifies the user is an admin.
+export const authenticate = async (req) => requireRole(req, ['admin']);
+
+// Authenticates a request and returns the user's UID.
+export const authenticateAndGetUid = async (req) => {
+  const decodedToken = await verifyIdTokenFromRequest(req);
+  return decodedToken.uid;
 };
 
 
@@ -109,14 +116,14 @@ const serializeFirestoreData = (doc) => {
 export async function getApprovedOpportunities(limitN = 50) {
   await initializeFirebaseAdmin();
   const adminDb = admin.firestore();
-  
+
   const qy = adminDb.collection('opportunities')
     .where('status', '==', 'approved')
     .orderBy('createdAt', 'desc')
     .limit(limitN);
-    
+
   const snap = await qy.get();
-  
+
   return snap.docs.map(serializeFirestoreData);
 }
 
@@ -128,7 +135,7 @@ export async function listShowcasePosts(limitN = 50) {
   const qy = adminDb.collection('wallPosts')
     .orderBy('createdAt', 'desc')
     .limit(limitN);
-    
+
   const snap = await qy.get();
 
   return snap.docs.map(serializeFirestoreData);

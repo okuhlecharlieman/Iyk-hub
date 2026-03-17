@@ -34,14 +34,25 @@ export async function updateUserDoc(uid, data) {
 }
 
 export async function listTopUsers(limitN = 10, filter = 'lifetime') {
-  // Use the server-side `/api/leaderboard` endpoint so the client doesn't
-  // need direct read access to the full `users` collection.
-  const res = await fetch(`/api/leaderboard?limit=${limitN}&filter=${encodeURIComponent(filter)}`);
+  const page = await listTopUsersPage({ limit: limitN, filter });
+  return page.users;
+}
+
+export async function listTopUsersPage({ limit = 10, filter = 'lifetime', cursor = null } = {}) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    filter,
+  });
+
+  if (cursor) params.set('cursor', cursor);
+
+  const res = await fetch(`/api/leaderboard?${params.toString()}`);
   const json = await res.json();
   if (!res.ok || !json.success) {
     throw new Error(json.error || json?.message || 'Failed to fetch leaderboard');
   }
-  return json.users;
+
+  return { users: json.users || [], nextCursor: json.nextCursor || null };
 }
 
 // Admin function to get all users (server-composed — includes whether the user exists in Auth)
@@ -74,17 +85,22 @@ export async function createShowcasePost(data, mediaFile) {
     mediaUrl = await uploadToStorage(mediaFile, `showcase/${user.uid}`);
   }
 
-  const postData = {
-    ...data,
-    uid: user.uid,
-    votes: 0,
-    voters: [],
-    mediaUrl,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-  const postRef = await addDoc(collection(db, 'wallPosts'), postData);
-  return postRef.id;
+  const token = await user.getIdToken();
+  const res = await fetch('/api/showcase/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ...data, mediaUrl }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to submit showcase post');
+  }
+
+  return json.id;
 }
 
 export async function listUserShowcasePosts(uid, limitN = 50) {
@@ -143,15 +159,22 @@ export async function createOpportunity(data) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
 
-  const oppData = {
-    ...data,
-    ownerId: user.uid,
-    status: 'pending', // Or 'approved' if you want to bypass approval for some users
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-  const docRef = await addDoc(collection(db, 'opportunities'), oppData);
-  return docRef.id;
+  const token = await user.getIdToken();
+  const res = await fetch('/api/opportunities/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to create opportunity');
+  }
+
+  return json.id;
 }
 
 export async function updateOpportunity(opportunityId, data) {
@@ -168,6 +191,30 @@ export async function getApprovedOpportunities(limitN = 50) {
   const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
   const snap = await getDocs(qy);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function listOpportunitiesPage({ limit = 12, cursor = null } = {}) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Not authenticated');
+  }
+
+  const token = await user.getIdToken();
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+
+  const res = await fetch(`/api/opportunities?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to fetch opportunities');
+  }
+
+  return { opportunities: json.opportunities || [], nextCursor: json.nextCursor || null };
 }
 
 // Client-side real-time listener

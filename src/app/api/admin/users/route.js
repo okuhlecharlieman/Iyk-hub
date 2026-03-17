@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, listAllUsers } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
-import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 
 const validateUidPayload = (payload) => {
   ensurePlainObject(payload);
@@ -97,6 +96,7 @@ const validateUpdatePayload = (payload) => {
   return { uid, updateData };
 };
 
+
 export async function GET(req) {
   try {
     await authenticate(req);
@@ -106,15 +106,12 @@ export async function GET(req) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
-
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
 
 export async function PUT(req) {
-  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
-  if (rateLimitResponse) return rateLimitResponse;
   try {
     await authenticate(req);
 
@@ -169,8 +166,6 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
-  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
-  if (rateLimitResponse) return rateLimitResponse;
   try {
     await authenticate(req);
 

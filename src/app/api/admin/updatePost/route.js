@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticate } from '@/lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
-import { enforceRateLimit } from '@/lib/api/rate-limit';
 
 const allowedPostFields = ['title', 'description', 'link', 'mediaUrl', 'type'];
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
@@ -63,8 +62,6 @@ const validateUpdatePostPayload = (payload) => {
 };
 
 export async function POST(req) {
-  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:posts:update', limit: 40, windowMs: 60 * 1000 });
-  if (rateLimitResponse) return rateLimitResponse;
   try {
     await authenticate(req);
 

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '@/lib/firebase/admin';
-import { sanitizeProfileUpdates } from '@/lib/server/validation';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +25,29 @@ export async function POST(req) {
       return NextResponse.json({ error: sanitized.error }, { status: sanitized.status || 400 });
     }
 
-    const allowedUpdates = sanitized.data;
+    // Sanitize updates to only allow specific user-editable fields.
+    const allowedUpdates = {};
+    const editableFields = ['displayName', 'bio', 'skills'];
+
+    editableFields.forEach((field) => {
+      if (!Object.prototype.hasOwnProperty.call(updates, field)) return;
+
+      if (field === 'skills') {
+        const skills = updates[field];
+        if (Array.isArray(skills) && skills.every((s) => typeof s === 'string')) {
+          allowedUpdates[field] = skills.slice(0, 50);
+        }
+        return;
+      }
+
+      if (typeof updates[field] === 'string') {
+        allowedUpdates[field] = updates[field].trim();
+      }
+    });
+
+    if (Object.keys(allowedUpdates).length === 0) {
+      return NextResponse.json({ error: 'No valid fields provided to update.' }, { status: 400 });
+    }
 
     const userRef = admin.firestore().collection('users').doc(uid);
     await userRef.set(allowedUpdates, { merge: true });

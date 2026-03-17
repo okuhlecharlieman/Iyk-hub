@@ -35,7 +35,7 @@ export default function DashboardPage() {
       async function load() {
         const q = await fetchLatestQuote();
         setQuote(q);
-            if (q && q.createdAt) {
+        if (q && q.createdAt) {
           const date = new Date(q.createdAt.seconds * 1000);
           const options = { year: 'numeric', month: 'long', day: 'numeric' };
           setFormattedDate(date.toLocaleDateString('en-US', options));
@@ -61,7 +61,7 @@ export default function DashboardPage() {
                 </h1>
                 <p className="mt-2 text-blue-100 max-w-2xl">
                   {quote?.text ? <em>“{quote.text}”</em> : 'Your journey to greatness starts now. Let’s make today count!'}
-     {formattedDate && <span className="text-sm ml-2">({formattedDate})</span>}
+                  {formattedDate && <span className="text-sm ml-2">({formattedDate})</span>}
                 </p>
               </div>
               <OnlineCount />

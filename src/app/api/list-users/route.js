@@ -33,30 +33,14 @@ function toAuthUserRecord(userRecord) {
   };
 }
 
-function isAuthStatusCode(code) {
-  return code === 401 || code === 403;
-}
-
-async function listAllAuthUsers(auth) {
-  const users = [];
-  let pageToken;
-
-  do {
-    const page = await auth.listUsers(1000, pageToken);
-    users.push(...page.users);
-    pageToken = page.pageToken;
-  } while (pageToken);
-
-  return users;
-}
 
 export async function GET(request) {
-  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-    console.log('Build-time: Returning empty list for /api/list-users.');
-    return NextResponse.json({ success: true, users: [] });
-  }
-
+    if (process.env.NODE_ENV === 'production' && !serviceAccount) {
+        console.log("Build-time: Returning empty list for /api/list-users.");
+        return NextResponse.json({ success: true, users: [] });
+    }
   try {
+    // Explicit server-side authorization to prevent data exposure.
     await authenticate(request);
     await initializeFirebaseAdmin();
     const admin = await import('firebase-admin');
@@ -70,52 +54,46 @@ export async function GET(request) {
     const allAuthUsers = await listAllAuthUsers(auth);
     const authUserMap = new Map();
     const authUserByEmailMap = new Map();
+    listUsersResult.users.forEach(userRecord => {
+      authUserMap.set(userRecord.uid, {
+        uid: userRecord.uid,
+        email: userRecord.email,
+        displayName: userRecord.displayName,
+        photoURL: userRecord.photoURL,
+      });
 
-    allAuthUsers.forEach((userRecord) => {
-      const normalized = toAuthUserRecord(userRecord);
-      authUserMap.set(normalized.uid, normalized);
-
-      const emailKey = normalizeEmail(normalized.email);
-      if (emailKey) {
-        authUserByEmailMap.set(emailKey, normalized);
+      if (userRecord.email) {
+        authUserByEmailMap.set(userRecord.email.toLowerCase(), {
+          uid: userRecord.uid,
+          email: userRecord.email,
+          displayName: userRecord.displayName,
+          photoURL: userRecord.photoURL,
+        });
       }
     });
 
-    const combinedUsers = firestoreUsers.map((user) => {
-      const emailKey = normalizeEmail(user.email);
+    const combinedUsers = firestoreUsers.map(user => {
       const authUser =
-        authUserMap.get(user.authUid) ||
-        authUserMap.get(user.uid) ||
         authUserMap.get(user.id) ||
-        (emailKey ? authUserByEmailMap.get(emailKey) : null);
-
-      const resolvedUid = authUser?.uid || user.authUid || user.uid || user.id;
-
+        (user.email ? authUserByEmailMap.get(user.email.toLowerCase()) : null);
       return {
         id: user.id,
-        uid: resolvedUid,
-        authUid: authUser?.uid || user.authUid || null,
-        firestoreUid: user.uid || null,
         email: user.email || authUser?.email || 'N/A',
         displayName: user.displayName || authUser?.displayName || null,
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
-        createdAt: serializeTimestamp(user.createdAt),
-        authExists: Boolean(authUser || user.authUid),
+        createdAt: user.createdAt ? serializeTimestamp(user.createdAt) : null,
+        authExists: !!authUser,
       };
     });
 
     return NextResponse.json({ success: true, users: combinedUsers });
   } catch (error) {
     console.error('Error in /api/list-users:', error);
-
-    const statusCode = error && typeof error.code === 'number' ? error.code : null;
-    if (isAuthStatusCode(statusCode)) {
-      const message = error && error.message ? error.message : 'Not authorized';
-      return NextResponse.json({ success: false, error: message }, { status: statusCode });
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.code });
     }
-
     return NextResponse.json({ success: false, error: 'An internal server error occurred.' }, { status: 500 });
   }
 }

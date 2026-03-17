@@ -28,11 +28,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Target user not found' }, { status: 404 });
     }
 
-    // Set custom claim and mirror the role to Firestore
     await admin.auth().setCustomUserClaims(uid, { role });
-    await adminDb.collection('users').doc(uid).set({ role }, { merge: true });
+    await admin.firestore().collection('users').doc(uid).set({ role }, { merge: true });
 
-    // Try to provide a friendly display name in the response
     let targetDisplayName = null;
     try {
       const authUser = await admin.auth().getUser(uid);

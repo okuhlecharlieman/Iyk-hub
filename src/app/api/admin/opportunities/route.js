@@ -23,7 +23,6 @@ export async function PUT(request) {
 
     await updateOpportunity(id, { status });
 
-    // Return the updated opportunity title for friendly UI notifications
     const adminDb = (await import('firebase-admin')).firestore();
     const snap = await adminDb.collection('opportunities').doc(id).get();
     const title = snap.exists ? snap.data().title : null;

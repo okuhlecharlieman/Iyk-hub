@@ -34,68 +34,83 @@ export async function GET(request) {
 
   try {
     await initializeFirebaseAdmin();
-    const db = admin.firestore();
 
     const { searchParams } = new URL(request.url);
     const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
     const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 20 : rawLimit, 1), MAX_LIMIT);
     const cursor = searchParams.get('cursor');
 
-    let queryRef = db.collection('wallPosts').orderBy('createdAt', 'desc').limit(limitN);
+    const cacheKey = buildCacheKey('showcase', request.url, { limitN, cursor });
+    const { value: payload, cacheHit } = await getOrSetCache({
+      key: cacheKey,
+      ttlMs: 20 * 1000,
+      loader: async () => {
+        const db = admin.firestore();
 
-    if (cursor) {
-      const cursorSnap = await db.collection('wallPosts').doc(cursor).get();
-      if (cursorSnap.exists) {
-        queryRef = db.collection('wallPosts').orderBy('createdAt', 'desc').startAfter(cursorSnap).limit(limitN);
-      }
-    }
+        let queryRef = db.collection('wallPosts').orderBy('createdAt', 'desc').limit(limitN);
 
-    const postsSnapshot = await queryRef.get();
-    if (postsSnapshot.empty) {
-      return NextResponse.json({ posts: [], nextCursor: null });
-    }
+        if (cursor) {
+          const cursorSnap = await db.collection('wallPosts').doc(cursor).get();
+          if (cursorSnap.exists) {
+            queryRef = db.collection('wallPosts').orderBy('createdAt', 'desc').startAfter(cursorSnap).limit(limitN);
+          }
+        }
 
-    const posts = postsSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
-      };
+        const postsSnapshot = await queryRef.get();
+        if (postsSnapshot.empty) {
+          return { posts: [], nextCursor: null };
+        }
+
+        const posts = postsSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
+          };
+        });
+
+        const authorUids = [...new Set(posts.map((p) => p.uid).filter(Boolean))];
+        const authors = {};
+
+        if (authorUids.length > 0) {
+          const uidChunks = chunkArray(authorUids, 10);
+          await Promise.all(
+            uidChunks.map(async (chunk) => {
+              const authorDocs = await db
+                .collection('users')
+                .where(admin.firestore.FieldPath.documentId(), 'in', chunk)
+                .get();
+
+              authorDocs.forEach((doc) => {
+                const { displayName, photoURL } = doc.data();
+                authors[doc.id] = {
+                  displayName: displayName || 'Anonymous User',
+                  photoURL: photoURL || null,
+                };
+              });
+            })
+          );
+        }
+
+        const postsWithAuthors = posts.map((post) => ({
+          ...post,
+          author: authors[post.uid] || { displayName: 'Anonymous User', photoURL: null },
+        }));
+
+        const lastDoc = postsSnapshot.docs[postsSnapshot.docs.length - 1];
+        const nextCursor = postsSnapshot.docs.length === limitN ? lastDoc.id : null;
+
+        return { posts: postsWithAuthors, nextCursor };
+      },
     });
 
-    const authorUids = [...new Set(posts.map((p) => p.uid).filter(Boolean))];
-    const authors = {};
-
-    if (authorUids.length > 0) {
-      const uidChunks = chunkArray(authorUids, 10);
-      await Promise.all(
-        uidChunks.map(async (chunk) => {
-          const authorDocs = await db
-            .collection('users')
-            .where(admin.firestore.FieldPath.documentId(), 'in', chunk)
-            .get();
-
-          authorDocs.forEach((doc) => {
-            const { displayName, photoURL } = doc.data();
-            authors[doc.id] = {
-              displayName: displayName || 'Anonymous User',
-              photoURL: photoURL || null,
-            };
-          });
-        })
-      );
-    }
-
-    const postsWithAuthors = posts.map((post) => ({
-      ...post,
-      author: authors[post.uid] || { displayName: 'Anonymous User', photoURL: null },
-    }));
-
-    const lastDoc = postsSnapshot.docs[postsSnapshot.docs.length - 1];
-    const nextCursor = postsSnapshot.docs.length === limitN ? lastDoc.id : null;
-
-    return NextResponse.json({ posts: postsWithAuthors, nextCursor });
+    return NextResponse.json(payload, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+        'X-Cache': cacheHit ? 'HIT' : 'MISS',
+      },
+    });
   } catch (error) {
     console.error('Error in /api/showcase GET handler:', error);
     return NextResponse.json(

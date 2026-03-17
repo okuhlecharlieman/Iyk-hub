@@ -1,58 +1,61 @@
 import { NextResponse } from 'next/server';
-import { listAllOpportunities, updateOpportunity } from '../../../../lib/firebase/admin';
+import { authenticate, listAllOpportunities, updateOpportunity } from '../../../../lib/firebase/admin';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 
-// All admin endpoints must validate the caller's ID token and ensure the
-// caller is an admin (checks Firestore `users/{uid}` role).
-async function requireAdmin(request) {
-  const idToken = request.headers.get('authorization')?.split('Bearer ')[1];
-  if (!idToken) return { ok: false, status: 401, body: { error: 'Unauthorized' } };
+const allowedOpportunityStatuses = new Set(['pending', 'approved', 'rejected']);
 
-  try {
-    await import('../../../../lib/firebase/admin'); // ensure admin SDK init helper available
-    const admin = await import('firebase-admin');
-    const decoded = await admin.auth().verifyIdToken(idToken);
-    const callerUid = decoded.uid;
-    const callerDoc = await admin.firestore().collection('users').doc(callerUid).get();
-    if (!callerDoc.exists || callerDoc.data().role !== 'admin') {
-      return { ok: false, status: 403, body: { error: 'Forbidden' } };
-    }
-    return { ok: true, admin, callerUid };
-  } catch (err) {
-    console.error('Admin auth check failed:', err?.message || err);
-    return { ok: false, status: 401, body: { error: 'Invalid auth token' } };
+const validateOpportunityUpdatePayload = (payload) => {
+  ensurePlainObject(payload);
+  validateNoExtraFields(payload, ['id', 'status']);
+
+  if (typeof payload.id !== 'string' || payload.id.trim().length === 0) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'id', message: 'Opportunity id is required.' }]);
   }
-}
+
+  if (typeof payload.status !== 'string' || !allowedOpportunityStatuses.has(payload.status)) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'status', message: 'Status must be one of pending, approved, or rejected.' }]);
+  }
+
+  return { id: payload.id.trim(), status: payload.status };
+};
 
 export async function GET(request) {
-  const check = await requireAdmin(request);
-  if (!check.ok) return NextResponse.json(check.body, { status: check.status });
-
   try {
+    await authenticate(request);
     const opportunities = await listAllOpportunities();
     return NextResponse.json(opportunities);
   } catch (error) {
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.code });
+    }
     console.error('Error in GET /api/admin/opportunities:', error?.message || error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function PUT(request) {
-  const check = await requireAdmin(request);
-  if (!check.ok) return NextResponse.json(check.body, { status: check.status });
-
+  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:update', limit: 40, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
   try {
-    const { id, status } = await request.json();
-    if (!id || !status) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    await authenticate(request);
+    const payload = await parseJsonBody(request);
+    const { id, status } = validateOpportunityUpdatePayload(payload);
 
     await updateOpportunity(id, { status });
 
-    // Return the updated opportunity title for friendly UI notifications
     const adminDb = (await import('firebase-admin')).firestore();
     const snap = await adminDb.collection('opportunities').doc(id).get();
     const title = snap.exists ? snap.data().title : null;
 
     return NextResponse.json({ message: 'Opportunity updated successfully', id, title });
   } catch (error) {
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.code });
+    }
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
+    }
     console.error('Error in PUT /api/admin/opportunities:', error?.message || error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

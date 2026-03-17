@@ -85,17 +85,22 @@ export async function createShowcasePost(data, mediaFile) {
     mediaUrl = await uploadToStorage(mediaFile, `showcase/${user.uid}`);
   }
 
-  const postData = {
-    ...data,
-    uid: user.uid,
-    votes: 0,
-    voters: [],
-    mediaUrl,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-  const postRef = await addDoc(collection(db, 'wallPosts'), postData);
-  return postRef.id;
+  const token = await user.getIdToken();
+  const res = await fetch('/api/showcase/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ...data, mediaUrl }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to submit showcase post');
+  }
+
+  return json.id;
 }
 
 export async function listUserShowcasePosts(uid, limitN = 50) {
@@ -154,15 +159,22 @@ export async function createOpportunity(data) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
 
-  const oppData = {
-    ...data,
-    ownerId: user.uid,
-    status: 'pending', // Or 'approved' if you want to bypass approval for some users
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-  const docRef = await addDoc(collection(db, 'opportunities'), oppData);
-  return docRef.id;
+  const token = await user.getIdToken();
+  const res = await fetch('/api/opportunities/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to create opportunity');
+  }
+
+  return json.id;
 }
 
 export async function updateOpportunity(opportunityId, data) {

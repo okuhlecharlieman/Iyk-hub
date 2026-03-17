@@ -24,11 +24,44 @@
 - `src/components/*`: reusable UI components
 
 ## 4) API Design Conventions
-- Validate payloads and reject extra fields.
-- Use explicit auth checks and role checks (`admin` where required).
-- Return machine-readable error messages consistently.
-- Log privileged actions with `logAdminAction`.
-- Use rate limiting on high-risk and high-volume routes.
+- Validate payloads and reject extra fields using `ValidationSchema`.
+- Use explicit auth checks with `AuthMiddleware` (admin where required).
+- Return machine-readable error messages using standardized error types.
+- Log privileged actions with `logAdminAction`, security events with `logSecurityEvent`.
+- Use rate limiting on high-risk and high-volume routes with `enforceRateLimit`.
+- Wrap handlers with `withErrorHandling` for consistent error responses.
+
+### API Security Utilities (2026 Improvements)
+These utilities ensure consistent security across all endpoints:
+- **Error Handling**: `src/lib/api/error-handler.js` - Standardized errors, proper HTTP codes
+- **Validation**: `src/lib/api/schema-validation.js` - Type-safe input validation
+- **Auth Middleware**: `src/lib/api/auth-middleware.js` - Consistent auth/authz checking
+- **Logging**: `src/lib/api/logging.js` - Audit trails for admin/security/data access
+- **Rate Limiting**: `src/lib/api/rate-limit.js` - IP-based request throttling
+
+Quick Reference:
+```javascript
+// Typical endpoint structure
+export const POST = withErrorHandling(async (request) => {
+  // Enforce rate limit
+  const rl = enforceRateLimit(request, { keyPrefix: 'my-endpoint', limit: 100, windowMs: 60000 });
+  if (rl) return rl;
+
+  // Auth
+  const user = await AuthMiddleware.authenticate(request);
+
+  // Validate
+  const body = await request.json();
+  const data = mySchema.validate(body);
+
+  // Do work with proper logging
+  await logAdminAction({ request, actor: user, action: 'created', ... });
+
+  return NextResponse.json({ success: true });
+});
+```
+
+See `docs/API_IMPROVEMENTS.md` for detailed migration guide and `docs/QUICK_REFERENCE.md` for cheat sheet.
 
 ## 5) Background Jobs
 - **Weekly leaderboard reset**: `/api/jobs/weekly-leaderboard-reset`

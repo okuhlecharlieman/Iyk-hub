@@ -2,11 +2,8 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticate } from '@/lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
-<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
 import { enforceRateLimit } from '@/lib/api/rate-limit';
 import { logAdminAction } from '@/lib/api/audit-log';
-=======
->>>>>>> main
 
 const validateDeletePostPayload = (payload) => {
   ensurePlainObject(payload);
@@ -23,11 +20,7 @@ export async function POST(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:posts:delete', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
   try {
-<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     const actor = await authenticate(req);
-=======
-    await authenticate(req);
->>>>>>> main
 
     const payload = await parseJsonBody(req);
     const { postId } = validateDeletePostPayload(payload);
@@ -38,7 +31,6 @@ export async function POST(req) {
     const postRef = adminDb.collection('wallPosts').doc(postId);
     await postRef.delete();
 
-<<<<<<< codex/secure-admin-apis-with-role-based-access-control-1tvsx8
     await logAdminAction({
       request: req,
       actor,
@@ -47,8 +39,6 @@ export async function POST(req) {
       targetId: postId,
     });
 
-=======
->>>>>>> main
     return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {
     if (error instanceof RequestValidationError) {

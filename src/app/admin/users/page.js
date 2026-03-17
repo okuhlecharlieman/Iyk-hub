@@ -112,7 +112,7 @@ export default function AdminUsersPage() {
           const idToken = await user.getIdToken();
           const initial = await listAllUsers(idToken);
           if (Array.isArray(initial)) {
-            setUsers(initial.map((u) => ({ ...u, uid: u.uid || u.authUid || u.id, authUid: u.authUid || u.uid || null })));
+            setUsers(initial.map(u => ({ ...u, uid: u.uid || u.authUid || u.id })));
           } else {
             setUsers([]);
           }
@@ -130,9 +130,9 @@ export default function AdminUsersPage() {
 
                 // Rebuild the list from the Firestore snapshot, preserving Auth data.
                 docs.forEach(userDoc => {
-                    const uid = userDoc.authUid || userDoc.uid || userDoc.id;
+                    const uid = userDoc.uid || userDoc.authUid || userDoc.id;
                     const existingUser = prevUsersMap.get(uid) || {}; // has auth data
-                    newUsersMap.set(uid, { ...existingUser, ...userDoc, uid, authUid: userDoc.authUid || existingUser.authUid || uid, id: userDoc.id || existingUser.id || uid });
+                    newUsersMap.set(uid, { ...existingUser, ...userDoc, uid, id: userDoc.id || existingUser.id || uid });
                 });
 
                 // Add back auth-only users from the previous state.

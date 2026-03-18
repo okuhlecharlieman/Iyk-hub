@@ -22,7 +22,7 @@ export default function ManageOpportunities() {
         // Only load admin-owned data when we have BOTH a signed-in user and
         // a Firestore profile that marks them admin. This prevents calling the
         // admin API without an ID token (causing 401s).
-        if (user && userProfile?.isAdmin) {
+        if (user && userProfile?.role === 'admin') {
             loadOpps();
         } else if (user) {
             setLoading(false);

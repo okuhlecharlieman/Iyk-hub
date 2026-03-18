@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
@@ -13,6 +13,7 @@ export default function HangmanGame({ gameId, onEnd }) {
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const lastResultKeyRef = useRef(null);
   const gameDocRef = doc(db, 'games', gameId);
 
   // Game setup
@@ -92,7 +93,11 @@ export default function HangmanGame({ gameId, onEnd }) {
     if (wordGuessed) {
       const winner = data.currentPlayer === 'player1' ? players.player1.displayName : players.player2.displayName;
       updateDoc(gameDocRef, { status: 'result', winner });
-      if(onEnd && playerSymbol) onEnd(10); 
+      const resultKey = `hangman:${gameId}:win:${winner}:${word}`;
+      if (onEnd && playerSymbol && lastResultKeyRef.current !== resultKey) {
+        lastResultKeyRef.current = resultKey;
+        onEnd({ score: 10, resultKey });
+      }
       return;
     }
 
@@ -100,7 +105,11 @@ export default function HangmanGame({ gameId, onEnd }) {
       const loser = players.player1.wrongGuesses >= maxWrongGuesses ? players.player1.displayName : players.player2.displayName;
       const winner = loser === players.player1.displayName ? players.player2.displayName : players.player1.displayName;
       updateDoc(gameDocRef, { status: 'result', winner: winner, loser: loser });
-      if(onEnd && playerSymbol) onEnd(playerSymbol === data.currentPlayer ? 2 : 10);
+      const resultKey = `hangman:${gameId}:loss:${winner}:${loser}:${word}`;
+      if (onEnd && playerSymbol && lastResultKeyRef.current !== resultKey) {
+        lastResultKeyRef.current = resultKey;
+        onEnd({ score: playerSymbol === data.currentPlayer ? 2 : 10, resultKey });
+      }
     }
   };
 

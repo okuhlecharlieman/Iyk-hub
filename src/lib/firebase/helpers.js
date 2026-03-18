@@ -55,7 +55,7 @@ export async function listTopUsersPage({ limit = 10, filter = 'lifetime', cursor
   return { users: json.users || [], nextCursor: json.nextCursor || null };
 }
 
-// Admin function to get all users (server-composed — includes whether the user exists in Auth)
+// Admin function to get all users (server-composed — includes linked Auth UID when available)
 export async function listAllUsers() {
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -72,7 +72,7 @@ export async function listAllUsers() {
   if (!res.ok || !json.success) {
     throw new Error(json.error || json?.message || 'Failed to fetch users');
   }
-  return json.users; // objects include `id` and `authExists`
+  return json.users; // objects include `id` and `authUid` when linked to Firebase Auth
 }
 
 // Showcase

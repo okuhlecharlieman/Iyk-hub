@@ -9,11 +9,25 @@ import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
 
+const getUserAccountState = (user) => {
+  const email = typeof user?.email === 'string' ? user.email.trim() : '';
+  const hasEmail = email.length > 0;
+  const hasAuthAccount = Boolean(user?.authUid);
+
+  return {
+    email,
+    hasEmail,
+    hasAuthAccount,
+    canManageClaims: hasAuthAccount || hasEmail,
+  };
+};
+
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const role = user.role || 'user';
+  const accountState = getUserAccountState(user);
 
   return (
     <>
@@ -25,31 +39,35 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
             <div className="text-xs text-gray-500 truncate">{user.uid}</div>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{user.email || '—'}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{accountState.hasEmail ? accountState.email : '—'}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
               {role}
             </span>
-            {!user.authExists && (
-              <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">no auth</span>
+            {!accountState.hasAuthAccount && (
+              <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">setup needed</span>
             )}
           </div>
         </td>
         <td className="px-4 py-3 text-sm">
           {role !== 'admin' ? (
-            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)}>
+            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !accountState.canManageClaims} onClick={() => setConfirmOpen(true)}>
               Make admin
             </Button>
           ) : (
-            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)}>
+            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !accountState.canManageClaims} onClick={() => setConfirmOpen(true)}>
               Revoke
             </Button>
           )}
           <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} className="ml-2" disabled={isProcessing}>Edit</Button>
           <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
-          {!user.authExists && (
-            <div className="text-xs text-gray-500 mt-1">User has no Auth account — cannot set custom claims.</div>
+          {!accountState.hasAuthAccount && (
+            <div className="text-xs text-gray-500 mt-1">
+              {accountState.hasEmail
+                ? 'This user can be linked to sign-in automatically from the saved email during role assignment.'
+                : 'Add an email first so this user can be linked to sign-in before assigning admin access.'}
+            </div>
           )}
         </td>
       </tr>
@@ -58,7 +76,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
           <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
+          <Button variant="primary" size="sm" disabled={!accountState.canManageClaims} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
         </div>
       </Modal>
 
@@ -75,12 +93,30 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
             </div>
+            <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                    type="email"
+                    name="email"
+                    id="email"
+                    defaultValue={accountState.hasEmail ? accountState.email : ''}
+                    placeholder="name@example.com"
+                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+                {!accountState.hasAuthAccount && (
+                  <p className="mt-1 text-xs text-gray-500">Add an email here first if you need to create a Firebase Auth account for this user.</p>
+                )}
+            </div>
             <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
                 <Button variant="primary" size="sm" onClick={async (e) => {
-                    const newDisplayName = e.target.closest('.flex-col').querySelector('#displayName').value;
+                    const container = e.target.closest('.flex-col');
+                    const newDisplayName = container.querySelector('#displayName').value;
+                    const newEmail = container.querySelector('#email').value;
+                    const payload = { displayName: newDisplayName };
+                    if (newEmail.trim()) payload.email = newEmail.trim();
                     setEditOpen(false);
-                    await onRequestUpdate(user.authUid || user.uid || user.id, { displayName: newDisplayName });
+                    await onRequestUpdate(user.authUid || user.uid || user.id, payload);
                 }}>Save</Button>
             </div>
         </div>
@@ -109,8 +145,7 @@ export default function AdminUsersPage() {
       (async () => {
         setLoading(true);
         try {
-          const idToken = await user.getIdToken();
-          const initial = await listAllUsers(idToken);
+          const initial = await listAllUsers();
           if (Array.isArray(initial)) {
             setUsers(initial.map(u => ({ ...u, uid: u.uid || u.authUid || u.id })));
           } else {
@@ -187,6 +222,11 @@ export default function AdminUsersPage() {
             return;
         }
 
+        if (json.authWasCreated) {
+            toast('success', `Created an Auth account and updated user ${uid}.`);
+            return;
+        }
+
         toast('success', `Successfully updated user ${uid}.`);
 
     } catch (err) {
@@ -249,7 +289,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute adminOnly>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-4">Admin: All Users</h1>
         <div className="bg-white shadow-md rounded-lg overflow-x-auto">

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 
 const choices = [
@@ -76,32 +76,7 @@ export default function RPSGame({ gameId, onEnd }) {
 
         // Determine winner when both have chosen
         if (data.status === 'playing' && data.players.player1?.choice && data.players.player2?.choice) {
-            const p1c = data.players.player1.choice;
-            const p2c = data.players.player2.choice;
-            let resultText = '';
-            let p1Score = data.players.player1.score;
-            let p2Score = data.players.player2.score;
-
-            if (p1c === p2c) {
-                resultText = "It's a tie!";
-            } else if (
-                (p1c === 'rock' && p2c === 'scissors') ||
-                (p1c === 'paper' && p2c === 'rock') ||
-                (p1c === 'scissors' && p2c === 'paper')
-            ) {
-                resultText = `${data.players.player1.displayName} wins!`;
-                p1Score += 1;
-            } else {
-                resultText = `${data.players.player2.displayName} wins!`;
-                p2Score += 1;
-            }
-
-            updateDoc(gameDocRef, {
-                status: 'result',
-                result: resultText,
-                'players.player1.score': p1Score,
-                'players.player2.score': p2Score
-            });
+            resolveRound();
         }
 
       } else {
@@ -113,6 +88,48 @@ export default function RPSGame({ gameId, onEnd }) {
     });
     return () => unsubscribe();
   }, [gameDocRef]);
+
+
+  const resolveRound = async () => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(gameDocRef);
+        if (!snapshot.exists()) return;
+
+        const data = snapshot.data();
+        if (data.status !== 'playing' || !data.players.player1?.choice || !data.players.player2?.choice) return;
+
+        const p1c = data.players.player1.choice;
+        const p2c = data.players.player2.choice;
+        let resultText = '';
+        let p1Score = data.players.player1.score;
+        let p2Score = data.players.player2.score;
+
+        if (p1c === p2c) {
+          resultText = "It's a tie!";
+        } else if (
+          (p1c === 'rock' && p2c === 'scissors') ||
+          (p1c === 'paper' && p2c === 'rock') ||
+          (p1c === 'scissors' && p2c === 'paper')
+        ) {
+          resultText = `${data.players.player1.displayName} wins!`;
+          p1Score += 1;
+        } else {
+          resultText = `${data.players.player2.displayName} wins!`;
+          p2Score += 1;
+        }
+
+        transaction.update(gameDocRef, {
+          status: 'result',
+          result: resultText,
+          'players.player1.score': p1Score,
+          'players.player2.score': p2Score,
+        });
+      });
+    } catch (e) {
+      setError('Failed to resolve round: ' + e.message);
+    }
+  };
 
   const handleUserChoice = async (choiceId) => {
     if (!playerSymbol || !gameState || gameState.status !== 'playing') return;

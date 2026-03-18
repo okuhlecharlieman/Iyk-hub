@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 
 const cardEmojis = ['🍎', '🍌', '🍇', '🍒', '🍓', '🍍', '🥝', '🍊'];
 
@@ -18,6 +18,7 @@ export default function MemoryGame({ gameId, onEnd }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const lastResultKeyRef = useRef(null);
   const gameDocRef = doc(db, 'games', gameId);
 
   useEffect(() => {
@@ -93,48 +94,70 @@ export default function MemoryGame({ gameId, onEnd }) {
       const isMatch = card1.content === card2.content;
 
       setTimeout(async () => {
-        let newCards = [...gameState.cards];
-        let newPlayers = { ...gameState.players };
-        let nextPlayer = gameState.currentPlayer;
+        try {
+          let finalResult = null;
+          await runTransaction(db, async (transaction) => {
+            const snapshot = await transaction.get(gameDocRef);
+            if (!snapshot.exists()) return;
 
-        if (isMatch) {
-          newCards = newCards.map(c =>
-            c.id === card1.id || c.id === card2.id ? { ...c, isMatched: true, isFlipped: false } : c
-          );
-          newPlayers[gameState.currentPlayer].score += 1;
-        } else {
-          newCards = newCards.map(c =>
-            c.id === card1.id || c.id === card2.id ? { ...c, isFlipped: false } : c
-          );
-          nextPlayer = gameState.currentPlayer === 'player1' ? 'player2' : 'player1';
-        }
+            const latest = snapshot.data();
+            if (latest.status !== 'playing') return;
 
-        const allMatched = newCards.every(c => c.isMatched);
-        const newStatus = allMatched ? 'result' : 'playing';
+            const latestFlipped = latest.cards.filter((c) => c.isFlipped && !c.isMatched);
+            if (latestFlipped.length !== 2) return;
 
-        let winner = null;
-        if (newStatus === 'result') {
-            if (newPlayers.player1.score > newPlayers.player2.score) {
-                winner = newPlayers.player1.displayName;
-            } else if (newPlayers.player2.score > newPlayers.player1.score) {
-                winner = newPlayers.player2.displayName;
+            const [latestCard1, latestCard2] = latestFlipped;
+            const latestIsMatch = latestCard1.content === latestCard2.content;
+            let newCards = [...latest.cards];
+            let newPlayers = { ...latest.players };
+            let nextPlayer = latest.currentPlayer;
+
+            if (latestIsMatch) {
+              newCards = newCards.map((c) =>
+                c.id === latestCard1.id || c.id === latestCard2.id ? { ...c, isMatched: true, isFlipped: false } : c
+              );
+              newPlayers[latest.currentPlayer].score += 1;
             } else {
-                winner = 'draw';
+              newCards = newCards.map((c) =>
+                c.id === latestCard1.id || c.id === latestCard2.id ? { ...c, isFlipped: false } : c
+              );
+              nextPlayer = latest.currentPlayer === 'player1' ? 'player2' : 'player1';
             }
-            if(onEnd && playerSymbol) {
-                const myScore = newPlayers[playerSymbol].score;
-                onEnd(myScore * 2); // Simple scoring
-            }
-        }
 
-        await updateDoc(gameDocRef, {
-          cards: newCards,
-          players: newPlayers,
-          currentPlayer: nextPlayer,
-          status: newStatus,
-          winner: winner,
-        });
-        setIsProcessing(false);
+            const allMatched = newCards.every((c) => c.isMatched);
+            const newStatus = allMatched ? 'result' : 'playing';
+
+            let winner = null;
+            if (newStatus === 'result') {
+              if (newPlayers.player1.score > newPlayers.player2.score) winner = newPlayers.player1.displayName;
+              else if (newPlayers.player2.score > newPlayers.player1.score) winner = newPlayers.player2.displayName;
+              else winner = 'draw';
+
+              finalResult = {
+                winner,
+                myScore: playerSymbol ? newPlayers[playerSymbol].score : 0,
+                resultKey: `memory:${gameId}:${winner}:${newPlayers.player1.score}:${newPlayers.player2.score}`
+              };
+            }
+
+            transaction.update(gameDocRef, {
+              cards: newCards,
+              players: newPlayers,
+              currentPlayer: nextPlayer,
+              status: newStatus,
+              winner,
+            });
+          });
+
+          if (finalResult && onEnd && playerSymbol && lastResultKeyRef.current !== finalResult.resultKey) {
+            lastResultKeyRef.current = finalResult.resultKey;
+            onEnd({ score: finalResult.myScore * 2, resultKey: finalResult.resultKey });
+          }
+        } catch (error) {
+          setError('Failed to resolve memory round: ' + error.message);
+        } finally {
+          setIsProcessing(false);
+        }
       }, 1000);
     }
   }, [gameState, gameDocRef, onEnd, playerSymbol, isProcessing]);

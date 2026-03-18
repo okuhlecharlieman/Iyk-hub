@@ -1,6 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import XOGame from '../../../components/games/XOGame';
@@ -26,9 +26,19 @@ export default function GamePage() {
   const { gameId } = useParams();
   const { user } = useAuth();
   const baseGameId = gameId.split('-')[0];
+  const awardedResultKeys = useRef(new Set());
 
-  async function finishGame(finalScore = 1, duration = 0) {
+  async function finishGame(result = 1, duration = 0) {
     if (!user) return;
+
+    const normalized = typeof result === 'number' ? { score: result, resultKey: null } : { score: result?.score ?? 0, resultKey: result?.resultKey ?? null };
+    const finalScore = Math.max(0, Number(normalized.score) || 0);
+
+    if (normalized.resultKey) {
+      if (awardedResultKeys.current.has(normalized.resultKey)) return;
+      awardedResultKeys.current.add(normalized.resultKey);
+    }
+
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
@@ -42,6 +52,7 @@ export default function GamePage() {
         gameId: gameId,
         baseGameId: baseGameId,
         score: finalScore,
+        resultKey: normalized.resultKey || null,
         duration: duration,
         completedAt: serverTimestamp(),
       });

@@ -2,7 +2,7 @@
 // Multiplayer TicTacToe with Firestore sync
 
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "../../context/AuthContext";
@@ -14,6 +14,7 @@ export default function XOGame({ gameId, onEnd }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [onEndCalled, setOnEndCalled] = useState(false);
+  const lastResultKeyRef = useRef(null);
   const gameDocRef = doc(db, "games", gameId);
 
   // Join or create game room
@@ -88,8 +89,10 @@ export default function XOGame({ gameId, onEnd }) {
         finalScore = 2; // loss
       }
       
-      if (playerSymbol) { // only call onEnd for players, not spectators
-        onEnd({ score: finalScore });
+      const resultKey = `xo:${gameId}:${gameState.winner}:${gameState.board.join('')}`;
+      if (playerSymbol && lastResultKeyRef.current !== resultKey) { // only call onEnd for players, not spectators
+        lastResultKeyRef.current = resultKey;
+        onEnd({ score: finalScore, resultKey });
         setOnEndCalled(true);
       }
     }

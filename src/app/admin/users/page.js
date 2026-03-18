@@ -9,6 +9,19 @@ import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
 
+const getUserAccountState = (user) => {
+  const email = typeof user?.email === 'string' ? user.email.trim() : '';
+  const hasEmail = email.length > 0;
+  const hasAuthAccount = Boolean(user?.authUid);
+
+  return {
+    email,
+    hasEmail,
+    hasAuthAccount,
+    canManageClaims: hasAuthAccount || hasEmail,
+  };
+};
+
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -132,8 +145,7 @@ export default function AdminUsersPage() {
       (async () => {
         setLoading(true);
         try {
-          const idToken = await user.getIdToken();
-          const initial = await listAllUsers(idToken);
+          const initial = await listAllUsers();
           if (Array.isArray(initial)) {
             setUsers(initial.map(u => ({ ...u, uid: u.uid || u.authUid || u.id })));
           } else {

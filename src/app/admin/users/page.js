@@ -14,6 +14,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const role = user.role || 'user';
+  const canManageClaims = user.authExists || Boolean(user.email);
 
   return (
     <>
@@ -38,18 +39,22 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         </td>
         <td className="px-4 py-3 text-sm">
           {role !== 'admin' ? (
-            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)}>
+            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>
               Make admin
             </Button>
           ) : (
-            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !user.authExists} onClick={() => setConfirmOpen(true)}>
+            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>
               Revoke
             </Button>
           )}
           <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} className="ml-2" disabled={isProcessing}>Edit</Button>
           <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
           {!user.authExists && (
-            <div className="text-xs text-gray-500 mt-1">User has no Auth account — cannot set custom claims.</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {user.email
+                ? 'User has no Auth account yet — promoting them will create one from their saved email before setting claims.'
+                : 'User has no Auth account or email yet — add an email first before assigning admin claims.'}
+            </div>
           )}
         </td>
       </tr>
@@ -58,7 +63,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
           <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="sm" disabled={!user.authExists} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
+          <Button variant="primary" size="sm" disabled={!canManageClaims} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
         </div>
       </Modal>
 
@@ -249,7 +254,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute adminOnly>
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-4">Admin: All Users</h1>
         <div className="bg-white shadow-md rounded-lg overflow-x-auto">

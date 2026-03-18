@@ -43,6 +43,11 @@ export async function POST(request) {
     await initializeFirebaseAdmin();
     const uid = await authenticateAndGetUid(request);
 
+       // 1. Fetch user record to get email and display name
+    const userRecord = await admin.auth().getUser(uid);
+    const ownerEmail = userRecord.email || null;
+    const ownerName = userRecord.displayName || 'Unknown User';
+
     const payload = await parseJsonBody(request);
     const data = validateBoostPayload(payload);
 
@@ -50,6 +55,8 @@ export async function POST(request) {
 
     const boostRef = await db.collection('creatorBoostOrders').add({
       ownerUid: uid,
+       ownerEmail, // 2. Add email to order
+      ownerName,  // 3. Add name to order
       plan: data.planKey,
       feeCents: data.plan.feeCents,
       durationHours: data.plan.durationHours,

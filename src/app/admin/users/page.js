@@ -26,7 +26,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
             <div className="text-xs text-gray-500 truncate">{user.uid}</div>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{user.email || '—'}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{hasEmail ? normalizedEmail : '—'}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -80,12 +80,30 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
             </div>
+            <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                <input
+                    type="email"
+                    name="email"
+                    id="email"
+                    defaultValue={hasEmail ? normalizedEmail : ''}
+                    placeholder="name@example.com"
+                    className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                />
+                {!user.authExists && (
+                  <p className="mt-1 text-xs text-gray-500">Add an email here first if you need to create a Firebase Auth account for this user.</p>
+                )}
+            </div>
             <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
                 <Button variant="primary" size="sm" onClick={async (e) => {
-                    const newDisplayName = e.target.closest('.flex-col').querySelector('#displayName').value;
+                    const container = e.target.closest('.flex-col');
+                    const newDisplayName = container.querySelector('#displayName').value;
+                    const newEmail = container.querySelector('#email').value;
+                    const payload = { displayName: newDisplayName };
+                    if (newEmail.trim()) payload.email = newEmail.trim();
                     setEditOpen(false);
-                    await onRequestUpdate(user.authUid || user.uid || user.id, { displayName: newDisplayName });
+                    await onRequestUpdate(user.authUid || user.uid || user.id, payload);
                 }}>Save</Button>
             </div>
         </div>
@@ -189,6 +207,11 @@ export default function AdminUsersPage() {
         const json = await res.json();
         if (!res.ok) {
             toast('error', json.error || json.message || 'Failed to update user');
+            return;
+        }
+
+        if (json.authWasCreated) {
+            toast('success', `Created an Auth account and updated user ${uid}.`);
             return;
         }
 

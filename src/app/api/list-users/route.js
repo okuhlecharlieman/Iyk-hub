@@ -101,7 +101,7 @@ export async function GET(request) {
         id: user.id,
         uid,
         authUid: authUser?.uid || null,
-        email: user.email || authUser?.email || 'N/A',
+        email: normalizeEmail(user.email) || normalizeEmail(authUser?.email),
         displayName: user.displayName || authUser?.displayName || null,
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',

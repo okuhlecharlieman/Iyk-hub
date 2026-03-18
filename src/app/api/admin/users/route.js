@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { authenticate, listAllUsers } from '../../../../lib/firebase/admin';
+import { authenticate, initializeFirebaseAdmin, listAllUsers } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
@@ -15,6 +15,8 @@ const validateUidPayload = (payload) => {
 
   return { uid: payload.uid.trim() };
 };
+
+const normalizeEmail = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : null);
 
 const validateUpdatePayload = (payload) => {
   ensurePlainObject(payload);
@@ -36,7 +38,7 @@ const validateUpdatePayload = (payload) => {
     if (typeof payload.email !== 'string' || !payload.email.includes('@')) {
       throw new RequestValidationError('Invalid request payload.', [{ path: 'email', message: 'email must be valid.' }]);
     }
-    updateData.email = payload.email.trim();
+    updateData.email = normalizeEmail(payload.email);
   }
 
   if (payload.photoURL !== undefined) {
@@ -119,6 +121,7 @@ export async function PUT(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
   try {
+    await initializeFirebaseAdmin();
     const actor = await authenticate(req);
 
     const payload = await parseJsonBody(req);
@@ -134,33 +137,34 @@ export async function PUT(req) {
     
     const adminDb = admin.firestore();
     const userDocRef = adminDb.collection('users').doc(uid);
+    const existingUserDoc = await userDocRef.get();
+    const existingUserData = existingUserDoc.exists ? existingUserDoc.data() : {};
     let authExists = true;
+    let authWasCreated = false;
 
     try {
       await admin.auth().getUser(uid);
     } catch (error) {
       if (error?.code === 'auth/user-not-found') {
         authExists = false;
-        // If a role is being assigned, we must have an Auth user.
-        // Let's try to create one from the Firestore data.
         if (updateData.role) {
-          const userDoc = await userDocRef.get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            const createPayload = { uid };
-            if (userData.email) createPayload.email = userData.email;
-            if (userData.displayName) createPayload.displayName = userData.displayName;
-            if (userData.photoURL) createPayload.photoURL = userData.photoURL;
-            
-            try {
-              await admin.auth().createUser(createPayload);
-              authExists = true;
-              console.log(`Created Firebase Auth user for ${uid}`);
-            } catch (createUserError) {
-              console.error(`Failed to create Firebase Auth user for ${uid}:`, createUserError);
-              // Fail gracefully. The role will be set in Firestore only.
-            }
+          const createPayload = { uid };
+          const emailForAuth = updateData.email || normalizeEmail(existingUserData?.email);
+          const displayNameForAuth = updateData.displayName || existingUserData?.displayName || undefined;
+          const photoUrlForAuth = updateData.photoURL || existingUserData?.photoURL || undefined;
+
+          if (!emailForAuth) {
+            throw new RequestValidationError('Cannot assign admin claims because this user does not have a Firebase Auth account or a saved email address.', [{ path: 'email', message: 'Add an email address before assigning admin claims.' }]);
           }
+
+          createPayload.email = emailForAuth;
+          if (displayNameForAuth) createPayload.displayName = displayNameForAuth;
+          if (photoUrlForAuth) createPayload.photoURL = photoUrlForAuth;
+
+          await admin.auth().createUser(createPayload);
+          authExists = true;
+          authWasCreated = true;
+          console.log(`Created Firebase Auth user for ${uid}`);
         }
       } else {
         throw error;
@@ -190,10 +194,10 @@ export async function PUT(req) {
       action: 'user.updated',
       targetType: 'user',
       targetId: uid,
-      metadata: { updatedFields: Object.keys(updateData), authExists },
+      metadata: { updatedFields: Object.keys(updateData), authExists, authWasCreated },
     });
 
-    return NextResponse.json({ message: `User ${uid} updated successfully`, authExists });
+    return NextResponse.json({ message: `User ${uid} updated successfully`, authExists, authWasCreated });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
@@ -211,6 +215,7 @@ export async function DELETE(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
   try {
+    await initializeFirebaseAdmin();
     const actor = await authenticate(req);
 
     const payload = await parseJsonBody(req);

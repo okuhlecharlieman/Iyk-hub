@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getCreatorBoostPlan } from '../../lib/monetization/creator-boosts';
 import Button from '../../components/ui/Button';
@@ -19,12 +19,14 @@ export default function CreatorBoostsPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [paymentIntent, setPaymentIntent] = useState(null);
 
   const handleBoost = async (planKey) => {
     if (!user) return;
     setError(null);
     setMessage(null);
     setLoading(true);
+    setPaymentIntent(null);
 
     try {
       const res = await fetch('/api/creator-boosts/submit', {
@@ -40,7 +42,21 @@ export default function CreatorBoostsPage() {
         throw new Error(json.error || 'Failed to create boost order');
       }
 
-      setMessage(`Boost order created (ID: ${json.orderId}). Payment is pending.`);
+      const paymentRes = await fetch('/api/payments/create-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({ orderType: 'creatorBoost', orderId: json.orderId }),
+      });
+      const paymentJson = await paymentRes.json();
+      if (!paymentRes.ok) {
+        throw new Error(paymentJson.error || 'Failed to prepare payment options');
+      }
+
+      setPaymentIntent(paymentJson);
+      setMessage(`Boost order created (ID: ${json.orderId}). Select a payment option below to continue.`);
     } catch (err) {
       console.error('Boost purchase error:', err);
       setError(err.message || 'Failed to create boost order');
@@ -50,6 +66,9 @@ export default function CreatorBoostsPage() {
   };
 
   const planItems = buildPlanList();
+
+  const paymentOptions = useMemo(() => paymentIntent?.paymentOptions || [], [paymentIntent]);
+
 
   return (
     <div className="container mx-auto px-4 py-10">
@@ -88,6 +107,38 @@ export default function CreatorBoostsPage() {
 
       {message && <div className="mt-6 rounded-lg bg-green-50 dark:bg-green-900/30 p-4 text-green-800 dark:text-green-200">{message}</div>}
       {error && <div className="mt-6 rounded-lg bg-red-50 dark:bg-red-900/30 p-4 text-red-800 dark:text-red-200">{error}</div>}
+
+      {paymentIntent && (
+        <div className="mt-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">South Africa payment options</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Payment ID: {paymentIntent.paymentId} · Amount: R{(paymentIntent.amountCents / 100).toFixed(2)}
+              </p>
+            </div>
+            <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+              {paymentIntent.status}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {paymentOptions.map((option) => (
+              <div key={option.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold">{option.label}</h3>
+                  <span className="text-xs uppercase tracking-wide text-gray-500">{option.provider}</span>
+                </div>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{option.description}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            Provider-specific checkout links are not wired yet, but these options are now included in the payment intent so the South Africa rollout can connect Yoco, Ozow, or Peach Payments without changing the order flow again.
+          </p>
+        </div>
+      )}
 
       {loading && (
         <div className="mt-6 flex items-center gap-2">

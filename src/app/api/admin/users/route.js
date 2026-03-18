@@ -131,13 +131,37 @@ export async function PUT(req) {
         authUpdateData[field] = updateData[field];
       }
     });
-
+    
+    const adminDb = admin.firestore();
+    const userDocRef = adminDb.collection('users').doc(uid);
     let authExists = true;
+
     try {
       await admin.auth().getUser(uid);
     } catch (error) {
       if (error?.code === 'auth/user-not-found') {
         authExists = false;
+        // If a role is being assigned, we must have an Auth user.
+        // Let's try to create one from the Firestore data.
+        if (updateData.role) {
+          const userDoc = await userDocRef.get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            const createPayload = { uid };
+            if (userData.email) createPayload.email = userData.email;
+            if (userData.displayName) createPayload.displayName = userData.displayName;
+            if (userData.photoURL) createPayload.photoURL = userData.photoURL;
+            
+            try {
+              await admin.auth().createUser(createPayload);
+              authExists = true;
+              console.log(`Created Firebase Auth user for ${uid}`);
+            } catch (createUserError) {
+              console.error(`Failed to create Firebase Auth user for ${uid}:`, createUserError);
+              // Fail gracefully. The role will be set in Firestore only.
+            }
+          }
+        }
       } else {
         throw error;
       }
@@ -147,8 +171,7 @@ export async function PUT(req) {
       await admin.auth().updateUser(uid, authUpdateData);
     }
 
-    const adminDb = admin.firestore();
-    await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
+    await userDocRef.set(updateData, { merge: true });
 
     if (Object.prototype.hasOwnProperty.call(updateData, 'role')) {
       if (authExists) {
@@ -157,7 +180,7 @@ export async function PUT(req) {
         // User does not exist in Auth (e.g. legacy Firestore-only record).
         // We still update the Firestore role so the app can treat this user appropriately.
         // Note: such users cannot sign in until an Auth record exists.
-        console.warn(`User ${uid} has no Firebase Auth account; role stored in Firestore only.`);
+        console.warn(`User ${uid} has no Firebase Auth account and could not be created; role stored in Firestore only.`);
       }
     }
 

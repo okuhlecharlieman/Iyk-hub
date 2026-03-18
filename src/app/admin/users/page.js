@@ -62,7 +62,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
           )}
           <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} className="ml-2" disabled={isProcessing}>Edit</Button>
           <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
-          {!user.authExists && (
+          {!canManageClaims && (
             <div className="text-xs text-gray-500 mt-1">
               {user.email
                 ? 'User has no Auth account yet — promoting them will create one from their saved email before setting claims.'
@@ -103,7 +103,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                     placeholder="name@example.com"
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
-                {!user.authExists && (
+                {!canManageClaims && (
                   <p className="mt-1 text-xs text-gray-500">Add an email here first if you need to create a Firebase Auth account for this user.</p>
                 )}
             </div>

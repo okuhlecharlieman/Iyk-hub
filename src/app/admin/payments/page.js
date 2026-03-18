@@ -131,44 +131,70 @@ export default function AdminPaymentsPage() {
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order) => (
-                    <tr key={order.id} className="border-t border-gray-100 dark:border-gray-800">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-200">{order.id}</td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
-                        {order.ownerUid || '—'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-200">{order.plan}</td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="font-semibold">{PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus}</span>
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
-                        <span className="font-semibold">{ACTIVATION_STATUS_LABELS[order.activationStatus] || order.activationStatus}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{formatDate(order.createdAt)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            disabled={updating === order.id}
-                            onClick={() => updateOrder(order.id, { paymentStatus: 'paid' })}
-                          >
-                            Mark paid
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            disabled={updating === order.id}
-                            onClick={() => updateOrder(order.id, { activationStatus: 'active' })}
-                          >
-                            Activate
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+           orders.map((order) => (
+  <tr key={order.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+    <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">
+      {order.id.slice(0, 8)}...
+    </td>
+    
+    {/* Updated User Column to show Name and Email */}
+    <td className="px-4 py-3">
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-900 dark:text-gray-100">
+          {order.ownerName || 'Unknown User'}
+        </span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {order.ownerEmail || order.email || 'No email provided'}
+        </span>
+      </div>
+    </td>
+
+    <td className="px-4 py-3">
+      <span className="capitalize px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+        {order.plan}
+      </span>
+    </td>
+    
+    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
+      <span className={`text-xs font-bold ${order.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+        {PAYMENT_STATUS_LABELS[order.paymentStatus] || order.paymentStatus}
+      </span>
+    </td>
+    
+    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
+      <span className={`text-xs font-bold ${order.activationStatus === 'active' ? 'text-green-600' : 'text-blue-600'}`}>
+        {ACTIVATION_STATUS_LABELS[order.activationStatus] || order.activationStatus}
+      </span>
+    </td>
+    
+    <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+      {formatDate(order.createdAt)}
+    </td>
+
+    <td className="px-4 py-3">
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="primary"
+          className="h-8 text-xs"
+          disabled={updating === order.id || order.paymentStatus === 'paid'}
+          onClick={() => updateOrder(order.id, { paymentStatus: 'paid' })}
+        >
+          {updating === order.id ? '...' : 'Mark Paid'}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="h-8 text-xs"
+          disabled={updating === order.id || order.activationStatus === 'active'}
+          onClick={() => updateOrder(order.id, { activationStatus: 'active' })}
+        >
+          {updating === order.id ? '...' : 'Activate'}
+        </Button>
+      </div>
+    </td>
+  </tr>
+))
                 )}
               </tbody>
             </table>

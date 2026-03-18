@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { authenticate, initializeFirebaseAdmin } from 'src/lib/firebase/admin.js';
 
 export const runtime = 'nodejs';
 

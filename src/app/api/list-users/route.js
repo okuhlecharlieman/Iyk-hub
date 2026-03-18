@@ -80,7 +80,7 @@ export async function GET(request) {
         batches.push(uids.slice(i, i + 100));
       }
       for (const batch of batches) {
-        const result = await auth.getUsers({ uids: batch });
+        const result = await auth.getUsers(batch.map((uid) => ({ uid })));
         result.users.forEach((userRecord) => {
           const authRecord = toAuthUserRecord(userRecord);
           authUsersById.set(userRecord.uid, authRecord);
@@ -107,7 +107,6 @@ export async function GET(request) {
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
         createdAt: user.createdAt ? serializeTimestamp(user.createdAt) : null,
-        authExists: !!authUser,
       };
     });
 

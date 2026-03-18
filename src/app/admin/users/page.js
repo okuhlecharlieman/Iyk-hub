@@ -32,8 +32,8 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
               {role}
             </span>
-            {!user.authExists && (
-              <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">no auth</span>
+            {!hasAuthAccount && (
+              <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">setup needed</span>
             )}
           </div>
         </td>

@@ -151,10 +151,14 @@ export async function PUT(req) {
     await adminDb.collection('users').doc(uid).set(updateData, { merge: true });
 
     if (Object.prototype.hasOwnProperty.call(updateData, 'role')) {
-      if (!authExists) {
-        return NextResponse.json({ error: `User ${uid} has no Firebase Auth account; cannot set role claims.` }, { status: 400 });
+      if (authExists) {
+        await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
+      } else {
+        // User does not exist in Auth (e.g. legacy Firestore-only record).
+        // We still update the Firestore role so the app can treat this user appropriately.
+        // Note: such users cannot sign in until an Auth record exists.
+        console.warn(`User ${uid} has no Firebase Auth account; role stored in Firestore only.`);
       }
-      await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
     }
 
     await logAdminAction({

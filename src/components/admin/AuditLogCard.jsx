@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
 import { FaFileDownload, FaShieldAlt } from 'react-icons/fa';
 
@@ -17,14 +18,20 @@ function downloadJson(filename, data) {
 }
 
 export default function AuditLogCard() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleDownload = async () => {
     setError(null);
     setLoading(true);
+
     try {
-      const res = await fetch('/api/admin/audit-logs/download?limit=500');
+      const token = user ? await user.getIdToken() : null;
+      const res = await fetch('/api/admin/audit-logs/download?limit=500', {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Failed to fetch audit logs');

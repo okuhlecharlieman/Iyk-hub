@@ -99,10 +99,13 @@ const validateUpdatePayload = (payload) => {
 };
 
 export async function GET(req) {
+  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:get', limit: 30, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     await authenticate(req);
     const users = await listAllUsers();
-    return NextResponse.json(users);
+    return NextResponse.json({ success: true, users });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });

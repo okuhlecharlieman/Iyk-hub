@@ -47,51 +47,57 @@ export async function GET(request) {
       return NextResponse.json({ opportunities, nextCursor });
     }
 
-    const collected = [];
-    const pageBatch = Math.min(limitN * 3, 100);
-    let exhausted = false;
+    // Only load approved opportunities in the main paged query.
+    // For non-admins, also include the user's own pending opportunities (first page only).
+    const approvedQuery = db
+      .collection('opportunities')
+      .where('status', '==', 'approved')
+      .orderBy('createdAt', 'desc')
+      .limit(limitN);
 
-    while (collected.length < limitN && !exhausted) {
-      let queryRef = db
-        .collection('opportunities')
-        .where('status', 'in', ['approved', 'pending'])
-        .orderBy('createdAt', 'desc')
-        .limit(pageBatch);
-
-      if (cursor) {
-        const cursorSnap = await db.collection('opportunities').doc(cursor).get();
-        if (cursorSnap.exists) {
-          queryRef = db
-            .collection('opportunities')
-            .where('status', 'in', ['approved', 'pending'])
-            .orderBy('createdAt', 'desc')
-            .startAfter(cursorSnap)
-            .limit(pageBatch);
-        }
-      }
-
-      const snap = await queryRef.get();
-      if (snap.empty) {
-        exhausted = true;
-        break;
-      }
-
-      const visible = snap.docs.filter((doc) => {
-        const data = doc.data();
-        return data.status === 'approved' || data.ownerId === uid;
-      });
-
-      collected.push(...visible.map((doc) => ({ id: doc.id, ...doc.data() })));
-
-      const lastDoc = snap.docs[snap.docs.length - 1];
-      cursor = lastDoc?.id || null;
-      if (snap.docs.length < pageBatch) {
-        exhausted = true;
+    let queryRef = approvedQuery;
+    if (cursor) {
+      const cursorSnap = await db.collection('opportunities').doc(cursor).get();
+      if (cursorSnap.exists) {
+        queryRef = approvedQuery.startAfter(cursorSnap);
       }
     }
 
-    const opportunities = collected.slice(0, limitN);
-    const nextCursor = exhausted ? null : cursor;
+    const approvedSnap = await queryRef.get();
+    const approvedOpportunities = approvedSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    let opportunities = approvedOpportunities;
+
+    // Include the user's own pending opportunities on the first page only.
+    if (!cursor) {
+      const pendingSnap = await db
+        .collection('opportunities')
+        .where('ownerId', '==', uid)
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const pendingOpportunities = pendingSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+      // Merge and de-dupe, keeping newest by createdAt.
+      const combined = [...pendingOpportunities, ...approvedOpportunities];
+      const seen = new Set();
+      opportunities = combined
+        .sort((a, b) => {
+          const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return bTime - aTime;
+        })
+        .filter((item) => {
+          if (seen.has(item.id)) return false;
+          seen.add(item.id);
+          return true;
+        })
+        .slice(0, limitN);
+    }
+
+    const lastDoc = approvedSnap.docs[approvedSnap.docs.length - 1];
+    const nextCursor = approvedSnap.docs.length === limitN ? lastDoc.id : null;
 
     return NextResponse.json({ opportunities, nextCursor });
   } catch (error) {

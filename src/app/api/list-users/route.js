@@ -72,6 +72,7 @@ export async function GET(request) {
 
     const uids = firestoreUsers.map((u) => u.id).filter(Boolean);
     const authUsersById = new Map();
+    const authUsersByEmail = new Map();
 
     if (uids.length > 0) {
       const batches = [];
@@ -81,20 +82,25 @@ export async function GET(request) {
       for (const batch of batches) {
         const result = await auth.getUsers({ uids: batch });
         result.users.forEach((userRecord) => {
-          authUsersById.set(userRecord.uid, {
-            uid: userRecord.uid,
-            email: userRecord.email,
-            displayName: userRecord.displayName,
-            photoURL: userRecord.photoURL,
-          });
+          const authRecord = toAuthUserRecord(userRecord);
+          authUsersById.set(userRecord.uid, authRecord);
+          if (authRecord.email) {
+            authUsersByEmail.set(authRecord.email.toLowerCase(), authRecord);
+          }
         });
       }
     }
 
     const combinedUsers = firestoreUsers.map((user) => {
-      const authUser = authUsersById.get(user.id);
+      const authUser =
+        authUsersById.get(user.id) ||
+        (user.email ? authUsersByEmail.get(user.email.toLowerCase()) : null);
+      const uid = authUser?.uid || user.id;
+
       return {
         id: user.id,
+        uid,
+        authUid: authUser?.uid || null,
         email: user.email || authUser?.email || 'N/A',
         displayName: user.displayName || authUser?.displayName || null,
         photoURL: user.photoURL || authUser?.photoURL || null,

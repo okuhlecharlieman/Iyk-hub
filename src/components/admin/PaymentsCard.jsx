@@ -21,7 +21,7 @@ export default function PaymentsCard() {
         <Link href="/creator-boosts">
           <Button variant="primary">View boost plans</Button>
         </Link>
-        <Link href="/admin" className="mt-2 sm:mt-0">
+        <Link href="/admin/payments" className="mt-2 sm:mt-0">
           <Button variant="secondary">Admin payment tools</Button>
         </Link>
       </div>

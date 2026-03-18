@@ -80,7 +80,7 @@ export async function GET(request) {
         batches.push(uids.slice(i, i + 100));
       }
       for (const batch of batches) {
-        const result = await auth.getUsers({ uids: batch });
+        const result = await auth.getUsers(batch.map((uid) => ({ uid })));
         result.users.forEach((userRecord) => {
           const authRecord = toAuthUserRecord(userRecord);
           authUsersById.set(userRecord.uid, authRecord);
@@ -101,13 +101,12 @@ export async function GET(request) {
         id: user.id,
         uid,
         authUid: authUser?.uid || null,
-        email: user.email || authUser?.email || 'N/A',
+        email: normalizeEmail(user.email) || normalizeEmail(authUser?.email),
         displayName: user.displayName || authUser?.displayName || null,
         photoURL: user.photoURL || authUser?.photoURL || null,
         role: user.role || 'user',
         points: user.points || { weekly: 0, lifetime: 0 },
         createdAt: user.createdAt ? serializeTimestamp(user.createdAt) : null,
-        authExists: !!authUser,
       };
     });
 

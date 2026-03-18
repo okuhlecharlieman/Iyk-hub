@@ -14,10 +14,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const role = user.role || 'user';
-  const normalizedEmail = typeof user.email === 'string' ? user.email.trim() : '';
-  const hasEmail = normalizedEmail.length > 0;
-  const hasAuthAccount = Boolean(user.authUid);
-  const canManageClaims = hasAuthAccount || hasEmail;
+  const canManageClaims = user.authExists || Boolean(user.email);
 
   return (
     <>
@@ -52,11 +49,11 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
           )}
           <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} className="ml-2" disabled={isProcessing}>Edit</Button>
           <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
-          {!hasAuthAccount && (
+          {!user.authExists && (
             <div className="text-xs text-gray-500 mt-1">
-              {hasEmail
-                ? 'This user can be linked to sign-in automatically from the saved email during role assignment.'
-                : 'Add an email first so this user can be linked to sign-in before assigning admin access.'}
+              {user.email
+                ? 'User has no Auth account yet — promoting them will create one from their saved email before setting claims.'
+                : 'User has no Auth account or email yet — add an email first before assigning admin claims.'}
             </div>
           )}
         </td>
@@ -93,7 +90,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                     placeholder="name@example.com"
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
-                {!hasAuthAccount && (
+                {!user.authExists && (
                   <p className="mt-1 text-xs text-gray-500">Add an email here first if you need to create a Firebase Auth account for this user.</p>
                 )}
             </div>

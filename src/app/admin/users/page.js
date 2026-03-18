@@ -21,7 +21,7 @@ const getUserAccountState = (user) => {
     canManageClaims: hasAuthAccount || hasEmail,
   };
 };
-
+getUserAccountState(); 
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);

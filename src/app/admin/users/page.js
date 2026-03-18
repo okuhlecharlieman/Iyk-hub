@@ -14,9 +14,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const role = user.role || 'user';
-  const normalizedEmail = typeof user.email === 'string' ? user.email.trim() : '';
-  const hasEmail = normalizedEmail.length > 0;
-  const canManageClaims = user.authExists || hasEmail;
+  const canManageClaims = user.authExists || Boolean(user.email);
 
   return (
     <>
@@ -53,7 +51,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
           <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
           {!user.authExists && (
             <div className="text-xs text-gray-500 mt-1">
-              {hasEmail
+              {user.email
                 ? 'User has no Auth account yet — promoting them will create one from their saved email before setting claims.'
                 : 'User has no Auth account or email yet — add an email first before assigning admin claims.'}
             </div>

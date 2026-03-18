@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
-import { createPaymentIntentRecord, getOrderConfig } from '../../../../lib/monetization/payments';
+import { createPaymentIntentRecord, getOrderConfig, getSupportedPaymentOptions } from '../../../../lib/monetization/payments';
 
 const validatePayload = (payload) => {
   ensurePlainObject(payload);
@@ -57,13 +57,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Order has no payable amount.' }, { status: 400 });
     }
 
+    const paymentOptions = getSupportedPaymentOptions('ZA');
+
     const paymentRef = await createPaymentIntentRecord({
       db,
       uid,
       orderType,
       orderId,
       amountCents,
-      metadata: { source: 'create-intent-api' },
+      provider: 'manual_south_africa',
+      metadata: { source: 'create-intent-api', paymentOptionIds: paymentOptions.map((option) => option.id) },
     });
 
     await db.collection(config.collection).doc(orderId).set({
@@ -77,7 +80,8 @@ export async function POST(request) {
       paymentId: paymentRef.id,
       amountCents,
       status: 'pending',
-      message: 'Payment intent created. Complete payment through configured provider integration.',
+      paymentOptions,
+      message: 'Payment intent created. Choose a South Africa-friendly payment option to complete checkout once the provider integration is connected.',
     });
   } catch (error) {
     if (error instanceof RequestValidationError) {

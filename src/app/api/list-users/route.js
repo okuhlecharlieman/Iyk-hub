@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { enforceRateLimit } from '../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -36,10 +37,14 @@ function toAuthUserRecord(userRecord) {
 
 
 export async function GET(request) {
+    const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'list-users:get', limit: 30, windowMs: 60 * 1000 });
+    if (rateLimitResponse) return rateLimitResponse;
+
     if (process.env.NODE_ENV === 'production' && !serviceAccount) {
         console.log("Build-time: Returning empty list for /api/list-users.");
-        return NextResponse.json({ success: true, users: [] });
+        return NextResponse.json({ success: true, users: [], nextCursor: null });
     }
+
   try {
     // Explicit server-side authorization to prevent data exposure.
     await authenticate(request);
@@ -49,34 +54,45 @@ export async function GET(request) {
     const firestore = admin.firestore();
     const auth = admin.auth();
 
-    const usersSnapshot = await firestore.collection('users').orderBy('createdAt', 'desc').get();
+    const { searchParams } = new URL(request.url);
+    const rawLimit = Number.parseInt(searchParams.get('limit') || '50', 10);
+    const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
+    const cursor = searchParams.get('cursor');
+
+    let queryRef = firestore.collection('users').orderBy('createdAt', 'desc').limit(limitN);
+    if (cursor) {
+      const cursorSnap = await firestore.collection('users').doc(cursor).get();
+      if (cursorSnap.exists) {
+        queryRef = queryRef.startAfter(cursorSnap);
+      }
+    }
+
+    const usersSnapshot = await queryRef.get();
     const firestoreUsers = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    const listUsersResult = await auth.listUsers(1000);
-    const authUserMap = new Map();
-    const authUserByEmailMap = new Map();
-    listUsersResult.users.forEach(userRecord => {
-      authUserMap.set(userRecord.uid, {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        displayName: userRecord.displayName,
-        photoURL: userRecord.photoURL,
-      });
+    const uids = firestoreUsers.map((u) => u.id).filter(Boolean);
+    const authUsersById = new Map();
 
-      if (userRecord.email) {
-        authUserByEmailMap.set(userRecord.email.toLowerCase(), {
-          uid: userRecord.uid,
-          email: userRecord.email,
-          displayName: userRecord.displayName,
-          photoURL: userRecord.photoURL,
+    if (uids.length > 0) {
+      const batches = [];
+      for (let i = 0; i < uids.length; i += 100) {
+        batches.push(uids.slice(i, i + 100));
+      }
+      for (const batch of batches) {
+        const result = await auth.getUsers({ uids: batch });
+        result.users.forEach((userRecord) => {
+          authUsersById.set(userRecord.uid, {
+            uid: userRecord.uid,
+            email: userRecord.email,
+            displayName: userRecord.displayName,
+            photoURL: userRecord.photoURL,
+          });
         });
       }
-    });
+    }
 
-    const combinedUsers = firestoreUsers.map(user => {
-      const authUser =
-        authUserMap.get(user.id) ||
-        (user.email ? authUserByEmailMap.get(user.email.toLowerCase()) : null);
+    const combinedUsers = firestoreUsers.map((user) => {
+      const authUser = authUsersById.get(user.id);
       return {
         id: user.id,
         email: user.email || authUser?.email || 'N/A',
@@ -89,7 +105,10 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json({ success: true, users: combinedUsers });
+    const lastDoc = usersSnapshot.docs[usersSnapshot.docs.length - 1];
+    const nextCursor = usersSnapshot.docs.length === limitN ? lastDoc.id : null;
+
+    return NextResponse.json({ success: true, users: combinedUsers, nextCursor });
   } catch (error) {
     console.error('Error in /api/list-users:', error);
     if (error?.code === 401 || error?.code === 403) {

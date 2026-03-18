@@ -9,25 +9,25 @@ import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
 
-const getUserAccountState = (user) => {
-  const email = typeof user?.email === 'string' ? user.email.trim() : '';
-  const hasEmail = email.length > 0;
-  const hasAuthAccount = Boolean(user?.authUid);
+// const getUserAccountState = (user) => {
+//   const email = typeof user?.email === 'string' ? user.email.trim() : '';
+//   const hasEmail = email.length > 0;
+//   const hasAuthAccount = Boolean(user?.authUid);
 
-  return {
-    email,
-    hasEmail,
-    hasAuthAccount,
-    canManageClaims: hasAuthAccount || hasEmail,
-  };
-};
-
+//   return {
+//     email,
+//     hasEmail,
+//     hasAuthAccount,
+//     canManageClaims: hasAuthAccount || hasEmail,
+//   };
+// };
+// getUserAccountState(); 
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const role = user.role || 'user';
-  const accountState = getUserAccountState(user);
+  const canManageClaims = user.authExists || Boolean(user.email);
 
   return (
     <>
@@ -39,34 +39,34 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
             <div className="text-xs text-gray-500 truncate">{user.uid}</div>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{accountState.hasEmail ? accountState.email : '—'}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{canManageClaims ? user.email : '—'}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
               {role}
             </span>
-            {!accountState.hasAuthAccount && (
+            {!canManageClaims && (
               <span className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">setup needed</span>
             )}
           </div>
         </td>
         <td className="px-4 py-3 text-sm">
           {role !== 'admin' ? (
-            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !accountState.canManageClaims} onClick={() => setConfirmOpen(true)}>
+            <Button ariaLabel={`Make ${user.displayName || user.email || user.uid} an admin`} size="sm" variant="primary" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>
               Make admin
             </Button>
           ) : (
-            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !accountState.canManageClaims} onClick={() => setConfirmOpen(true)}>
+            <Button ariaLabel={`Revoke admin from ${user.displayName || user.email || user.uid}`} size="sm" variant="danger" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>
               Revoke
             </Button>
           )}
           <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} className="ml-2" disabled={isProcessing}>Edit</Button>
           <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} className="ml-2" disabled={isProcessing}>Delete</Button>
-          {!accountState.hasAuthAccount && (
+          {!canManageClaims && (
             <div className="text-xs text-gray-500 mt-1">
-              {accountState.hasEmail
-                ? 'This user can be linked to sign-in automatically from the saved email during role assignment.'
-                : 'Add an email first so this user can be linked to sign-in before assigning admin access.'}
+              {user.email
+                ? 'User has no Auth account yet — promoting them will create one from their saved email before setting claims.'
+                : 'User has no Auth account or email yet — add an email first before assigning admin claims.'}
             </div>
           )}
         </td>
@@ -76,7 +76,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         <p className="mb-4">Are you sure you want to <strong>{role === 'admin' ? 'revoke admin from' : 'make admin'}</strong> <span className="font-semibold">{user.displayName || user.email || user.uid}</span>?</p>
         <div className="flex gap-2 justify-end">
           <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button variant="primary" size="sm" disabled={!accountState.canManageClaims} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
+          <Button variant="primary" size="sm" disabled={!canManageClaims} onClick={async () => { setConfirmOpen(false); await onRequestUpdate(user.authUid || user.uid || user.id, { role: role === 'admin' ? 'user' : 'admin' }); }}>Confirm</Button>
         </div>
       </Modal>
 
@@ -99,11 +99,11 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                     type="email"
                     name="email"
                     id="email"
-                    defaultValue={accountState.hasEmail ? accountState.email : ''}
+                    defaultValue={canManageClaims ? user.email : ''}
                     placeholder="name@example.com"
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
-                {!accountState.hasAuthAccount && (
+                {!canManageClaims && (
                   <p className="mt-1 text-xs text-gray-500">Add an email here first if you need to create a Firebase Auth account for this user.</p>
                 )}
             </div>

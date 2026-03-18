@@ -9,19 +9,19 @@ import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
 
-const getUserAccountState = (user) => {
-  const email = typeof user?.email === 'string' ? user.email.trim() : '';
-  const hasEmail = email.length > 0;
-  const hasAuthAccount = Boolean(user?.authUid);
+// const getUserAccountState = (user) => {
+//   const email = typeof user?.email === 'string' ? user.email.trim() : '';
+//   const hasEmail = email.length > 0;
+//   const hasAuthAccount = Boolean(user?.authUid);
 
-  return {
-    email,
-    hasEmail,
-    hasAuthAccount,
-    canManageClaims: hasAuthAccount || hasEmail,
-  };
-};
-getUserAccountState(); 
+//   return {
+//     email,
+//     hasEmail,
+//     hasAuthAccount,
+//     canManageClaims: hasAuthAccount || hasEmail,
+//   };
+// };
+// getUserAccountState(); 
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -39,7 +39,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
             <div className="text-xs text-gray-500 truncate">{user.uid}</div>
           </div>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{hasEmail ? normalizedEmail : '—'}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{canManageClaims ? user.email : '—'}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs ${role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -99,7 +99,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                     type="email"
                     name="email"
                     id="email"
-                    defaultValue={hasEmail ? normalizedEmail : ''}
+                    defaultValue={canManageClaims ? user.email : ''}
                     placeholder="name@example.com"
                     className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />

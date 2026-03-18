@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import admin from 'firebase-admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
+import { buildCacheKey, getOrSetCache } from '../../../lib/api/cache';
 
 export const runtime = 'nodejs';
 

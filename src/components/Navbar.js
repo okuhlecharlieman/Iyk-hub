@@ -41,6 +41,7 @@ export default function Navbar() {
     { href: '/showcase', label: 'Showcase' },
     { href: '/opportunities', label: 'Opportunities' },
     { href: '/leaderboard', label: 'Leaderboard' },
+    { href: '/creator-boosts', label: 'Boosts' },
   ];
 
   return (

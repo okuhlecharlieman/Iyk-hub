@@ -97,11 +97,7 @@ function RPSSinglePlayer({ onEnd }) {
   );
 }
 
-export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
-  if (singlePlayer) {
-    return <RPSSinglePlayer onEnd={onEnd} />;
-  }
-
+function RPSMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const [error, setError] = useState("");
   const [gameState, setGameState] = useState(null);
@@ -293,4 +289,11 @@ export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
       </div>
     </div>
   );
+}
+
+export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
+  if (singlePlayer) {
+    return <RPSSinglePlayer onEnd={onEnd} />;
+  }
+  return <RPSMultiplayer gameId={gameId} onEnd={onEnd} />;
 }

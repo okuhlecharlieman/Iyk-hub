@@ -12,12 +12,100 @@ const choices = [
   { id: 'scissors', icon: <FaHandScissors size={40} /> },
 ];
 
-export default function RPSGame({ gameId, onEnd }) {
+function RPSSinglePlayer({ onEnd }) {
   const { user } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState("");
+  const [playerScore, setPlayerScore] = useState(0);
+  const [playerChoice, setPlayerChoice] = useState(null);
+  const [opponentChoice, setOpponentChoice] = useState(null);
+  const [roundResult, setRoundResult] = useState('');
+
+  const resolveSingleRound = (choiceId) => {
+    const opponent = choices[Math.floor(Math.random() * choices.length)].id;
+    setPlayerChoice(choiceId);
+    setOpponentChoice(opponent);
+
+    if (choiceId === opponent) {
+      setRoundResult("It's a tie!");
+      return 1;
+    }
+
+    const win =
+      (choiceId === 'rock' && opponent === 'scissors') ||
+      (choiceId === 'paper' && opponent === 'rock') ||
+      (choiceId === 'scissors' && opponent === 'paper');
+
+    if (win) {
+      setRoundResult('You win!');
+      setPlayerScore((prev) => prev + 5);
+      return 5;
+    }
+
+    setRoundResult('You lose.');
+    return 0;
+  };
+
+  const handleChoice = (choiceId) => {
+    if (!user) {
+      setError('You must be logged in to play.');
+      return;
+    }
+    resolveSingleRound(choiceId);
+  };
+
+  const handleEndGame = () => {
+    if (onEnd) {
+      onEnd(playerScore);
+    }
+    router.push('/games');
+  };
+
+  return (
+    <div className="flex flex-col items-center">
+      <h2 className="text-2xl font-bold mb-4">Rock, Paper, Scissors - Single Player</h2>
+      <p className="mb-4">Score: {playerScore}</p>
+
+      <div className="flex justify-center gap-8 mb-8">
+        {choices.map((choice) => (
+          <button
+            key={choice.id}
+            onClick={() => handleChoice(choice.id)}
+            className="p-4 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+          >
+            {choice.icon}
+          </button>
+        ))}
+      </div>
+
+      <div className="text-center mb-4">
+        {playerChoice && opponentChoice && (
+          <>
+            <p>Your choice: {playerChoice}</p>
+            <p>Opponent&apos;s choice: {opponentChoice}</p>
+            <p className="font-semibold">{roundResult}</p>
+          </>
+        )}
+      </div>
+
+      {error && <p className="text-red-500 mb-2">{error}</p>}
+
+      <button onClick={handleEndGame} className="bg-blue-500 text-white px-6 py-2 rounded">
+        End Game
+      </button>
+    </div>
+  );
+}
+
+export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
+  if (singlePlayer) {
+    return <RPSSinglePlayer onEnd={onEnd} />;
+  }
+
+  const { user } = useAuth();
+  const [error, setError] = useState("");
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const gameDocRef = doc(db, "games", gameId);
 

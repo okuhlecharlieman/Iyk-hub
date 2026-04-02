@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
@@ -22,7 +23,81 @@ const allQuestions = [
     return [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, count);
   };
 
-export default function QuizGame({ gameId, onEnd }) {
+function QuizSinglePlayer({ onEnd }) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localQuestions] = useState(shuffleAndPickQuestions());
+  const [localIndex, setLocalIndex] = useState(0);
+  const [localScore, setLocalScore] = useState(0);
+  const [localFinished, setLocalFinished] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setError('You must be logged in to play.');
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+  }, [user]);
+
+  const handleAnswerSingle = (option) => {
+    if (isProcessing || localFinished || !localQuestions[localIndex] || !user) return;
+
+    const current = localQuestions[localIndex];
+    const isCorrect = current.answer === option;
+    const scoreDelta = isCorrect ? 10 : 0;
+    const updatedScore = localScore + scoreDelta;
+    setLocalScore(updatedScore);
+
+    const nextIdx = localIndex + 1;
+    if (nextIdx >= localQuestions.length) {
+      setLocalFinished(true);
+      setTimeout(() => {
+        if (onEnd) onEnd(updatedScore);
+        router.push('/games');
+      }, 500);
+    } else {
+      setLocalIndex(nextIdx);
+    }
+  };
+
+  if (loading) return <p>Loading quiz...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
+
+  const currentQuestion = localQuestions[localIndex];
+
+  return (
+    <div className="text-center max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Single Player Quiz</h1>
+      <p className="text-lg mb-4">Score: {localScore}</p>
+      {localFinished ? (
+        <div>
+          <p className="text-xl">Quiz complete! Final Score: {localScore}</p>
+          <button onClick={() => router.push('/games')} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Return to Games</button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-xl font-semibold mb-2">{currentQuestion.question}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {currentQuestion.options.map((option) => (
+              <button key={option} onClick={() => handleAnswerSingle(option)} className="px-4 py-2 border rounded hover:bg-gray-200">{option}</button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function QuizGame({ gameId, onEnd, singlePlayer = false }) {
+  if (singlePlayer) {
+    return <QuizSinglePlayer onEnd={onEnd} />;
+  }
+
+  const router = useRouter();
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
   const [playerRole, setPlayerRole] = useState(null); // 'player1' or 'player2'

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
@@ -154,6 +154,67 @@ export default function QuizGame({ gameId, onEnd, singlePlayer = false }) {
     joinGame();
   }, [gameId, user, gameDocRef]);
 
+  const processAnswers = useCallback(async (data) => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
+    setTimeout(async () => {
+      try {
+        let finalResult = null;
+        await runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(gameDocRef);
+          if (!snapshot.exists()) return;
+
+          const latest = snapshot.data();
+          if (latest.status !== 'playing' || !latest.players.player1?.answer || !latest.players.player2?.answer) return;
+
+          const { players, questions, currentQuestionIndex } = latest;
+          const correctAnswer = questions[currentQuestionIndex].answer;
+          const newPlayers = { ...players };
+
+          if (newPlayers.player1.answer === correctAnswer) newPlayers.player1.score += 1;
+          if (newPlayers.player2.answer === correctAnswer) newPlayers.player2.score += 1;
+
+          const nextIndex = currentQuestionIndex + 1;
+          if (nextIndex < questions.length) {
+            transaction.update(gameDocRef, {
+              players: newPlayers,
+              currentQuestionIndex: nextIndex,
+              'players.player1.answer': null,
+              'players.player2.answer': null,
+            });
+            return;
+          }
+
+          let winner = null;
+          if (newPlayers.player1.score > newPlayers.player2.score) winner = newPlayers.player1.displayName;
+          else if (newPlayers.player2.score > newPlayers.player1.score) winner = newPlayers.player2.displayName;
+          else winner = 'draw';
+
+          finalResult = {
+            myFinalScore: playerRole ? newPlayers[playerRole].score : 0,
+            resultKey: `quiz:${gameId}:${winner}:${newPlayers.player1.score}:${newPlayers.player2.score}`,
+          };
+
+          transaction.update(gameDocRef, {
+            players: newPlayers,
+            status: 'result',
+            winner,
+          });
+        });
+
+        if (finalResult && onEnd && playerRole && lastResultKeyRef.current !== finalResult.resultKey) {
+          lastResultKeyRef.current = finalResult.resultKey;
+          onEnd({ score: finalResult.myFinalScore * 2, resultKey: finalResult.resultKey });
+        }
+      } catch (error) {
+        setError('Failed to score quiz round: ' + error.message);
+      } finally {
+        setIsProcessing(false);
+      }
+    }, 2000); // Wait 2 seconds before moving to next question or result
+  }, [gameId, gameDocRef, isProcessing, onEnd, playerRole, db]);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
       if (snapshot.exists()) {
@@ -172,9 +233,7 @@ export default function QuizGame({ gameId, onEnd, singlePlayer = false }) {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [gameDocRef]);
-
-  const processAnswers = async (data) => {
+  }, [gameDocRef, processAnswers]);
     if (isProcessing) return;
     setIsProcessing(true);
 

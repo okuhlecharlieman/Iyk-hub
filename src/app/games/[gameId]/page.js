@@ -1,6 +1,6 @@
 'use client';
 import { useParams } from 'next/navigation';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import XOGame from '../../../components/games/XOGame';
@@ -71,10 +71,10 @@ export default function GamePage() {
     }
   }
 
-  const GameComponent = useMemo(() => {
-    const onEnd = (score) => finishGame(score);
-    const isSinglePlayer = mode === 'singleplayer' && singlePlayerAvailable;
+  const onEnd = (score) => finishGame(score);
+  const isSinglePlayer = mode === 'singleplayer' && singlePlayerAvailable;
 
+  const GameComponent = (() => {
     switch (baseGameId) {
       case 'tictactoe':
         return <XOGame gameId={gameId} onEnd={onEnd} singlePlayer={isSinglePlayer} />;
@@ -89,7 +89,7 @@ export default function GamePage() {
       default:
         return null;
     }
-  }, [gameId, user, baseGameId, mode, singlePlayerAvailable]);
+  })();
 
   const gameDetails = GAME_DETAILS[baseGameId];
 

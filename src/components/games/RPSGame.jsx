@@ -155,30 +155,7 @@ export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
   }, [gameId, user, gameDocRef]);
 
   // Listen for game state
-  useEffect(() => {
-    const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setGameState(data);
-        setLoading(false);
-
-        // Determine winner when both have chosen
-        if (data.status === 'playing' && data.players.player1?.choice && data.players.player2?.choice) {
-            resolveRound();
-        }
-
-      } else {
-        // Game not yet created
-      }
-    }, (e) => {
-        setError("Game sync error: " + e.message)
-        setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [gameDocRef]);
-
-
-  const resolveRound = async () => {
+  const resolveRound = useCallback(async () => {
     try {
       await runTransaction(db, async (transaction) => {
         const snapshot = await transaction.get(gameDocRef);
@@ -217,7 +194,7 @@ export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
     } catch (e) {
       setError('Failed to resolve round: ' + e.message);
     }
-  };
+  }, [gameDocRef, resolveRound]);
 
   const handleUserChoice = async (choiceId) => {
     if (!playerSymbol || !gameState || gameState.status !== 'playing') return;

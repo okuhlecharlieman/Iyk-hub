@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { authenticate, initializeFirebaseAdmin, listAllUsers } from '../../../../lib/firebase/admin';
+import { initializeFirebaseAdmin, authenticate, listAllUsers } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
@@ -120,6 +120,7 @@ export async function GET(req) {
 export async function PUT(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
+
   try {
     await initializeFirebaseAdmin();
     const actor = await authenticate(req);
@@ -134,7 +135,7 @@ export async function PUT(req) {
         authUpdateData[field] = updateData[field];
       }
     });
-    
+
     const adminDb = admin.firestore();
     const userDocRef = adminDb.collection('users').doc(uid);
     const existingUserDoc = await userDocRef.get();
@@ -182,8 +183,6 @@ export async function PUT(req) {
         await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
       } else {
         // User does not exist in Auth (e.g. legacy Firestore-only record).
-        // We still update the Firestore role so the app can treat this user appropriately.
-        // Note: such users cannot sign in until an Auth record exists.
         console.warn(`User ${uid} has no Firebase Auth account and could not be created; role stored in Firestore only.`);
       }
     }
@@ -214,6 +213,7 @@ export async function PUT(req) {
 export async function DELETE(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
+
   try {
     await initializeFirebaseAdmin();
     const actor = await authenticate(req);

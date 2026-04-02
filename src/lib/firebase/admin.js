@@ -25,12 +25,22 @@ export const initializeFirebaseAdmin = () => {
 };
 
 // Extracts the bearer token from a request object (works for both Pages and App Routers).
-const getBearerToken = (req) => {
-  const authHeader = req.headers.get ? req.headers.get('authorization') : req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+export const extractBearerToken = (req) => {
+  const authHeader = req.headers?.get ? req.headers.get('authorization') : req.headers?.authorization;
+  if (!authHeader || !/^Bearer\s+/i.test(authHeader)) {
     return null;
   }
-  return authHeader.substring(7);
+  return authHeader.replace(/^Bearer\s+/i, '').trim();
+};
+
+const verifyIdToken = async (token) => {
+  const decoded = await admin.auth().verifyIdToken(token);
+  if (!decoded || !decoded.uid) {
+    const err = new Error('Invalid ID token');
+    err.code = 401;
+    throw err;
+  }
+  return decoded;
 };
 
 const createHttpError = (message, code) => {
@@ -41,8 +51,7 @@ const createHttpError = (message, code) => {
 
 export const verifyIdTokenFromRequest = async (req) => {
   initializeFirebaseAdmin();
-  const token = getBearerToken(req);
-
+  const token = extractBearerToken(req);
   if (!token) {
     throw createHttpError('Not authenticated. No token provided.', 401);
   }
@@ -56,7 +65,7 @@ export const verifyIdTokenFromRequest = async (req) => {
       throw createHttpError('Invalid or expired authentication token.', 401);
     }
 
-    throw createHttpError('Authentication failed.', 500);
+    throw createHttpError('Authentication failed.', 401);
   }
 };
 
@@ -92,7 +101,7 @@ export const authenticate = async (req) => requireRole(req, ['admin']);
 export const authenticateAndGetUid = async (req) => {
   const decodedToken = await verifyIdTokenFromRequest(req);
   return decodedToken.uid;
-};
+};;
 
 
 // Converts Firestore Timestamps to a JSON-serializable format

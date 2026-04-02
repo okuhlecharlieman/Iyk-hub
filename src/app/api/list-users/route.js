@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
@@ -35,18 +34,16 @@ function toAuthUserRecord(userRecord) {
   };
 }
 
-
 export async function GET(request) {
-    const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'list-users:get', limit: 30, windowMs: 60 * 1000 });
-    if (rateLimitResponse) return rateLimitResponse;
+  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'list-users:get', limit: 30, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
 
-    if (process.env.NODE_ENV === 'production' && !serviceAccount) {
-        console.log("Build-time: Returning empty list for /api/list-users.");
-        return NextResponse.json({ success: true, users: [], nextCursor: null });
-    }
+  if (process.env.NODE_ENV === 'production' && !serviceAccount) {
+    console.log('Build-time: Returning empty list for /api/list-users.');
+    return NextResponse.json({ success: true, users: [], nextCursor: null });
+  }
 
   try {
-    // Explicit server-side authorization to prevent data exposure.
     await authenticate(request);
     await initializeFirebaseAdmin();
     const admin = await import('firebase-admin');
@@ -79,6 +76,7 @@ export async function GET(request) {
       for (let i = 0; i < uids.length; i += 100) {
         batches.push(uids.slice(i, i + 100));
       }
+
       for (const batch of batches) {
         const result = await auth.getUsers(batch.map((uid) => ({ uid })));
         result.users.forEach((userRecord) => {
@@ -92,9 +90,7 @@ export async function GET(request) {
     }
 
     const combinedUsers = firestoreUsers.map((user) => {
-      const authUser =
-        authUsersById.get(user.id) ||
-        (user.email ? authUsersByEmail.get(user.email.toLowerCase()) : null);
+      const authUser = authUsersById.get(user.id) || (user.email ? authUsersByEmail.get(user.email.toLowerCase()) : null);
       const uid = authUser?.uid || user.id;
 
       return {

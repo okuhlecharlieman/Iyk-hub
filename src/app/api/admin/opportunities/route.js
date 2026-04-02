@@ -25,19 +25,20 @@ export async function GET(request) {
   try {
     await authenticate(request);
     const opportunities = await listAllOpportunities();
-    return NextResponse.json(opportunities);
+    return NextResponse.json({ success: true, opportunities });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
     }
     console.error('Error in GET /api/admin/opportunities:', error?.message || error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function PUT(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:update', limit: 40, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const actor = await authenticate(request);
     const payload = await parseJsonBody(request);
@@ -58,7 +59,7 @@ export async function PUT(request) {
     const snap = await adminDb.collection('opportunities').doc(id).get();
     const title = snap.exists ? snap.data().title : null;
 
-    return NextResponse.json({ message: 'Opportunity updated successfully', id, title });
+    return NextResponse.json({ success: true, message: 'Opportunity updated successfully', id, title });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
@@ -67,6 +68,6 @@ export async function PUT(request) {
       return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
     }
     console.error('Error in PUT /api/admin/opportunities:', error?.message || error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

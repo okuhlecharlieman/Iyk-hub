@@ -217,7 +217,7 @@ export default function RPSGame({ gameId, onEnd }) {
       {status === 'result' && (
         <div className="text-center mt-8">
             <p>Your choice: {you.choice}</p>
-            <p>{opponent.displayName}'s choice: {opponent.choice}</p>
+            <p>{opponent.displayName}&apos;s choice: {opponent.choice}</p>
             <p className="text-xl font-bold mt-4">{result}</p>
             <button onClick={handleNextRound} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">Next Round</button>
         </div>

@@ -8,12 +8,8 @@ import {
   handlePaymentIntentFailed,
 } from '../../../../lib/stripe/stripe-client';
 
-// Stripe requires the raw body for signature verification
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Next.js 13+ App Router - raw body is handled automatically by the route handler
+
 
 async function logStripeEvent(db, event) {
   try {

@@ -20,7 +20,7 @@ export default function VideoPage() {
                   </div>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold">Video Chat</h1>
-                <p className="text-purple-100 mt-2 text-lg">Connect and chat with the community in real-time</p>
+                <p className="text-purple-100 mt-2 text-lg">Connects and chat with the community in real-time</p>
               </div>
             </div>
             

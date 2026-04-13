@@ -144,5 +144,4 @@ export default function SponsoredChallenges() {
       </div>
     </div>
   );
-}</content>
-<parameter name="filePath">/workspaces/Iyk-hub/src/app/sponsored-challenges/page.js
+}

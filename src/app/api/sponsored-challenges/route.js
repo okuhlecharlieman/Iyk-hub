@@ -132,5 +132,4 @@ export async function POST(request) {
     console.error('Error creating sponsored challenge:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}</content>
-<parameter name="filePath">/workspaces/Iyk-hub/src/app/api/sponsored-challenges/route.js
+}

@@ -225,5 +225,4 @@ export default function CreateSponsoredChallenge() {
       </div>
     </ProtectedRoute>
   );
-}</content>
-<parameter name="filePath">/workspaces/Iyk-hub/src/app/sponsored-challenges/create/page.js
+}

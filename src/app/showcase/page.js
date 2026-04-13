@@ -263,6 +263,6 @@ export default function ShowcasePage() {
           onClose={() => setIsEditorOpen(false)}
         />
       )}
-    </div>
+    </div></ErrorBoundary>
   );
 }

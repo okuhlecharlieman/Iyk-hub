@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
-import { AuthMiddleware } from '../../../../../lib/api/auth-middleware';
-import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
-import { logAdminAction } from '../../../../../lib/api/logging';
+import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../../lib/firebase/admin';
+import { AuthMiddleware } from '../../../../../../lib/api/auth-middleware';
+import { enforceRateLimit } from '../../../../../../lib/api/rate-limit';
+import { logAdminAction } from '../../../../../../lib/api/logging';
 
 export async function POST(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:sponsored-challenges:approve', limit: 20, windowMs: 60 * 1000 });

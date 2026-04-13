@@ -61,5 +61,4 @@ export async function POST(request, { params }) {
     console.error('Error approving sponsored challenge:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}</content>
-<parameter name="filePath">/workspaces/Iyk-hub/src/app/api/admin/sponsored-challenges/[id]/approve/route.js
+}

@@ -14,6 +14,7 @@ import LeaderboardCard from '../../components/admin/LeaderboardCard';
 import AuditLogCard from '../../components/admin/AuditLogCard';
 import PaymentsCard from '../../components/admin/PaymentsCard';
 import SponsoredChallengesCard from '../../components/admin/SponsoredChallengesCard';
+import MonetizationDashboard from '../../components/admin/MonetizationDashboard';
 
 export default function AdminPage() {
   const { user, userProfile } = useAuth();
@@ -105,6 +106,11 @@ export default function AdminPage() {
             <AuditLogCard />
             <PaymentsCard />
           </div>
+        </div>
+        
+        {/* Monetization Dashboard */}
+        <div>
+          <MonetizationDashboard />
         </div>
         
         {/* Full-width Bottom Section */}

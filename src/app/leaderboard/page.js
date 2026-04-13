@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { listTopUsersPage } from '../../lib/firebase/helpers';
 import Podium from '../../components/Podium';
 import LeaderboardItem from '../../components/LeaderboardItem';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import { FaSync } from 'react-icons/fa';
+import { SkeletonTable } from '../../components/loaders/SkeletonLoader';
+import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
+import { ErrorBoundary } from '../../components/error/ErrorBoundary';
+import { FaSync, FaTrophy } from 'react-icons/fa';
 import Button from '../../components/ui/Button';
 
 const PAGE_SIZE = 20;
@@ -58,12 +60,18 @@ export default function LeaderboardPage() {
   const restOfUsers = users.slice(3);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Leaderboard</h1>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">See who is leading the ranks!</p>
-        </div>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12 md:px-8 md:py-16">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-3 text-white shadow-lg">
+                <FaTrophy className="h-8 w-8" />
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Leaderboard</h1>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">See who is leading the ranks!</p>
+          </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
           <div className="flex justify-between items-center mb-6">
@@ -91,8 +99,8 @@ export default function LeaderboardPage() {
             </button>
           </div>
 
-          {loading ? <LoadingSpinner /> :
-            error ? <div className="text-red-500 text-center py-10">{error}</div> :
+          {loading ? <SkeletonTable rows={5} cols={4} /> :
+            error ? <ErrorEmptyState title="Unable to Load Leaderboard" message={error} onRetry={() => loadLeaderboard()} /> :
               users.length > 0 ? (
                 <>
                   <Podium users={topThree} filter={filter} />
@@ -111,13 +119,17 @@ export default function LeaderboardPage() {
                   )}
                 </>
               ) : (
-                <div className="text-center py-10">
-                  <p className="text-gray-500 dark:text-gray-400">The leaderboard is empty. Start playing to get on the board!</p>
-                </div>
+                <ErrorEmptyState 
+                  icon={FaTrophy}
+                  title="Leaderboard Empty" 
+                  message="The leaderboard is empty. Start playing to get on the board!" 
+                  actionLabel="View Games"
+                  actionUrl="/games"
+                />
               )
           }
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

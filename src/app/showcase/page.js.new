@@ -202,25 +202,47 @@ export default function ShowcasePage() {
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
             </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search posts..."
-              className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {user && (
-              <button onClick={handleAddPost} className="flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <FaPlus size={20} />
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <div className="relative flex-1 md:flex-none">
+                <FaSearch className="absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search posts..."
+                  className="pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              {(user || isAdmin) && (
+                <button
+                  onClick={handleAddPost}
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
+                >
+                  <FaPlus /> New Post
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        {loading ? <LoadingSpinner /> :
-          error ? <div className="text-red-500 text-center py-10">{error}</div> :
-          filteredPosts.length > 0 ? (
+          {error && (
+            <ErrorAlert 
+              message="Failed to load showcase" 
+              details={error}
+              onClose={() => setError('')}
+            />
+          )}
+
+          {loading ? (
+            <SkeletonGrid count={6} cols={3} />
+          ) : filteredPosts.length === 0 ? (
+            <ErrorEmptyState
+              icon={searchTerm ? FaSearch : FaExclamationTriangle}
+              title={searchTerm ? "No posts found" : "Showcase is empty"}
+              message={searchTerm ? "Try adjusting your search terms" : "Be the first to share your creation!"}
+              actionLabel={!searchTerm && (user || isAdmin) ? "Create Post" : null}
+              onAction={!searchTerm && (user || isAdmin) ? handleAddPost : null}
+            />
+          ) : (
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredPosts.map(p => (
@@ -233,33 +255,30 @@ export default function ShowcasePage() {
                   />
                 ))}
               </div>
-              {!searchTerm && nextCursor && (
-                <div className="flex justify-center mt-10">
+              {nextCursor && (
+                <div className="mt-8 flex justify-center">
                   <button
                     onClick={loadMorePosts}
                     disabled={loadingMore}
-                    className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
+                    className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg transition-all duration-200 font-semibold disabled:opacity-50"
                   >
-                    {loadingMore ? 'Loading...' : 'Load more'}
+                    {loadingMore ? 'Loading...' : 'Load More'}
                   </button>
                 </div>
               )}
             </>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
-            </div>
-          )
-        }
-      </div>
+          )}
 
-      {isEditorOpen && (
-        <PostEditor
-          post={editingPost}
-          onSave={handleSavePost}
-          onClose={() => setIsEditorOpen(false)}
-        />
-      )}
-    </div>
+          {isEditorOpen && (
+            <PostEditor
+              isOpen={isEditorOpen}
+              post={editingPost}
+              onSave={handleSavePost}
+              onClose={() => { setIsEditorOpen(false); setEditingPost(null); }}
+            />
+          )}
+        </div>
+      </div>
+    </ErrorBoundary>
   );
 }

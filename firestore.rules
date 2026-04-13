@@ -62,6 +62,35 @@ service cloud.firestore {
       allow delete: if isAdmin() || resource.data.ownerId == request.auth.uid;
     }
 
+    // Rules for the 'sponsoredChallenges' collection
+    match /sponsoredChallenges/{challengeId} {
+      // Admins can read any challenge.
+      // Authenticated users can read approved challenges.
+      // Users can read their own submitted challenges.
+      allow get: if isAdmin() || resource.data.status == 'approved' || resource.data.creatorUid == request.auth.uid;
+
+      // Admins can list all challenges.
+      // Authenticated users may only list approved challenges or their
+      // own documents — this prevents exposing other users' pending items.
+      allow list: if isAdmin()
+        || (
+          request.auth.uid != null && (
+            request.query.where('status','==','approved') ||
+            request.query.where('creatorUid','==', request.auth.uid)
+          )
+        );
+
+      // Authenticated users can create new challenges.
+      allow create: if request.auth.uid != null;
+
+      // Admins can update any challenge.
+      // The creator of a challenge can update it if it's still pending.
+      allow update: if isAdmin() || (resource.data.creatorUid == request.auth.uid && resource.data.status == 'pending');
+
+      // Admins or the creator can delete a challenge.
+      allow delete: if isAdmin() || resource.data.creatorUid == request.auth.uid;
+    }
+
     // Wall Posts
     match /wallPosts/{postId} {
       // Allow anyone to read

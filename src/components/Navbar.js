@@ -40,6 +40,7 @@ export default function Navbar() {
     { href: '/games', label: 'Games' },
     { href: '/showcase', label: 'Showcase' },
     { href: '/opportunities', label: 'Opportunities' },
+    { href: '/sponsored-challenges', label: 'Challenges' },
     { href: '/leaderboard', label: 'Leaderboard' },
     { href: '/creator-boosts', label: 'Boosts' },
   ];

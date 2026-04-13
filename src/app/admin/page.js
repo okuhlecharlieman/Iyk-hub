@@ -13,6 +13,7 @@ import PendingOppsCard from '../../components/admin/PendingOppsCard';
 import LeaderboardCard from '../../components/admin/LeaderboardCard';
 import AuditLogCard from '../../components/admin/AuditLogCard';
 import PaymentsCard from '../../components/admin/PaymentsCard';
+import SponsoredChallengesCard from '../../components/admin/SponsoredChallengesCard';
 
 export default function AdminPage() {
   const { user, userProfile } = useAuth();
@@ -99,6 +100,7 @@ export default function AdminPage() {
 
           {/* Right Column */}
           <div className="space-y-8">
+            <SponsoredChallengesCard />
             <PendingOppsCard />
             <AuditLogCard />
             <PaymentsCard />

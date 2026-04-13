@@ -5,7 +5,7 @@ import { listTopUsersPage } from '../../lib/firebase/helpers';
 import Podium from '../../components/Podium';
 import LeaderboardItem from '../../components/LeaderboardItem';
 import { SkeletonTable } from '../../components/loaders/SkeletonLoader';
-import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
+import { ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaSync, FaTrophy } from 'react-icons/fa';
 import Button from '../../components/ui/Button';
@@ -59,12 +59,19 @@ export default function LeaderboardPage() {
   const topThree = users.slice(0, 3);
   const restOfUsers = users.slice(3);
 
-  const content = (
-    loading ? (
-      <SkeletonTable rows={5} cols={4} />
-    ) : error ? (
-      <ErrorEmptyState title="Unable to Load Leaderboard" message={error} onRetry={() => loadLeaderboard()} />
-    ) : users.length > 0 ? (
+  let content;
+  if (loading) {
+    content = <SkeletonTable rows={5} cols={4} />;
+  } else if (error) {
+    content = (
+      <ErrorEmptyState 
+        title="Unable to Load Leaderboard" 
+        message={error} 
+        onRetry={() => loadLeaderboard()} 
+      />
+    );
+  } else if (users.length > 0) {
+    content = (
       <>
         <Podium users={topThree} filter={filter} />
         <ol className="space-y-4 mt-8">
@@ -72,16 +79,20 @@ export default function LeaderboardPage() {
             <LeaderboardItem key={u.id} user={u} rank={idx + 4} filter={filter} />
           ))}
         </ol>
-
         {nextCursor && (
           <div className="mt-8 flex justify-center">
-            <Button onClick={() => loadLeaderboard({ cursor: nextCursor, append: true })} disabled={loadingMore}>
+            <Button 
+              onClick={() => loadLeaderboard({ cursor: nextCursor, append: true })} 
+              disabled={loadingMore}
+            >
               {loadingMore ? 'Loading...' : 'Load More'}
             </Button>
           </div>
         )}
       </>
-    ) : (
+    );
+  } else {
+    content = (
       <ErrorEmptyState 
         icon={FaTrophy}
         title="Leaderboard Empty" 
@@ -89,8 +100,14 @@ export default function LeaderboardPage() {
         actionLabel="View Games"
         actionUrl="/games"
       />
-    )
-  );
+    );
+  }
+
+  const handleRefresh = () => {
+    if (typeof window !== 'undefined') {
+      loadLeaderboard();
+    }
+  };
 
   return (
     <ErrorBoundary>
@@ -102,37 +119,50 @@ export default function LeaderboardPage() {
                 <FaTrophy className="h-8 w-8" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Leaderboard</h1>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">See who is leading the ranks!</p>
+            <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Leaderboard
+            </h1>
+            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
+              See who is leading the ranks!
+            </p>
           </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <button
+                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                    filter === 'lifetime' 
+                      ? 'bg-blue-600 text-white shadow' 
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}
+                  onClick={() => setFilter('lifetime')}
+                >
+                  All Time
+                </button>
+                <button
+                  className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+                    filter === 'weekly' 
+                      ? 'bg-blue-600 text-white shadow' 
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}
+                  onClick={() => setFilter('weekly')}
+                >
+                  This Week
+                </button>
+              </div>
               <button
-                className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${filter === 'lifetime' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 dark:text-gray-300'}`}
-                onClick={() => setFilter('lifetime')}
+                className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                onClick={handleRefresh}
+                disabled={loading}
+                aria-label="Refresh leaderboard"
               >
-                All Time
-              </button>
-              <button
-                className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${filter === 'weekly' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 dark:text-gray-300'}`}
-                onClick={() => setFilter('weekly')}
-              >
-                This Week
+                <FaSync className={loading ? 'animate-spin' : ''} />
               </button>
             </div>
-            <button
-              className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-              onClick={() => { if (typeof window !== 'undefined') loadLeaderboard(); }}
-              disabled={loading}
-              aria-label="Refresh leaderboard"
-            >
-              <FaSync className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
 
-          {content}
+            {content}
+          </div>
         </div>
       </div>
     </ErrorBoundary>

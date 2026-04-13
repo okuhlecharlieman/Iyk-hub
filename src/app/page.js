@@ -51,7 +51,7 @@ const TestimonialCard = ({ quote, author, role, company }) => (
         <FaStar key={i} className="text-yellow-400 text-sm" />
       ))}
     </div>
-    <blockquote className="text-gray-700 dark:text-gray-300 mb-4 italic">"{quote}"</blockquote>
+    <blockquote className="text-gray-700 dark:text-gray-300 mb-4 italic">&quot;{quote}&quot;</blockquote>
     <div className="flex items-center">
       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold mr-3">
         {author.charAt(0)}
@@ -117,8 +117,8 @@ export default function Home() {
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto mb-10 leading-relaxed">
-              Join South Africa's premier youth innovation platform. Play games, showcase your talent,
-              discover opportunities, and connect with a community that's building the future.
+              Join South Africa&apos;s premier youth innovation platform. Play games, showcase your talent,
+              discover opportunities, and connect with a community that&apos;s building the future.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">

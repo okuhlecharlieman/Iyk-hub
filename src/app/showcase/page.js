@@ -9,6 +9,7 @@ import { SkeletonGrid } from '../../components/loaders/SkeletonLoader';
 import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaPlus, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function ShowcasePage() {
   const { user, isAdmin } = useAuth();

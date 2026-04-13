@@ -192,6 +192,41 @@ export default function ShowcasePage() {
     );
   });
 
+  const content = (
+    loading ? <LoadingSpinner /> :
+    error ? <div className="text-red-500 text-center py-10">{error}</div> :
+    filteredPosts.length > 0 ? (
+      <>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredPosts.map(p => (
+            <ContentCard
+              key={p.id}
+              p={p}
+              onEdit={() => handleEditPost(p)}
+              onDelete={() => handleDeletePost(p.id, p.uid)}
+              canManage={isAdmin || (user && user.uid === p.uid)}
+            />
+          ))}
+        </div>
+        {!searchTerm && nextCursor && (
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={loadMorePosts}
+              disabled={loadingMore}
+              className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
+            >
+              {loadingMore ? 'Loading...' : 'Load more'}
+            </button>
+          </div>
+        )}
+      </>
+    ) : (
+      <div className="text-center py-10">
+        <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
+      </div>
+    )
+  );
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12 md:px-8 md:py-16">
@@ -218,39 +253,7 @@ export default function ShowcasePage() {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner /> :
-          error ? <div className="text-red-500 text-center py-10">{error}</div> :
-          filteredPosts.length > 0 ? (
-            <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredPosts.map(p => (
-                  <ContentCard
-                    key={p.id}
-                    p={p}
-                    onEdit={() => handleEditPost(p)}
-                    onDelete={() => handleDeletePost(p.id, p.uid)}
-                    canManage={isAdmin || (user && user.uid === p.uid)}
-                  />
-                ))}
-              </div>
-              {!searchTerm && nextCursor && (
-                <div className="flex justify-center mt-10">
-                  <button
-                    onClick={loadMorePosts}
-                    disabled={loadingMore}
-                    className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
-                  >
-                    {loadingMore ? 'Loading...' : 'Load more'}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
-            </div>
-          )
-        }
+        {content}
       </div>
 
       {isEditorOpen && (

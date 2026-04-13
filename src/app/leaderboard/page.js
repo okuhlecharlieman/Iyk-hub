@@ -59,6 +59,39 @@ export default function LeaderboardPage() {
   const topThree = users.slice(0, 3);
   const restOfUsers = users.slice(3);
 
+  const content = (
+    loading ? (
+      <SkeletonTable rows={5} cols={4} />
+    ) : error ? (
+      <ErrorEmptyState title="Unable to Load Leaderboard" message={error} onRetry={() => loadLeaderboard()} />
+    ) : users.length > 0 ? (
+      <>
+        <Podium users={topThree} filter={filter} />
+        <ol className="space-y-4 mt-8">
+          {restOfUsers.map((u, idx) => (
+            <LeaderboardItem key={u.id} user={u} rank={idx + 4} filter={filter} />
+          ))}
+        </ol>
+
+        {nextCursor && (
+          <div className="mt-8 flex justify-center">
+            <Button onClick={() => loadLeaderboard({ cursor: nextCursor, append: true })} disabled={loadingMore}>
+              {loadingMore ? 'Loading...' : 'Load More'}
+            </Button>
+          </div>
+        )}
+      </>
+    ) : (
+      <ErrorEmptyState 
+        icon={FaTrophy}
+        title="Leaderboard Empty" 
+        message="The leaderboard is empty. Start playing to get on the board!" 
+        actionLabel="View Games"
+        actionUrl="/games"
+      />
+    )
+  );
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12 md:px-8 md:py-16">
@@ -99,36 +132,7 @@ export default function LeaderboardPage() {
             </button>
           </div>
 
-          {loading ? (
-            <SkeletonTable rows={5} cols={4} />
-          ) : error ? (
-            <ErrorEmptyState title="Unable to Load Leaderboard" message={error} onRetry={() => loadLeaderboard()} />
-          ) : users.length > 0 ? (
-            <>
-              <Podium users={topThree} filter={filter} />
-              <ol className="space-y-4 mt-8">
-                {restOfUsers.map((u, idx) => (
-                  <LeaderboardItem key={u.id} user={u} rank={idx + 4} filter={filter} />
-                ))}
-              </ol>
-
-              {nextCursor && (
-                <div className="mt-8 flex justify-center">
-                  <Button onClick={() => loadLeaderboard({ cursor: nextCursor, append: true })} disabled={loadingMore}>
-                    {loadingMore ? 'Loading...' : 'Load More'}
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <ErrorEmptyState 
-              icon={FaTrophy}
-              title="Leaderboard Empty" 
-              message="The leaderboard is empty. Start playing to get on the board!" 
-              actionLabel="View Games"
-              actionUrl="/games"
-            />
-          )}
+          {content}
         </div>
       </div>
     </ErrorBoundary>

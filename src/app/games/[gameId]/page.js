@@ -28,9 +28,9 @@ export default function GamePage() {
   const baseGameId = gameId.split('-')[0];
   const awardedResultKeys = useRef(new Set());
   const [mode, setMode] = useState('multiplayer');
-  const [multiplier, setMultiplier] = useState(1);
+  const multiplier = 1;
 
-  const singlePlayerAvailable = ['rps', 'memory', 'hangman', 'quiz'].includes(baseGameId);
+  const singlePlayerAvailable = ['rps', 'quiz'].includes(baseGameId);
 
   async function finishGame(result = 1, duration = 0) {
     if (!user) return;
@@ -119,14 +119,7 @@ export default function GamePage() {
                     <option value="singleplayer" disabled={!singlePlayerAvailable}>Single-player{!singlePlayerAvailable ? ' (not available for this game)' : ''}</option>
                   </select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="multiplier" className="font-medium">Multiplier:</label>
-                  <select id="multiplier" value={multiplier} onChange={(e) => setMultiplier(Number(e.target.value))} className="px-3 py-2 border rounded">
-                    {[1,2,3,4,5].map((val) => (
-                      <option key={val} value={val}>{val}x</option>
-                    ))}
-                  </select>
-                </div>
+
               </div>
             </div>
             <div className="p-6">

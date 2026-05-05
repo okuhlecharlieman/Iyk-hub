@@ -209,7 +209,7 @@ function QuizMultiplayer({ gameId, onEnd }) {
         setIsProcessing(false);
       }
     }, 2000); // Wait 2 seconds before moving to next question or result
-  }, [gameId, gameDocRef, isProcessing, onEnd, playerRole, db]);
+  }, [gameId, gameDocRef, isProcessing, onEnd, playerRole]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {

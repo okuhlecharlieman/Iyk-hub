@@ -85,30 +85,36 @@ export default function HangmanGame({ gameId, onEnd }) {
 
   const checkGameEnd = (data) => {
     if (data.status !== 'playing') return;
+    if (!playerSymbol || !data.players.player2) return;
 
     const { word, guessedLetters, players } = data;
     const wordGuessed = word.split('').every(letter => guessedLetters.includes(letter));
     const maxWrongGuesses = 6;
 
     if (wordGuessed) {
-      const winner = data.currentPlayer === 'player1' ? players.player1.displayName : players.player2.displayName;
-      updateDoc(gameDocRef, { status: 'result', winner });
-      const resultKey = `hangman:${gameId}:win:${winner}:${word}`;
-      if (onEnd && playerSymbol && lastResultKeyRef.current !== resultKey) {
+      const winnerSymbol = data.currentPlayer;
+      const winnerName = players[winnerSymbol].displayName;
+      updateDoc(gameDocRef, { status: 'result', winner: winnerName });
+      const resultKey = `hangman:${gameId}:win:${winnerName}:${word}`;
+      if (onEnd && lastResultKeyRef.current !== resultKey) {
         lastResultKeyRef.current = resultKey;
-        onEnd({ score: 10, resultKey });
+        const isWinner = playerSymbol === winnerSymbol;
+        onEnd({ score: isWinner ? 10 : 2, resultKey });
       }
       return;
     }
 
     if (players.player1.wrongGuesses >= maxWrongGuesses || players.player2.wrongGuesses >= maxWrongGuesses) {
-      const loser = players.player1.wrongGuesses >= maxWrongGuesses ? players.player1.displayName : players.player2.displayName;
-      const winner = loser === players.player1.displayName ? players.player2.displayName : players.player1.displayName;
-      updateDoc(gameDocRef, { status: 'result', winner: winner, loser: loser });
-      const resultKey = `hangman:${gameId}:loss:${winner}:${loser}:${word}`;
-      if (onEnd && playerSymbol && lastResultKeyRef.current !== resultKey) {
+      const loserSymbol = players.player1.wrongGuesses >= maxWrongGuesses ? 'player1' : 'player2';
+      const winnerSymbol = loserSymbol === 'player1' ? 'player2' : 'player1';
+      const winnerName = players[winnerSymbol].displayName;
+      const loserName = players[loserSymbol].displayName;
+      updateDoc(gameDocRef, { status: 'result', winner: winnerName, loser: loserName });
+      const resultKey = `hangman:${gameId}:loss:${winnerName}:${loserName}:${word}`;
+      if (onEnd && lastResultKeyRef.current !== resultKey) {
         lastResultKeyRef.current = resultKey;
-        onEnd({ score: playerSymbol === data.currentPlayer ? 2 : 10, resultKey });
+        const isWinner = playerSymbol === winnerSymbol;
+        onEnd({ score: isWinner ? 10 : 2, resultKey });
       }
     }
   };

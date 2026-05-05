@@ -1,16 +1,13 @@
 'use client';
-// This line is the key fix for the Vercel deployment.
-// It tells Next.js not to pre-render this page at build time.
-// Instead, it will be rendered dynamically on the server when a user requests it,
-// ensuring that user-specific data is fetched only when a user is logged in.
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { fetchLatestQuote, getApprovedOpportunities } from '../../lib/firebase/helpers';
 import Link from 'next/link';
-import { FaArrowRight, FaGamepad, FaBriefcase } from 'react-icons/fa';
+import { FaArrowRight, FaGamepad, FaBriefcase, FaVideo } from 'react-icons/fa';
 
 import PointsCard from '../../components/PointsCard';
 import LeaderboardPreview from '../../components/LeaderboardPreview';
@@ -26,6 +23,7 @@ const GAME_ICONS = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [quote, setQuote] = useState(null);
   const [opps, setOpps] = useState([]);
   const [formattedDate, setFormattedDate] = useState('');
@@ -84,11 +82,11 @@ export default function DashboardPage() {
                     { id: 'memory', name: 'Memory Match' },
                     { id: 'hangman', name: 'Hangman' },
                   ].map((g) => (
-                    <Link key={g.id} href={`/games/${g.id}`} 
+                    <button key={g.id} onClick={() => router.push(`/games/${g.id}-${Date.now()}`)}
                       className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center text-center">
                       <div className="text-blue-500 dark:text-blue-400 mb-2">{GAME_ICONS[g.id]}</div>
                       <p className="font-semibold text-sm text-gray-700 dark:text-gray-300">{g.name}</p>
-                    </Link>
+                    </button>
                   ))}
                 </div>
               </section>

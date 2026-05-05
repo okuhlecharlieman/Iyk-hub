@@ -1,27 +1,26 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 
-// Keep a larger, more diverse set of questions.
 const allQuestions = [
-    { question: 'What is the powerhouse of the cell?', options: ['Nucleus', 'Mitochondrion', 'Ribosome', 'Chloroplast'], answer: 'Mitochondrion' },
-    { question: 'Which planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], answer: 'Mars' },
-    { question: 'What is the largest mammal in the world?', options: ['Elephant', 'Blue Whale', 'Giraffe', 'Great White Shark'], answer: 'Blue Whale' },
-    { question: 'Who wrote the play \'Romeo and Juliet\'?', options: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'], answer: 'William Shakespeare' },
-    { question: 'What is the chemical symbol for Gold?', options: ['Au', 'Ag', 'Go', 'Gd'], answer: 'Au' },
-    { question: 'How many continents are there?', options: ['5', '6', '7', '8'], answer: '7' },
-    { question: 'What is the capital of Japan?', options: ['Beijing', 'Seoul', 'Tokyo', 'Bangkok'], answer: 'Tokyo' },
-    { question: 'Which is the only vowel on a standard keyboard that is not on the top row?', options: ['A', 'E', 'I', 'O'], answer: 'A' },
-    { question: 'What is the hardest natural substance on Earth?', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], answer: 'Diamond' },
-    { question: 'How many hearts does an octopus have?', options: ['1', '2', '3', '4'], answer: '3' }
-  ];
-  
-  const shuffleAndPickQuestions = (count = 5) => {
-    return [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, count);
-  };
+  { question: 'What is the powerhouse of the cell?', options: ['Nucleus', 'Mitochondrion', 'Ribosome', 'Chloroplast'], answer: 'Mitochondrion' },
+  { question: 'Which planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], answer: 'Mars' },
+  { question: 'What is the largest mammal in the world?', options: ['Elephant', 'Blue Whale', 'Giraffe', 'Great White Shark'], answer: 'Blue Whale' },
+  { question: 'Who wrote the play \'Romeo and Juliet\'?', options: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'], answer: 'William Shakespeare' },
+  { question: 'What is the chemical symbol for Gold?', options: ['Au', 'Ag', 'Go', 'Gd'], answer: 'Au' },
+  { question: 'How many continents are there?', options: ['5', '6', '7', '8'], answer: '7' },
+  { question: 'What is the capital of Japan?', options: ['Beijing', 'Seoul', 'Tokyo', 'Bangkok'], answer: 'Tokyo' },
+  { question: 'Which is the only vowel on a standard keyboard that is not on the top row?', options: ['A', 'E', 'I', 'O'], answer: 'A' },
+  { question: 'What is the hardest natural substance on Earth?', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], answer: 'Diamond' },
+  { question: 'How many hearts does an octopus have?', options: ['1', '2', '3', '4'], answer: '3' }
+];
+
+const shuffleAndPickQuestions = (count = 5) => {
+  return [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, count);
+};
 
 function QuizSinglePlayer({ onEnd }) {
   const router = useRouter();
@@ -33,6 +32,8 @@ function QuizSinglePlayer({ onEnd }) {
   const [localIndex, setLocalIndex] = useState(0);
   const [localScore, setLocalScore] = useState(0);
   const [localFinished, setLocalFinished] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [showResult, setShowResult] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -46,45 +47,80 @@ function QuizSinglePlayer({ onEnd }) {
   const handleAnswerSingle = (option) => {
     if (isProcessing || localFinished || !localQuestions[localIndex] || !user) return;
 
+    setIsProcessing(true);
+    setSelectedAnswer(option);
+    setShowResult(true);
+
     const current = localQuestions[localIndex];
     const isCorrect = current.answer === option;
     const scoreDelta = isCorrect ? 10 : 0;
     const updatedScore = localScore + scoreDelta;
     setLocalScore(updatedScore);
 
-    const nextIdx = localIndex + 1;
-    if (nextIdx >= localQuestions.length) {
-      setLocalFinished(true);
-      setTimeout(() => {
+    setTimeout(() => {
+      const nextIdx = localIndex + 1;
+      if (nextIdx >= localQuestions.length) {
+        setLocalFinished(true);
         if (onEnd) onEnd(updatedScore);
-        router.push('/games');
-      }, 500);
-    } else {
-      setLocalIndex(nextIdx);
-    }
+      } else {
+        setLocalIndex(nextIdx);
+        setSelectedAnswer(null);
+        setShowResult(false);
+      }
+      setIsProcessing(false);
+    }, 1500);
   };
 
-  if (loading) return <p>Loading quiz...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) return <p className="text-center py-8">Loading quiz...</p>;
+  if (error) return <p className="text-red-500 text-center py-8">{error}</p>;
 
   const currentQuestion = localQuestions[localIndex];
 
   return (
     <div className="text-center max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Single Player Quiz</h1>
-      <p className="text-lg mb-4">Score: {localScore}</p>
+      <h1 className="text-3xl font-bold mb-2">Quiz</h1>
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-lg">Score: <span className="font-bold text-blue-500">{localScore}</span></p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Question {localIndex + 1} / {localQuestions.length}</p>
+      </div>
+
       {localFinished ? (
-        <div>
-          <p className="text-xl">Quiz complete! Final Score: {localScore}</p>
-          <button onClick={() => router.push('/games')} className="mt-4 bg-blue-600 text-white px-4 py-2 rounded">Return to Games</button>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md">
+          <p className="text-2xl font-bold mb-4">Quiz Complete!</p>
+          <p className="text-4xl font-bold text-blue-500 mb-6">{localScore} pts</p>
+          <button onClick={() => router.push('/games')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+            Return to Games
+          </button>
         </div>
       ) : (
-        <div>
-          <p className="text-xl font-semibold mb-2">{currentQuestion.question}</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {currentQuestion.options.map((option) => (
-              <button key={option} onClick={() => handleAnswerSingle(option)} className="px-4 py-2 border rounded hover:bg-gray-200">{option}</button>
-            ))}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+          <p className="text-xl font-semibold mb-6">{currentQuestion.question}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {currentQuestion.options.map((option) => {
+              let btnClass = 'px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 text-left';
+              if (showResult) {
+                if (option === currentQuestion.answer) {
+                  btnClass += ' bg-green-100 dark:bg-green-900/50 border-green-500 text-green-800 dark:text-green-200';
+                } else if (option === selectedAnswer) {
+                  btnClass += ' bg-red-100 dark:bg-red-900/50 border-red-500 text-red-800 dark:text-red-200';
+                } else {
+                  btnClass += ' bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 opacity-50';
+                }
+              } else {
+                btnClass += ' bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400';
+              }
+
+              return (
+                <button
+                  key={option}
+                  onClick={() => handleAnswerSingle(option)}
+                  disabled={isProcessing}
+                  className={btnClass}
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -96,12 +132,12 @@ function QuizMultiplayer({ gameId, onEnd }) {
   const router = useRouter();
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
-  const [playerRole, setPlayerRole] = useState(null); // 'player1' or 'player2'
+  const [playerRole, setPlayerRole] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const lastResultKeyRef = useRef(null);
-  const gameDocRef = doc(db, 'games', gameId);
+  const gameDocRef = useMemo(() => doc(db, 'games', gameId), [gameId]);
 
   useEffect(() => {
     if (!user) {
@@ -137,8 +173,6 @@ function QuizMultiplayer({ gameId, onEnd }) {
             setPlayerRole('player1');
           } else if (data.players.player2?.uid === user.uid) {
             setPlayerRole('player2');
-          } else {
-            // Spectator
           }
         }
       } catch (e) {
@@ -150,7 +184,7 @@ function QuizMultiplayer({ gameId, onEnd }) {
     joinGame();
   }, [gameId, user, gameDocRef]);
 
-  const processAnswers = useCallback(async (data) => {
+  const processAnswers = useCallback(async () => {
     if (isProcessing) return;
     setIsProcessing(true);
 
@@ -166,34 +200,37 @@ function QuizMultiplayer({ gameId, onEnd }) {
 
           const { players, questions, currentQuestionIndex } = latest;
           const correctAnswer = questions[currentQuestionIndex].answer;
-          const newPlayers = { ...players };
 
-          if (newPlayers.player1.answer === correctAnswer) newPlayers.player1.score += 1;
-          if (newPlayers.player2.answer === correctAnswer) newPlayers.player2.score += 1;
+          const p1Score = players.player1.score + (players.player1.answer === correctAnswer ? 1 : 0);
+          const p2Score = players.player2.score + (players.player2.answer === correctAnswer ? 1 : 0);
 
           const nextIndex = currentQuestionIndex + 1;
           if (nextIndex < questions.length) {
             transaction.update(gameDocRef, {
-              players: newPlayers,
-              currentQuestionIndex: nextIndex,
+              'players.player1.score': p1Score,
               'players.player1.answer': null,
+              'players.player2.score': p2Score,
               'players.player2.answer': null,
+              currentQuestionIndex: nextIndex,
             });
             return;
           }
 
           let winner = null;
-          if (newPlayers.player1.score > newPlayers.player2.score) winner = newPlayers.player1.displayName;
-          else if (newPlayers.player2.score > newPlayers.player1.score) winner = newPlayers.player2.displayName;
+          if (p1Score > p2Score) winner = players.player1.displayName;
+          else if (p2Score > p1Score) winner = players.player2.displayName;
           else winner = 'draw';
 
           finalResult = {
-            myFinalScore: playerRole ? newPlayers[playerRole].score : 0,
-            resultKey: `quiz:${gameId}:${winner}:${newPlayers.player1.score}:${newPlayers.player2.score}`,
+            myFinalScore: playerRole === 'player1' ? p1Score : p2Score,
+            resultKey: `quiz:${gameId}:${winner}:${p1Score}:${p2Score}`,
           };
 
           transaction.update(gameDocRef, {
-            players: newPlayers,
+            'players.player1.score': p1Score,
+            'players.player1.answer': null,
+            'players.player2.score': p2Score,
+            'players.player2.answer': null,
             status: 'result',
             winner,
           });
@@ -203,12 +240,12 @@ function QuizMultiplayer({ gameId, onEnd }) {
           lastResultKeyRef.current = finalResult.resultKey;
           onEnd({ score: finalResult.myFinalScore * 2, resultKey: finalResult.resultKey });
         }
-      } catch (error) {
-        setError('Failed to score quiz round: ' + error.message);
+      } catch (err) {
+        setError('Failed to score quiz round: ' + err.message);
       } finally {
         setIsProcessing(false);
       }
-    }, 2000); // Wait 2 seconds before moving to next question or result
+    }, 2000);
   }, [gameId, gameDocRef, isProcessing, onEnd, playerRole]);
 
   useEffect(() => {
@@ -217,12 +254,9 @@ function QuizMultiplayer({ gameId, onEnd }) {
         const data = snapshot.data();
         setGameState(data);
         setLoading(false);
-        // If both players have answered, process the result
         if (data.status === 'playing' && data.players.player1?.answer && data.players.player2?.answer) {
-          processAnswers(data);
+          processAnswers();
         }
-      } else {
-        // Game not found yet, wait for joinGame to create it
       }
     }, (e) => {
       setError('Game sync error: ' + e.message);
@@ -237,22 +271,22 @@ function QuizMultiplayer({ gameId, onEnd }) {
   };
 
   const handleResetGame = async () => {
-    if(gameState.status !== 'result') return;
+    if (gameState.status !== 'result') return;
     await updateDoc(gameDocRef, {
-        questions: shuffleAndPickQuestions(),
-        currentQuestionIndex: 0,
-        players: {
-            player1: {...gameState.players.player1, score: 0, answer: null},
-            player2: gameState.players.player2 ? {...gameState.players.player2, score: 0, answer: null} : null,
-        },
-        status: gameState.players.player2 ? 'playing' : 'waiting',
-        winner: null,
+      questions: shuffleAndPickQuestions(),
+      currentQuestionIndex: 0,
+      'players.player1.score': 0,
+      'players.player1.answer': null,
+      'players.player2.score': gameState.players.player2 ? 0 : null,
+      'players.player2.answer': gameState.players.player2 ? null : undefined,
+      status: gameState.players.player2 ? 'playing' : 'waiting',
+      winner: null,
     });
-  }
+  };
 
-  if (loading) return <p>Loading quiz...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
+  if (loading) return <p className="text-center py-8">Loading quiz...</p>;
+  if (error) return <p className="text-red-500 text-center py-8">{error}</p>;
+  if (!gameState) return <p className="text-red-500 text-center py-8">Game not found or failed to load.</p>;
 
   const { players, status, currentQuestionIndex, questions, winner } = gameState;
   const you = players?.[playerRole];
@@ -260,76 +294,82 @@ function QuizMultiplayer({ gameId, onEnd }) {
   const currentQuestion = questions[currentQuestionIndex];
 
   const getStatusMessage = () => {
-      if (status === 'waiting') return "Waiting for opponent...";
-      if (status === 'playing') {
-          if(!you) return "Spectating...";
-          if(you.answer && !opponent?.answer) return "Waiting for opponent to answer...";
-          if(!you.answer && opponent?.answer) return "Opponent has answered. Your turn!";
-          if(you.answer && opponent?.answer) return "Calculating results...";
-          return "Choose your answer!";
-      }
-      if (status === 'result') return winner === 'draw' ? "It's a draw!" : `${winner} wins!`;
-      return "";
-  }
+    if (status === 'waiting') return 'Waiting for opponent...';
+    if (status === 'playing') {
+      if (!you) return 'Spectating...';
+      if (you.answer && !opponent?.answer) return 'Waiting for opponent to answer...';
+      if (!you.answer && opponent?.answer) return 'Opponent has answered. Your turn!';
+      if (you.answer && opponent?.answer) return 'Calculating results...';
+      return 'Choose your answer!';
+    }
+    if (status === 'result') return winner === 'draw' ? "It's a draw!" : `${winner} wins!`;
+    return '';
+  };
 
   return (
     <div className="text-center max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Multiplayer Quiz</h1>
+      <h1 className="text-3xl font-bold mb-2">Quiz</h1>
 
-      <div className="grid grid-cols-2 gap-8 w-full text-center mx-auto mb-4">
-          <div>
-              <p className="font-bold text-lg">{you?.displayName || 'You'}</p>
-              <p>Score: {you?.score || 0}</p>
-          </div>
-          <div>
-              <p className="font-bold text-lg">{opponent?.displayName || 'Waiting...'}</p>
-              <p>Score: {opponent?.score || 0}</p>
-          </div>
+      <div className="grid grid-cols-2 gap-4 w-full max-w-md text-center mx-auto mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md">
+          <p className="font-bold text-lg">{you?.displayName || 'You'}</p>
+          <p className="text-2xl font-bold text-blue-500">{you?.score || 0}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md">
+          <p className="font-bold text-lg">{opponent?.displayName || 'Waiting...'}</p>
+          <p className="text-2xl font-bold text-red-500">{opponent?.score || 0}</p>
+        </div>
       </div>
-      <p className="text-xl font-semibold mb-6 h-6">{getStatusMessage()}</p>
+
+      <p className="text-xl font-semibold mb-6 h-8">{getStatusMessage()}</p>
 
       {status === 'playing' && currentQuestion && (
-        <div>
-          <p className="text-2xl mb-4">{currentQuestion.question}</p>
-          <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+            Question {currentQuestionIndex + 1} / {questions.length}
+          </p>
+          <p className="text-xl font-semibold mb-6">{currentQuestion.question}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {currentQuestion.options.map(option => {
-                const yourAnswer = you?.answer;
-                const oppAnswer = opponent?.answer;
-                const bothAnswered = yourAnswer && oppAnswer;
-                const isCorrect = option === currentQuestion.answer;
+              const yourAnswer = you?.answer;
+              const oppAnswer = opponent?.answer;
+              const bothAnswered = yourAnswer && oppAnswer;
+              const isCorrect = option === currentQuestion.answer;
 
-                let buttonClass = 'px-4 py-3 border rounded-lg transition-colors duration-300';
-                if (bothAnswered) {
-                    if(isCorrect) buttonClass += ' bg-green-500 text-white';
-                    else if(option === yourAnswer || option === oppAnswer) buttonClass += ' bg-red-500 text-white';
-                    else buttonClass += ' bg-gray-300 dark:bg-gray-600';
-                } else if (yourAnswer === option) {
-                    buttonClass += ' bg-blue-400 dark:bg-blue-800 text-white';
-                } else {
-                    buttonClass += ' bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600';
-                }
+              let buttonClass = 'px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 text-left';
+              if (bothAnswered) {
+                if (isCorrect) buttonClass += ' bg-green-100 dark:bg-green-900/50 border-green-500 text-green-800 dark:text-green-200';
+                else if (option === yourAnswer || option === oppAnswer) buttonClass += ' bg-red-100 dark:bg-red-900/50 border-red-500 text-red-800 dark:text-red-200';
+                else buttonClass += ' bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 opacity-50';
+              } else if (yourAnswer === option) {
+                buttonClass += ' bg-blue-100 dark:bg-blue-900/50 border-blue-500 text-blue-800 dark:text-blue-200';
+              } else {
+                buttonClass += ' bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400';
+              }
 
               return (
-                <button 
-                    key={option} 
-                    onClick={() => handleAnswer(option)} 
-                    disabled={!playerRole || isProcessing || you?.answer}
-                    className={buttonClass}
+                <button
+                  key={option}
+                  onClick={() => handleAnswer(option)}
+                  disabled={!playerRole || isProcessing || you?.answer}
+                  className={buttonClass}
                 >
                   {option}
                 </button>
-              )
+              );
             })}
           </div>
         </div>
       )}
 
       {status === 'result' && (
-        <div className="mt-4">
-            <p className="text-2xl font-bold mb-4">Final Score</p>
-            <p className="text-lg">{`${players.player1.displayName}: ${players.player1.score}`}</p>
-            <p className="text-lg mb-4">{`${players.player2.displayName}: ${players.player2.score}`}</p>
-            <button onClick={handleResetGame} className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold">Play Again</button>
+        <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
+          <p className="text-2xl font-bold mb-4">Final Score</p>
+          <p className="text-lg">{players.player1.displayName}: <span className="font-bold">{players.player1.score}</span></p>
+          <p className="text-lg mb-4">{players.player2.displayName}: <span className="font-bold">{players.player2.score}</span></p>
+          <button onClick={handleResetGame} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+            Play Again
+          </button>
         </div>
       )}
     </div>

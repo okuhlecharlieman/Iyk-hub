@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
-import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from "firebase/firestore";
-import { useAuth } from "@/context/AuthContext";
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 
 const choices = [
   { id: 'rock', icon: <FaHandRock size={40} /> },
@@ -15,7 +15,7 @@ const choices = [
 function RPSSinglePlayer({ onEnd }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [playerScore, setPlayerScore] = useState(0);
   const [playerChoice, setPlayerChoice] = useState(null);
   const [opponentChoice, setOpponentChoice] = useState(null);
@@ -65,34 +65,34 @@ function RPSSinglePlayer({ onEnd }) {
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-2xl font-bold mb-4">Rock, Paper, Scissors - Single Player</h2>
-      <p className="mb-4">Score: {playerScore}</p>
+      <h2 className="text-2xl font-bold mb-4">Rock, Paper, Scissors — Single Player</h2>
+      <p className="mb-4 text-lg">Score: <span className="font-bold text-blue-500">{playerScore}</span></p>
 
-      <div className="flex justify-center gap-8 mb-8">
+      <div className="flex justify-center gap-6 mb-8">
         {choices.map((choice) => (
           <button
             key={choice.id}
             onClick={() => handleChoice(choice.id)}
-            className="p-4 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+            className="p-5 bg-gray-100 dark:bg-gray-700 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-600 hover:scale-110 transition-all duration-200 shadow-md"
           >
             {choice.icon}
           </button>
         ))}
       </div>
 
-      <div className="text-center mb-4">
+      <div className="text-center mb-6 min-h-[80px]">
         {playerChoice && opponentChoice && (
-          <>
-            <p>Your choice: {playerChoice}</p>
-            <p>Opponent&apos;s choice: {opponentChoice}</p>
-            <p className="font-semibold">{roundResult}</p>
-          </>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+            <p className="text-gray-600 dark:text-gray-400">Your choice: <span className="font-semibold capitalize">{playerChoice}</span></p>
+            <p className="text-gray-600 dark:text-gray-400">Computer&apos;s choice: <span className="font-semibold capitalize">{opponentChoice}</span></p>
+            <p className="font-bold text-lg mt-2">{roundResult}</p>
+          </div>
         )}
       </div>
 
       {error && <p className="text-red-500 mb-2">{error}</p>}
 
-      <button onClick={handleEndGame} className="bg-blue-500 text-white px-6 py-2 rounded">
+      <button onClick={handleEndGame} className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
         End Game
       </button>
     </div>
@@ -102,17 +102,16 @@ function RPSSinglePlayer({ onEnd }) {
 function RPSMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [loading, setLoading] = useState(true);
   const hasEnded = useRef(false);
-  const gameDocRef = doc(db, "games", gameId);
+  const gameDocRef = useMemo(() => doc(db, 'games', gameId), [gameId]);
 
-  // Join or create game room
   useEffect(() => {
     if (!user) {
-      setError("You must be logged in to play.");
+      setError('You must be logged in to play.');
       setLoading(false);
       return;
     }
@@ -122,32 +121,30 @@ function RPSMultiplayer({ gameId, onEnd }) {
         const snap = await getDoc(gameDocRef);
         if (!snap.exists()) {
           await setDoc(gameDocRef, {
-            players: { 
+            players: {
               player1: { uid: user.uid, displayName: user.displayName, choice: null, score: 0 },
-              player2: null 
+              player2: null
             },
-            status: 'waiting', // waiting, playing, result
+            status: 'waiting',
             result: ''
           });
-          setPlayerSymbol("player1");
+          setPlayerSymbol('player1');
         } else {
           const data = snap.data();
           if (!data.players.player2 && data.players.player1?.uid !== user.uid) {
-            await updateDoc(gameDocRef, { 
-              "players.player2": { uid: user.uid, displayName: user.displayName, choice: null, score: 0 },
-              "status": 'playing'
+            await updateDoc(gameDocRef, {
+              'players.player2': { uid: user.uid, displayName: user.displayName, choice: null, score: 0 },
+              status: 'playing'
             });
-            setPlayerSymbol("player2");
+            setPlayerSymbol('player2');
           } else if (data.players.player1?.uid === user.uid) {
-            setPlayerSymbol("player1");
+            setPlayerSymbol('player1');
           } else if (data.players.player2?.uid === user.uid) {
-            setPlayerSymbol("player2");
-          } else {
-            // Spectator
+            setPlayerSymbol('player2');
           }
         }
       } catch (e) {
-        setError("Failed to join game: " + e.message);
+        setError('Failed to join game: ' + e.message);
         setLoading(false);
       }
     }
@@ -195,7 +192,6 @@ function RPSMultiplayer({ gameId, onEnd }) {
     }
   }, [gameDocRef]);
 
-  // Listen for game state changes and resolve rounds
   useEffect(() => {
     if (!gameId) return;
     const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
@@ -221,99 +217,101 @@ function RPSMultiplayer({ gameId, onEnd }) {
 
   const handleUserChoice = async (choiceId) => {
     if (!playerSymbol || !gameState || gameState.status !== 'playing') return;
-    
+
     const playerChoicePath = `players.${playerSymbol}.choice`;
-    if (gameState.players[playerSymbol].choice) return; // Already chosen
+    if (gameState.players[playerSymbol].choice) return;
 
     try {
       await updateDoc(gameDocRef, {
         [playerChoicePath]: choiceId
       });
     } catch (e) {
-      setError("Failed to make choice: " + e.message);
+      setError('Failed to make choice: ' + e.message);
     }
   };
 
   const handleNextRound = async () => {
     if (gameState.status !== 'result') return;
     try {
-        await updateDoc(gameDocRef, {
-            'players.player1.choice': null,
-            'players.player2.choice': null,
-            status: 'playing',
-            result: ''
-        });
+      await updateDoc(gameDocRef, {
+        'players.player1.choice': null,
+        'players.player2.choice': null,
+        status: 'playing',
+        result: ''
+      });
     } catch (e) {
-        setError("Failed to start next round: " + e.message);
+      setError('Failed to start next round: ' + e.message);
     }
   };
-  
+
   const handleEndGame = () => {
-      if (onEnd && !hasEnded.current) {
-          hasEnded.current = true;
-          const playerScore = gameState.players[playerSymbol].score;
-          onEnd(playerScore);
-      }
-      router.push('/games');
+    if (onEnd && !hasEnded.current) {
+      hasEnded.current = true;
+      const playerScore = gameState.players[playerSymbol].score;
+      onEnd(playerScore);
+    }
+    router.push('/games');
   };
 
-  if (loading) return <div>Loading game...</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
-  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
-  
+  if (loading) return <div className="text-center py-8">Loading game...</div>;
+  if (error) return <div className="text-red-600 text-center py-8">{error}</div>;
+  if (!gameState) return <p className="text-red-500 text-center py-8">Game not found or failed to load.</p>;
+
   const { players, status, result } = gameState;
   const you = players[playerSymbol];
   const opponent = playerSymbol === 'player1' ? players.player2 : players.player1;
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-2xl font-bold mb-4">Rock, Paper, Scissors</h2>
-      <p className="mb-2">Room: {gameId}</p>
-      
-      <div className="grid grid-cols-2 gap-8 w-full max-w-md text-center">
-          <div>
-              <p className="font-bold text-lg">{you?.displayName || 'You'}</p>
-              <p>Score: {you?.score || 0}</p>
-          </div>
-          <div>
-              <p className="font-bold text-lg">{opponent?.displayName || 'Waiting...'}</p>
-              <p>Score: {opponent?.score || 0}</p>
-          </div>
+      <h2 className="text-2xl font-bold mb-2">Rock, Paper, Scissors</h2>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Room: <span className="font-mono">{gameId}</span></p>
+
+      <div className="grid grid-cols-2 gap-8 w-full max-w-md text-center mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+          <p className="font-bold text-lg">{you?.displayName || 'You'}</p>
+          <p className="text-2xl font-bold text-blue-500">{you?.score || 0}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md">
+          <p className="font-bold text-lg">{opponent?.displayName || 'Waiting...'}</p>
+          <p className="text-2xl font-bold text-red-500">{opponent?.score || 0}</p>
+        </div>
       </div>
 
-      {status === 'waiting' && <p className="mt-4">Waiting for another player to join...</p>}
-      
+      {status === 'waiting' && (
+        <p className="mt-4 text-gray-500 dark:text-gray-400">Waiting for another player to join...</p>
+      )}
+
       {status === 'playing' && (
-          <div className="mt-8">
-              <p className="mb-4">Choose your weapon!</p>
-              <div className="flex justify-center gap-8 mb-8">
-                {choices.map((choice) => (
-                  <button
-                    key={choice.id}
-                    onClick={() => handleUserChoice(choice.id)}
-                    disabled={!!you?.choice}
-                    className="p-4 bg-gray-200 dark:bg-gray-700 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50"
-                  >
-                    {choice.icon}
-                  </button>
-                ))}
-              </div>
-              {you?.choice && !opponent?.choice && <p>Waiting for opponent to choose...</p>}
-              {you?.choice && opponent?.choice && <p>Both players have chosen. Calculating result...</p>}
+        <div className="mt-4 text-center">
+          <p className="mb-4 text-lg font-medium">Choose your weapon!</p>
+          <div className="flex justify-center gap-6 mb-8">
+            {choices.map((choice) => (
+              <button
+                key={choice.id}
+                onClick={() => handleUserChoice(choice.id)}
+                disabled={!!you?.choice}
+                className="p-5 bg-gray-100 dark:bg-gray-700 rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-600 hover:scale-110 transition-all duration-200 shadow-md disabled:opacity-50 disabled:hover:scale-100"
+              >
+                {choice.icon}
+              </button>
+            ))}
           </div>
+          {you?.choice && !opponent?.choice && <p className="text-gray-500">Waiting for opponent to choose...</p>}
+          {you?.choice && opponent?.choice && <p className="text-gray-500">Both players have chosen. Calculating result...</p>}
+        </div>
       )}
 
       {status === 'result' && (
-        <div className="text-center mt-8">
-            <p>Your choice: {you.choice}</p>
-            <p>{opponent.displayName}&apos;s choice: {opponent.choice}</p>
-            <p className="text-xl font-bold mt-4">{result}</p>
-            <button onClick={handleNextRound} className="mt-4 bg-blue-500 text-white px-4 py-2 rounded">Next Round</button>
+        <div className="text-center mt-4 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md max-w-md w-full">
+          <p className="text-gray-600 dark:text-gray-400">Your choice: <span className="font-semibold capitalize">{you.choice}</span></p>
+          <p className="text-gray-600 dark:text-gray-400">{opponent.displayName}&apos;s choice: <span className="font-semibold capitalize">{opponent.choice}</span></p>
+          <p className="text-xl font-bold mt-3">{result}</p>
+          <button onClick={handleNextRound} className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">Next Round</button>
         </div>
       )}
 
       <div className="mt-8">
-        <button onClick={handleEndGame} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">End Game</button>
+        <button onClick={handleEndGame} className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">End Game</button>
       </div>
     </div>
   );

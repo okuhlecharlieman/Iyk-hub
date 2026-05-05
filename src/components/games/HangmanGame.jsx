@@ -1,11 +1,34 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 
 const words = ['react', 'nextjs', 'firebase', 'tailwind', 'javascript', 'google', 'coding', 'interface'];
 const randomWord = () => words[Math.floor(Math.random() * words.length)];
+
+const HANGMAN_PARTS = [
+  { part: 'head', draw: '  O' },
+  { part: 'body', draw: '  |' },
+  { part: 'leftArm', draw: ' /|' },
+  { part: 'rightArm', draw: ' /|\\' },
+  { part: 'leftLeg', draw: ' /' },
+  { part: 'bothLegs', draw: ' / \\' },
+];
+
+function HangmanDrawing({ wrongGuesses }) {
+  const count = Math.min(wrongGuesses, 6);
+  return (
+    <div className="font-mono text-2xl leading-tight text-gray-800 dark:text-gray-200 mb-4 min-h-[120px] flex flex-col items-center">
+      <div>{' ____'}</div>
+      <div>{' |  |'}</div>
+      <div>{count >= 1 ? ' |  O' : ' |'}</div>
+      <div>{count >= 4 ? ' | /|\\' : count >= 3 ? ' | /|' : count >= 2 ? ' |  |' : ' |'}</div>
+      <div>{count >= 6 ? ' | / \\' : count >= 5 ? ' | /' : ' |'}</div>
+      <div>{' |____'}</div>
+    </div>
+  );
+}
 
 export default function HangmanGame({ gameId, onEnd }) {
   const { user } = useAuth();
@@ -14,12 +37,12 @@ export default function HangmanGame({ gameId, onEnd }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const lastResultKeyRef = useRef(null);
-  const gameDocRef = doc(db, 'games', gameId);
+  const gameEndedRef = useRef(false);
+  const gameDocRef = useMemo(() => doc(db, 'games', gameId), [gameId]);
 
-  // Game setup
   useEffect(() => {
     if (!user) {
-      setError("You must be logged in to play.");
+      setError('You must be logged in to play.');
       setLoading(false);
       return;
     }
@@ -52,12 +75,10 @@ export default function HangmanGame({ gameId, onEnd }) {
             setPlayerSymbol('player1');
           } else if (data.players.player2?.uid === user.uid) {
             setPlayerSymbol('player2');
-          } else {
-            // Spectator
           }
         }
       } catch (e) {
-        setError("Failed to join game: " + e.message);
+        setError('Failed to join game: ' + e.message);
         setLoading(false);
       }
     };
@@ -65,26 +86,8 @@ export default function HangmanGame({ gameId, onEnd }) {
     joinGame();
   }, [gameId, user, gameDocRef]);
 
-  // Game state listener
-  useEffect(() => {
-    const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setGameState(data);
-        checkGameEnd(data);
-        setLoading(false);
-      } else {
-        // Game not found yet, wait for joinGame to create it.
-      }
-    }, (e) => {
-      setError("Game sync error: " + e.message)
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [gameDocRef]);
-
-  const checkGameEnd = (data) => {
-    if (data.status !== 'playing') return;
+  const checkAndEndGame = useCallback(async (data) => {
+    if (data.status !== 'playing' || gameEndedRef.current) return;
     if (!playerSymbol || !data.players.player2) return;
 
     const { word, guessedLetters, players } = data;
@@ -92,9 +95,12 @@ export default function HangmanGame({ gameId, onEnd }) {
     const maxWrongGuesses = 6;
 
     if (wordGuessed) {
+      gameEndedRef.current = true;
       const winnerSymbol = data.currentPlayer;
       const winnerName = players[winnerSymbol].displayName;
-      updateDoc(gameDocRef, { status: 'result', winner: winnerName });
+      try {
+        await updateDoc(gameDocRef, { status: 'result', winner: winnerName });
+      } catch {}
       const resultKey = `hangman:${gameId}:win:${winnerName}:${word}`;
       if (onEnd && lastResultKeyRef.current !== resultKey) {
         lastResultKeyRef.current = resultKey;
@@ -105,11 +111,14 @@ export default function HangmanGame({ gameId, onEnd }) {
     }
 
     if (players.player1.wrongGuesses >= maxWrongGuesses || players.player2.wrongGuesses >= maxWrongGuesses) {
+      gameEndedRef.current = true;
       const loserSymbol = players.player1.wrongGuesses >= maxWrongGuesses ? 'player1' : 'player2';
       const winnerSymbol = loserSymbol === 'player1' ? 'player2' : 'player1';
       const winnerName = players[winnerSymbol].displayName;
       const loserName = players[loserSymbol].displayName;
-      updateDoc(gameDocRef, { status: 'result', winner: winnerName, loser: loserName });
+      try {
+        await updateDoc(gameDocRef, { status: 'result', winner: winnerName, loser: loserName });
+      } catch {}
       const resultKey = `hangman:${gameId}:loss:${winnerName}:${loserName}:${word}`;
       if (onEnd && lastResultKeyRef.current !== resultKey) {
         lastResultKeyRef.current = resultKey;
@@ -117,7 +126,27 @@ export default function HangmanGame({ gameId, onEnd }) {
         onEnd({ score: isWinner ? 10 : 2, resultKey });
       }
     }
-  };
+  }, [gameDocRef, gameId, onEnd, playerSymbol]);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setGameState(data);
+        setLoading(false);
+        if (data.status === 'playing') {
+          checkAndEndGame(data);
+        }
+        if (data.status === 'waiting' || data.status === 'playing') {
+          gameEndedRef.current = false;
+        }
+      }
+    }, (e) => {
+      setError('Game sync error: ' + e.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [gameDocRef, checkAndEndGame]);
 
   const handleGuess = async (letter) => {
     if (!gameState || gameState.currentPlayer !== playerSymbol || gameState.guessedLetters.includes(letter) || gameState.status !== 'playing') return;
@@ -125,7 +154,10 @@ export default function HangmanGame({ gameId, onEnd }) {
     const { word, guessedLetters, players, currentPlayer } = gameState;
     const newGuessedLetters = [...guessedLetters, letter];
     let nextPlayer = currentPlayer;
-    const newPlayers = { ...players };
+    const newPlayers = {
+      player1: { ...players.player1 },
+      player2: { ...players.player2 },
+    };
 
     if (!word.includes(letter)) {
       newPlayers[currentPlayer].wrongGuesses += 1;
@@ -140,79 +172,92 @@ export default function HangmanGame({ gameId, onEnd }) {
   };
 
   const handleResetGame = async () => {
+    gameEndedRef.current = false;
     await updateDoc(gameDocRef, {
-        word: randomWord(),
-        guessedLetters: [],
-        players: {
-            ...gameState.players,
-            player1: {...gameState.players.player1, wrongGuesses: 0},
-            player2: gameState.players.player2 ? {...gameState.players.player2, wrongGuesses: 0} : null,
-        },
-        currentPlayer: 'player1',
-        status: gameState.players.player2 ? 'playing' : 'waiting',
-        winner: null,
-        loser: null
+      word: randomWord(),
+      guessedLetters: [],
+      players: {
+        ...gameState.players,
+        player1: { ...gameState.players.player1, wrongGuesses: 0 },
+        player2: gameState.players.player2 ? { ...gameState.players.player2, wrongGuesses: 0 } : null,
+      },
+      currentPlayer: 'player1',
+      status: gameState.players.player2 ? 'playing' : 'waiting',
+      winner: null,
+      loser: null
     });
-  }
+  };
 
-  if (loading) return <p>Loading game...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-  if (!gameState) return <p className="text-red-500">Game not found or failed to load.</p>;
+  if (loading) return <p className="text-center py-8">Loading game...</p>;
+  if (error) return <p className="text-red-500 text-center py-8">{error}</p>;
+  if (!gameState) return <p className="text-red-500 text-center py-8">Game not found or failed to load.</p>;
 
   const { word, guessedLetters, players, status, currentPlayer, winner, loser } = gameState;
   const you = players?.[playerSymbol];
   const opponent = playerSymbol === 'player1' ? players?.player2 : players?.player1;
   const wordWithGuesses = word.split('').map(letter => (guessedLetters.includes(letter) ? letter : '_')).join(' ');
+  const yourWrongGuesses = you?.wrongGuesses || 0;
 
   const getStatusMessage = () => {
-      if (status === 'waiting') return "Waiting for an opponent...";
-      if (status === 'playing') return currentPlayer === playerSymbol ? "Your turn to guess" : `${players[currentPlayer]?.displayName}'s turn`;
-      if (status === 'result') {
-          if (winner === 'draw') return "It's a draw!";
-          return winner ? `${winner} wins!` : (loser ? `${loser} lost!` : "Game Over");
-      }
-      return "";
-  }
+    if (status === 'waiting') return 'Waiting for an opponent...';
+    if (status === 'playing') return currentPlayer === playerSymbol ? 'Your turn to guess' : `${players[currentPlayer]?.displayName}'s turn`;
+    if (status === 'result') {
+      if (winner === 'draw') return "It's a draw!";
+      return winner ? `${winner} wins!` : (loser ? `${loser} lost!` : 'Game Over');
+    }
+    return '';
+  };
 
   return (
     <div className="text-center max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Multiplayer Hangman</h1>
+      <h1 className="text-3xl font-bold mb-4">Hangman</h1>
 
-      <div className="grid grid-cols-2 gap-8 w-full text-center mx-auto mb-4">
-          <div>
-              <p className="font-bold text-lg">{you?.displayName || 'You'}</p>
-              <p>Wrong Guesses: {you?.wrongGuesses || 0} / 6</p>
-          </div>
-          <div>
-              <p className="font-bold text-lg">{opponent?.displayName || 'Waiting...'}</p>
-              <p>Wrong Guesses: {opponent?.wrongGuesses || 0} / 6</p>
-          </div>
+      <div className="grid grid-cols-2 gap-4 w-full max-w-md text-center mx-auto mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md">
+          <p className="font-bold text-lg">{you?.displayName || 'You'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Wrong: <span className="font-bold text-red-500">{yourWrongGuesses}</span> / 6</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-md">
+          <p className="font-bold text-lg">{opponent?.displayName || 'Waiting...'}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Wrong: <span className="font-bold text-red-500">{opponent?.wrongGuesses || 0}</span> / 6</p>
+        </div>
       </div>
 
-      <p className="text-xl font-semibold mb-6 h-6">{getStatusMessage()}</p>
-      <p className="text-4xl tracking-widest mb-6 font-mono">{wordWithGuesses}</p>
+      <p className="text-xl font-semibold mb-4 h-8">{getStatusMessage()}</p>
+
+      <HangmanDrawing wrongGuesses={yourWrongGuesses} />
+
+      <p className="text-4xl tracking-[0.3em] mb-6 font-mono font-bold">{wordWithGuesses}</p>
 
       {status === 'playing' && currentPlayer === playerSymbol && (
-          <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-md mx-auto">
-            {'abcdefghijklmnopqrstuvwxyz'.split('').map(letter => (
-              <button
-                key={letter}
-                onClick={() => handleGuess(letter)}
-                disabled={guessedLetters.includes(letter)}
-                className="w-10 h-10 m-1 border rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {letter.toUpperCase()}
-              </button>
-            ))}
-          </div>
+        <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+          {'abcdefghijklmnopqrstuvwxyz'.split('').map(letter => (
+            <button
+              key={letter}
+              onClick={() => handleGuess(letter)}
+              disabled={guessedLetters.includes(letter)}
+              className={`w-10 h-10 rounded-lg font-semibold transition-all duration-200 ${
+                guessedLetters.includes(letter)
+                  ? word.includes(letter)
+                    ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 opacity-60'
+                    : 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 opacity-60'
+                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-800 hover:scale-110'
+              } disabled:cursor-not-allowed`}
+            >
+              {letter.toUpperCase()}
+            </button>
+          ))}
+        </div>
       )}
-      
+
       {status === 'result' && (
-          <div className="mt-4">
-              <p className="text-2xl font-bold mb-2">Game Over!</p>
-              <p className="text-lg mb-4">The word was: <span className="font-bold text-blue-500">{word}</span></p>
-              <button onClick={handleResetGame} className="mt-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold">Play Again</button>
-          </div>
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md max-w-md mx-auto">
+          <p className="text-2xl font-bold mb-2">Game Over!</p>
+          <p className="text-lg mb-4">The word was: <span className="font-bold text-blue-500">{word}</span></p>
+          <button onClick={handleResetGame} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+            Play Again
+          </button>
+        </div>
       )}
     </div>
   );

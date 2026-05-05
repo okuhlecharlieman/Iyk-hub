@@ -38,6 +38,7 @@ export default function Navbar() {
   const navLinks = [
     ...(user ? [{ href: '/dashboard', label: 'Dashboard' }] : []),
     { href: '/games', label: 'Games' },
+    ...(user ? [{ href: '/video', label: 'Video Chat' }] : []),
     { href: '/showcase', label: 'Showcase' },
     { href: '/opportunities', label: 'Opportunities' },
     { href: '/sponsored-challenges', label: 'Challenges' },

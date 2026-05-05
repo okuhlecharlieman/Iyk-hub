@@ -30,7 +30,7 @@ export default function GamePage() {
   const [mode, setMode] = useState('multiplayer');
   const multiplier = 1;
 
-  const singlePlayerAvailable = ['rps', 'quiz'].includes(baseGameId);
+  const singlePlayerAvailable = ['rps', 'quiz', 'tictactoe'].includes(baseGameId);
 
   async function finishGame(result = 1, duration = 0) {
     if (!user) return;

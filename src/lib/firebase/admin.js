@@ -101,7 +101,7 @@ export const authenticate = async (req) => requireRole(req, ['admin']);
 export const authenticateAndGetUid = async (req) => {
   const decodedToken = await verifyIdTokenFromRequest(req);
   return decodedToken.uid;
-};;
+};
 
 
 // Converts Firestore Timestamps to a JSON-serializable format

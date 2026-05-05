@@ -110,11 +110,22 @@ function CheckoutForm({ clientSecret, amountCents, onSuccess, onError }) {
 
 export default function StripeCheckout({ clientSecret, amountCents, onSuccess, onError }) {
   if (!stripePromise) {
-    return <div className="text-red-600">Stripe is not configured</div>;
+    return <div className="text-red-600">Stripe is not configured. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.</div>;
   }
 
+  if (!clientSecret) {
+    return <div className="text-red-600">Payment session not ready. Please try again.</div>;
+  }
+
+  const elementsOptions = {
+    clientSecret,
+    appearance: {
+      theme: 'stripe',
+    },
+  };
+
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} options={elementsOptions}>
       <div className="max-w-md mx-auto">
         <CheckoutForm
           clientSecret={clientSecret}

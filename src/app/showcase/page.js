@@ -1,7 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { doc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
 import { useAuth } from '../../context/AuthContext';
@@ -87,11 +85,11 @@ export default function ShowcasePage() {
     if (!user) return alert('You must be logged in to save a post.');
 
     try {
+      const token = await user.getIdToken();
       const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
 
       if (editingPost) {
         if (isAdmin && isEditingAnotherUsersPost) {
-          const token = await user.getIdToken();
           const response = await fetch('/api/admin/updatePost', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -110,17 +108,28 @@ export default function ShowcasePage() {
             throw new Error(errorMessage);
           }
         } else {
-          const postRef = doc(db, 'wallPosts', editingPost.id);
-          await updateDoc(postRef, { ...postData, updatedAt: serverTimestamp() });
+          const response = await fetch('/api/admin/updatePost', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ postId: editingPost.id, updates: postData }),
+          });
+
+          if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            throw new Error(result.error || 'Could not update the post.');
+          }
         }
       } else {
-        await addDoc(collection(db, 'wallPosts'), {
-          ...postData,
-          uid: user.uid,
-          author: { displayName: user.displayName, photoURL: user.photoURL },
-          createdAt: serverTimestamp(),
-          reactions: { likes: 0, hearts: 0, laughs: 0 },
+        const response = await fetch('/api/showcase/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(postData),
         });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || 'Failed to submit showcase post.');
+        }
       }
 
       setIsEditorOpen(false);

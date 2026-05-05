@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
 import { db } from "@/lib/firebase";
@@ -20,6 +20,7 @@ function RPSSinglePlayer({ onEnd }) {
   const [playerChoice, setPlayerChoice] = useState(null);
   const [opponentChoice, setOpponentChoice] = useState(null);
   const [roundResult, setRoundResult] = useState('');
+  const hasEnded = useRef(false);
 
   const resolveSingleRound = (choiceId) => {
     const opponent = choices[Math.floor(Math.random() * choices.length)].id;
@@ -55,7 +56,8 @@ function RPSSinglePlayer({ onEnd }) {
   };
 
   const handleEndGame = () => {
-    if (onEnd) {
+    if (onEnd && !hasEnded.current) {
+      hasEnded.current = true;
       onEnd(playerScore);
     }
     router.push('/games');
@@ -99,10 +101,12 @@ function RPSSinglePlayer({ onEnd }) {
 
 function RPSMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
+  const router = useRouter();
   const [error, setError] = useState("");
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
   const [loading, setLoading] = useState(true);
+  const hasEnded = useRef(false);
   const gameDocRef = doc(db, "games", gameId);
 
   // Join or create game room
@@ -150,7 +154,6 @@ function RPSMultiplayer({ gameId, onEnd }) {
     joinGame();
   }, [gameId, user, gameDocRef]);
 
-  // Listen for game state
   const resolveRound = useCallback(async () => {
     try {
       await runTransaction(db, async (transaction) => {
@@ -190,7 +193,31 @@ function RPSMultiplayer({ gameId, onEnd }) {
     } catch (e) {
       setError('Failed to resolve round: ' + e.message);
     }
-  }, [gameDocRef, resolveRound]);
+  }, [gameDocRef]);
+
+  // Listen for game state changes and resolve rounds
+  useEffect(() => {
+    if (!gameId) return;
+    const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setGameState(data);
+        setLoading(false);
+
+        if (
+          data.status === 'playing' &&
+          data.players.player1?.choice &&
+          data.players.player2?.choice
+        ) {
+          resolveRound();
+        }
+      }
+    }, (e) => {
+      setError('Game sync error: ' + e.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [gameId, gameDocRef, resolveRound]);
 
   const handleUserChoice = async (choiceId) => {
     if (!playerSymbol || !gameState || gameState.status !== 'playing') return;
@@ -222,7 +249,8 @@ function RPSMultiplayer({ gameId, onEnd }) {
   };
   
   const handleEndGame = () => {
-      if (onEnd) {
+      if (onEnd && !hasEnded.current) {
+          hasEnded.current = true;
           const playerScore = gameState.players[playerSymbol].score;
           onEnd(playerScore);
       }

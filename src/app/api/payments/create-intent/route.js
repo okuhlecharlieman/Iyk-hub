@@ -5,6 +5,7 @@ import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExt
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logDataAccess } from '../../../../lib/api/logging';
 import { createStripePaymentIntent, createOrGetStripeCustomer } from '../../../../lib/stripe/stripe-client';
+import { getOrderConfig } from '../../../../lib/monetization/constants';
 
 const validatePayload = (payload) => {
   ensurePlainObject(payload);
@@ -24,21 +25,6 @@ const validatePayload = (payload) => {
   };
 };
 
-const ORDER_CONFIG = {
-  sponsoredChallenge: {
-    collection: 'sponsoredChallengeOrders',
-    statusField: 'paymentStatus',
-  },
-  creatorBoost: {
-    collection: 'creatorBoostOrders',
-    statusField: 'paymentStatus',
-  },
-  institutionPlan: {
-    collection: 'institutionAccounts',
-    statusField: 'accountStatus',
-  },
-};
-
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'payments:create-intent', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -50,7 +36,7 @@ export async function POST(request) {
     const payload = await parseJsonBody(request);
     const { orderType, orderId } = validatePayload(payload);
 
-    const config = ORDER_CONFIG[orderType];
+    const config = getOrderConfig(orderType);
     if (!config) {
       return NextResponse.json({ error: 'Unsupported orderType' }, { status: 400 });
     }

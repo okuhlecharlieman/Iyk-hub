@@ -1,4 +1,5 @@
 import admin from 'firebase-admin';
+import { ORDER_CONFIG } from './constants';
 
 const toNumber = (value, fallback = 0) => (typeof value === 'number' ? value : fallback);
 
@@ -6,16 +7,17 @@ const sumBy = (items, predicate, valueGetter) =>
   items.reduce((acc, item) => (predicate(item) ? acc + toNumber(valueGetter(item), 0) : acc), 0);
 
 export async function buildMonetizationSummary(db = admin.firestore()) {
+  const configs = Object.values(ORDER_CONFIG);
   const [
     sponsoredSnap,
     institutionsSnap,
     boostsSnap,
     placementsSnap,
   ] = await Promise.all([
-    db.collection('sponsoredOpportunityOrders').limit(500).get(),
-    db.collection('institutionAccounts').limit(500).get(),
-    db.collection('creatorBoostOrders').limit(500).get(),
-    db.collection('placementReports').limit(500).get(),
+    db.collection(ORDER_CONFIG.sponsoredOpportunity.collection).limit(500).get(),
+    db.collection(ORDER_CONFIG.institutionPlan.collection).limit(500).get(),
+    db.collection(ORDER_CONFIG.creatorBoost.collection).limit(500).get(),
+    db.collection(ORDER_CONFIG.placementFee.collection).limit(500).get(),
   ]);
 
   const sponsored = sponsoredSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));

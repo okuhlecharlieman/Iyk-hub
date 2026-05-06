@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getCreatorBoostPlan } from '../../lib/monetization/creator-boosts';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import StripeCheckout from '../../components/StripeCheckout';
 
 function buildPlanList() {
   return Object.entries({
@@ -67,9 +68,6 @@ export default function CreatorBoostsPage() {
 
   const planItems = buildPlanList();
 
-  const paymentOptions = useMemo(() => paymentIntent?.paymentOptions || [], [paymentIntent]);
-
-
   return (
     <div className="container mx-auto px-4 py-10">
       <h1 className="text-3xl font-bold mb-4">Creator Boosts</h1>
@@ -108,13 +106,13 @@ export default function CreatorBoostsPage() {
       {message && <div className="mt-6 rounded-lg bg-green-50 dark:bg-green-900/30 p-4 text-green-800 dark:text-green-200">{message}</div>}
       {error && <div className="mt-6 rounded-lg bg-red-50 dark:bg-red-900/30 p-4 text-red-800 dark:text-red-200">{error}</div>}
 
-      {paymentIntent && (
+      {paymentIntent && paymentIntent.clientSecret && (
         <div className="mt-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold">South Africa payment options</h2>
+              <h2 className="text-xl font-semibold">Complete Payment</h2>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Payment ID: {paymentIntent.paymentId} · Amount: R{(paymentIntent.amountCents / 100).toFixed(2)}
+                Amount: R{(paymentIntent.amountCents / 100).toFixed(2)}
               </p>
             </div>
             <span className="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
@@ -122,21 +120,17 @@ export default function CreatorBoostsPage() {
             </span>
           </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {paymentOptions.map((option) => (
-              <div key={option.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-semibold">{option.label}</h3>
-                  <span className="text-xs uppercase tracking-wide text-gray-500">{option.provider}</span>
-                </div>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{option.description}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-            Provider-specific checkout links are not wired yet, but these options are now included in the payment intent so the South Africa rollout can connect Yoco, Ozow, or Peach Payments without changing the order flow again.
-          </p>
+          <StripeCheckout
+            clientSecret={paymentIntent.clientSecret}
+            amountCents={paymentIntent.amountCents}
+            onSuccess={() => {
+              setMessage('Payment successful! Your boost is now active.');
+              setPaymentIntent(null);
+            }}
+            onError={(err) => {
+              setError(err.message || 'Payment failed. Please try again.');
+            }}
+          />
         </div>
       )}
 

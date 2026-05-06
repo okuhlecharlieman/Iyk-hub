@@ -4,6 +4,8 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/logging';
+import { PAYOUT_STATUSES, LEDGER_ENTRY_TYPES } from '../../../../lib/monetization/constants';
+import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payouts:list', limit: 30, windowMs: 60 * 1000 });
@@ -26,7 +28,6 @@ export async function GET(request) {
     for (const challengeDoc of challengesSnap.docs) {
       const challenge = { id: challengeDoc.id, ...challengeDoc.data() };
 
-      // Check if payment was successful
       const paymentLogSnap = await db.collection('paymentLogs')
         .where('orderType', '==', 'sponsoredChallenge')
         .where('orderId', '==', challenge.id)
@@ -35,9 +36,6 @@ export async function GET(request) {
         .get();
 
       if (!paymentLogSnap.empty) {
-        const paymentLog = { id: paymentLogSnap.docs[0].id, ...paymentLogSnap.docs[0].data() };
-
-        // Check if payout already exists
         const existingPayoutSnap = await db.collection('payouts')
           .where('challengeId', '==', challenge.id)
           .limit(1)
@@ -46,7 +44,6 @@ export async function GET(request) {
         const payoutAmountCents = challenge.budgetCents - (challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2));
 
         if (existingPayoutSnap.empty) {
-          // Create pending payout
           payouts.push({
             id: `payout_${challenge.id}`,
             challengeId: challenge.id,
@@ -54,12 +51,11 @@ export async function GET(request) {
             sponsorName: challenge.sponsorName,
             sponsorEmail: challenge.sponsorEmail,
             amountCents: payoutAmountCents,
-            status: 'pending',
+            status: PAYOUT_STATUSES.PENDING,
             createdAt: challenge.approvedAt || challenge.createdAt,
-            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           });
         } else {
-          // Existing payout
           const existingPayout = { id: existingPayoutSnap.docs[0].id, ...existingPayoutSnap.docs[0].data() };
           payouts.push({
             id: existingPayout.id,
@@ -69,7 +65,10 @@ export async function GET(request) {
             sponsorEmail: challenge.sponsorEmail,
             amountCents: payoutAmountCents,
             status: existingPayout.status,
+            approvedBy: existingPayout.approvedBy || null,
+            approvedAt: existingPayout.approvedAt || null,
             processedAt: existingPayout.processedAt,
+            providerPayoutId: existingPayout.providerPayoutId || null,
             createdAt: challenge.approvedAt || challenge.createdAt,
             dueDate: existingPayout.dueDate,
           });
@@ -77,7 +76,6 @@ export async function GET(request) {
       }
     }
 
-    // Sort by creation date, newest first
     payouts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return NextResponse.json({ payouts });
@@ -97,7 +95,7 @@ export async function POST(request) {
     const user = await AuthMiddleware.requireAdmin(request);
 
     const payload = await request.json();
-    const { challengeId, payoutMethod = 'bank_transfer' } = payload;
+    const { challengeId, action = 'approve', payoutMethod = 'bank_transfer', providerPayoutId = null } = payload;
 
     if (!challengeId) {
       return NextResponse.json({ error: 'challengeId is required' }, { status: 400 });
@@ -105,7 +103,6 @@ export async function POST(request) {
 
     const db = admin.firestore();
 
-    // Get challenge details
     const challengeSnap = await db.collection('sponsoredChallengeOrders').doc(challengeId).get();
     if (!challengeSnap.exists) {
       return NextResponse.json({ error: 'Challenge not found' }, { status: 404 });
@@ -113,7 +110,6 @@ export async function POST(request) {
 
     const challenge = challengeSnap.data();
 
-    // Verify payment was successful
     const paymentLogSnap = await db.collection('paymentLogs')
       .where('orderType', '==', 'sponsoredChallenge')
       .where('orderId', '==', challengeId)
@@ -125,54 +121,121 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No successful payment found for this challenge' }, { status: 400 });
     }
 
-    // Check if payout already exists
+    const platformFeeCents = challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2);
+    const payoutAmountCents = challenge.budgetCents - platformFeeCents;
+
+    // Check for existing payout
     const existingPayoutSnap = await db.collection('payouts')
       .where('challengeId', '==', challengeId)
       .limit(1)
       .get();
 
-    if (!existingPayoutSnap.empty) {
-      return NextResponse.json({ error: 'Payout already processed for this challenge' }, { status: 400 });
+    if (action === 'approve') {
+      if (!existingPayoutSnap.empty) {
+        const existing = existingPayoutSnap.docs[0].data();
+        if (existing.status !== PAYOUT_STATUSES.PENDING) {
+          return NextResponse.json({ error: `Payout already ${existing.status}` }, { status: 400 });
+        }
+        // Update existing to approved
+        await existingPayoutSnap.docs[0].ref.update({
+          status: PAYOUT_STATUSES.APPROVED,
+          approvedBy: uid,
+          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Create new payout in approved state
+        await db.collection('payouts').add({
+          challengeId,
+          sponsorName: challenge.sponsorName,
+          sponsorEmail: challenge.sponsorEmail,
+          amountCents: payoutAmountCents,
+          currency: 'ZAR',
+          status: PAYOUT_STATUSES.APPROVED,
+          payoutMethod,
+          approvedBy: uid,
+          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      await appendLedgerEntry(db, {
+        entryType: LEDGER_ENTRY_TYPES.PAYOUT_SCHEDULED,
+        orderType: 'sponsoredChallenge',
+        orderId: challengeId,
+        amountCents: payoutAmountCents,
+        description: `Payout approved for challenge ${challengeId}`,
+      });
+
+      await logAdminAction({
+        request,
+        actor: user,
+        action: 'payout.approved',
+        targetType: 'sponsoredChallenge',
+        targetId: challengeId,
+        details: { amountCents: payoutAmountCents, payoutMethod },
+      });
+
+      return NextResponse.json({
+        success: true,
+        status: PAYOUT_STATUSES.APPROVED,
+        amountCents: payoutAmountCents,
+        message: 'Payout approved. Ready for processing.',
+      });
     }
 
-    // Calculate payout amount
-    const platformFeeCents = challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2);
-    const payoutAmountCents = challenge.budgetCents - platformFeeCents;
+    if (action === 'process') {
+      if (existingPayoutSnap.empty) {
+        return NextResponse.json({ error: 'Payout must be approved before processing' }, { status: 400 });
+      }
 
-    // Create payout record
-    const payoutRef = await db.collection('payouts').add({
-      challengeId,
-      sponsorName: challenge.sponsorName,
-      sponsorEmail: challenge.sponsorEmail,
-      amountCents: payoutAmountCents,
-      currency: 'ZAR',
-      status: 'processed',
-      payoutMethod,
-      processedBy: uid,
-      processedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      const existing = existingPayoutSnap.docs[0].data();
+      if (existing.status !== PAYOUT_STATUSES.APPROVED) {
+        return NextResponse.json({ error: `Payout must be approved first. Current status: ${existing.status}` }, { status: 400 });
+      }
 
-    // Log admin action
-    await logAdminAction({
-      request,
-      actor: user,
-      action: 'payout.processed',
-      targetType: 'sponsoredChallenge',
-      targetId: challengeId,
-      details: {
-        payoutId: payoutRef.id,
+      await existingPayoutSnap.docs[0].ref.update({
+        status: PAYOUT_STATUSES.PAID,
+        processedBy: uid,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        providerPayoutId: providerPayoutId || null,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await appendLedgerEntry(db, {
+        entryType: LEDGER_ENTRY_TYPES.PAYOUT_PAID,
+        orderType: 'sponsoredChallenge',
+        orderId: challengeId,
         amountCents: payoutAmountCents,
-        payoutMethod,
-      },
-    });
+        description: `Payout processed for challenge ${challengeId}`,
+        metadata: { providerPayoutId },
+      });
 
-    return NextResponse.json({
-      success: true,
-      payoutId: payoutRef.id,
-      amountCents: payoutAmountCents,
-      message: 'Payout processed successfully',
-    });
+      await logAdminAction({
+        request,
+        actor: user,
+        action: 'payout.processed',
+        targetType: 'sponsoredChallenge',
+        targetId: challengeId,
+        details: {
+          payoutId: existingPayoutSnap.docs[0].id,
+          amountCents: payoutAmountCents,
+          payoutMethod,
+          providerPayoutId,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        status: PAYOUT_STATUSES.PAID,
+        payoutId: existingPayoutSnap.docs[0].id,
+        amountCents: payoutAmountCents,
+        message: 'Payout processed successfully',
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid action. Use "approve" or "process".' }, { status: 400 });
   } catch (error) {
     console.error('Error processing payout:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

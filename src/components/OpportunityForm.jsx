@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import Button from './ui/Button';
 import FileUploadField from './ui/FileUploadField';
 import { uploadToStorage } from '../lib/firebase/helpers';
+import { useToast } from './ui/ToastProvider';
 
 export default function OpportunityForm({ onSubmit, initialFormState, submitButtonText }) {
   const [form, setForm] = useState(initialFormState);
   const [mediaFile, setMediaFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     setForm(initialFormState);
@@ -29,7 +31,7 @@ export default function OpportunityForm({ onSubmit, initialFormState, submitButt
       onSubmit({ ...form, mediaUrl });
     } catch (err) {
       console.error('Upload error:', err);
-      alert('Failed to upload media: ' + (err.message || 'Unknown error'));
+      toast('error', 'Failed to upload media: ' + (err.message || 'Unknown error'));
     } finally {
       setUploading(false);
     }

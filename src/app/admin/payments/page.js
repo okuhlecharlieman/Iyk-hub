@@ -5,16 +5,33 @@ import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Button from '../../../components/ui/Button';
-import { FaDollarSign, FaSyncAlt } from 'react-icons/fa';
+import { FaDollarSign, FaSyncAlt, FaCopy } from 'react-icons/fa';
 
 const formatDate = (value) => {
   if (!value) return '—';
   try {
-    const d = typeof value.toDate === 'function' ? value.toDate() : new Date(value);
-    return d.toLocaleString();
+    let d;
+    if (typeof value.toDate === 'function') {
+      d = value.toDate();
+    } else if (value._seconds || value.seconds) {
+      d = new Date((value._seconds || value.seconds) * 1000);
+    } else if (typeof value === 'string' || typeof value === 'number') {
+      d = new Date(value);
+    } else {
+      return '—';
+    }
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch {
-    return String(value);
+    return '—';
   }
+};
+
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById(`copied-${text}`);
+    if (el) { el.textContent = 'Copied!'; setTimeout(() => { el.textContent = text; }, 1500); }
+  });
 };
 
 const PAYMENT_STATUS_LABELS = {
@@ -133,8 +150,15 @@ export default function AdminPaymentsPage() {
                 ) : (
            orders.map((order) => (
   <tr key={order.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
-    <td className="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">
-      {order.id.slice(0, 8)}...
+    <td className="px-4 py-3">
+      <button
+        onClick={() => copyToClipboard(order.id)}
+        className="group flex items-center gap-1.5 font-mono text-xs text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+        title="Click to copy"
+      >
+        <span id={`copied-${order.id}`} className="break-all">{order.id}</span>
+        <FaCopy className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </button>
     </td>
     
     {/* Updated User Column to show Name and Email */}

@@ -8,6 +8,7 @@ import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaPlus, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useToast } from '../../components/ui/ToastProvider';
 
 export default function ShowcasePage() {
   const { user, isAdmin } = useAuth();
@@ -20,6 +21,7 @@ export default function ShowcasePage() {
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
+  const toast = useToast();
 
   const fetchPosts = async () => {
     try {
@@ -61,7 +63,7 @@ export default function ShowcasePage() {
       });
     } catch (err) {
       console.error(err);
-      alert(`Failed to load more posts: ${err.message}`);
+      toast('error', `Failed to load more posts: ${err.message}`);
     } finally {
       setLoadingMore(false);
     }
@@ -82,7 +84,7 @@ export default function ShowcasePage() {
   };
 
   const handleSavePost = async (postData) => {
-    if (!user) return alert('You must be logged in to save a post.');
+    if (!user) { toast('warning', 'You must be logged in to save a post.'); return; }
 
     try {
       const token = await user.getIdToken();
@@ -137,7 +139,7 @@ export default function ShowcasePage() {
       fetchPosts();
     } catch (err) {
       console.error('Error saving post:', err);
-      alert(`There was an error saving your post: ${err.message}`);
+      toast('error', `Error saving your post: ${err.message}`);
     }
   };
 
@@ -188,7 +190,7 @@ export default function ShowcasePage() {
       fetchPosts();
     } catch (err) {
       console.error('Error deleting post:', err);
-      alert(`Failed to delete post: ${err.message}`);
+      toast('error', `Failed to delete post: ${err.message}`);
     }
   };
 

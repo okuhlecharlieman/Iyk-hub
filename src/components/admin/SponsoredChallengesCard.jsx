@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { FaTrophy, FaCheck, FaTimes } from 'react-icons/fa';
+import { useToast } from '../ui/ToastProvider';
 
 export default function SponsoredChallengesCard() {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
     fetchChallenges();
@@ -31,11 +33,11 @@ export default function SponsoredChallengesCard() {
       if (response.ok) {
         fetchChallenges(); // Refresh list
       } else {
-        alert('Failed to approve challenge');
+        toast('error', 'Failed to approve challenge');
       }
     } catch (error) {
       console.error('Error approving challenge:', error);
-      alert('Error approving challenge');
+      toast('error', 'Error approving challenge');
     }
   };
 

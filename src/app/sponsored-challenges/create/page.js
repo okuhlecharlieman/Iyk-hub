@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { FaRocket, FaTrophy, FaUsers, FaLightbulb, FaCheckCircle, FaArrowRight } from 'react-icons/fa';
 import FileUploadField from '../../../components/ui/FileUploadField';
 import { uploadToStorage } from '../../../lib/firebase/helpers';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 export default function CreateSponsoredChallenge() {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ export default function CreateSponsoredChallenge() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bannerFile, setBannerFile] = useState(null);
+  const toast = useToast();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,7 +62,7 @@ export default function CreateSponsoredChallenge() {
       }
 
       const data = await response.json();
-      alert('Challenge created successfully! It will be reviewed by admins before going live.');
+      toast('success', 'Challenge created successfully! It will be reviewed by admins before going live.');
       router.push('/sponsored-challenges');
     } catch (err) {
       setError(err.message);

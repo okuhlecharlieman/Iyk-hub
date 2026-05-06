@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FaDollarSign, FaCreditCard, FaUsers, FaChartLine, FaDownload, FaEye } from 'react-icons/fa';
+import { useToast } from '../ui/ToastProvider';
 
 export default function MonetizationDashboard() {
   const [data, setData] = useState(null);
@@ -7,6 +8,7 @@ export default function MonetizationDashboard() {
   const [error, setError] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [processingPayout, setProcessingPayout] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
     fetchMonetizationData();
@@ -41,12 +43,12 @@ export default function MonetizationDashboard() {
       }
 
       const result = await response.json();
-      alert(`Payout processed successfully! Amount: ZAR ${(result.amountCents / 100).toFixed(2)}`);
+      toast('success', `Payout processed! Amount: ZAR ${(result.amountCents / 100).toFixed(2)}`);
 
       // Refresh data
       fetchMonetizationData();
     } catch (err) {
-      alert('Error processing payout: ' + err.message);
+      toast('error', 'Error processing payout: ' + err.message);
     } finally {
       setProcessingPayout(null);
     }

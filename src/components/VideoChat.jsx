@@ -17,7 +17,6 @@ import {
   limit,
   getDocs,
   addDoc,
-  orderBy,
 } from 'firebase/firestore';
 import Button from './ui/Button';
 import { FaSpinner, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash } from 'react-icons/fa';
@@ -221,13 +220,19 @@ export default function VideoChat() {
     setMediaError(null);
 
     try {
-      const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), orderBy('createdAt'));
+      const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), limit(20));
       const querySnapshot = await getDocs(q);
 
       let roomToJoin = null;
       let myExistingRoom = null;
 
-      for (const d of querySnapshot.docs) {
+      const sortedDocs = querySnapshot.docs.sort((a, b) => {
+        const aTime = a.data().createdAt?.toMillis?.() || 0;
+        const bTime = b.data().createdAt?.toMillis?.() || 0;
+        return aTime - bTime;
+      });
+
+      for (const d of sortedDocs) {
         if (d.data().userA === user.uid) {
           myExistingRoom = d;
         } else {
@@ -272,7 +277,12 @@ export default function VideoChat() {
       }
     } catch (err) {
       console.error('Error finding partner:', err);
-      setMediaError('Failed to connect. Please try again.');
+      const msg = err?.code === 'failed-precondition'
+        ? 'Video chat requires a database index. Please contact the admin.'
+        : err?.code === 'permission-denied'
+          ? 'You do not have permission to use video chat. Please log in again.'
+          : `Failed to connect: ${err?.message || 'Unknown error'}. Please try again.`;
+      setMediaError(msg);
       setStatus('idle');
     }
   };

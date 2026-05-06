@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
@@ -11,7 +11,108 @@ const createShuffledCards = () =>
     .sort(() => Math.random() - 0.5)
     .map((content, i) => ({ id: i, content, isFlipped: false, isMatched: false }));
 
-export default function MemoryGame({ gameId, onEnd }) {
+function MemorySinglePlayer({ onEnd }) {
+  const [cards, setCards] = useState(createShuffledCards);
+  const [moves, setMoves] = useState(0);
+  const [matchedPairs, setMatchedPairs] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const onEndCalledRef = useRef(false);
+
+  const flipped = cards.filter(c => c.isFlipped && !c.isMatched);
+
+  const handleClick = useCallback((card) => {
+    if (isProcessing || card.isFlipped || card.isMatched || flipped.length >= 2) return;
+    setCards(prev => prev.map(c => c.id === card.id ? { ...c, isFlipped: true } : c));
+  }, [isProcessing, flipped.length]);
+
+  useEffect(() => {
+    const currentFlipped = cards.filter(c => c.isFlipped && !c.isMatched);
+    if (currentFlipped.length !== 2) return;
+
+    setIsProcessing(true);
+    setMoves(m => m + 1);
+    const [a, b] = currentFlipped;
+
+    const timer = setTimeout(() => {
+      if (a.content === b.content) {
+        setCards(prev => prev.map(c =>
+          c.id === a.id || c.id === b.id ? { ...c, isMatched: true, isFlipped: false } : c
+        ));
+        setMatchedPairs(p => p + 1);
+      } else {
+        setCards(prev => prev.map(c =>
+          c.id === a.id || c.id === b.id ? { ...c, isFlipped: false } : c
+        ));
+      }
+      setIsProcessing(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [cards]);
+
+  useEffect(() => {
+    if (matchedPairs === cardEmojis.length && !onEndCalledRef.current) {
+      onEndCalledRef.current = true;
+      setGameOver(true);
+      const score = Math.max(1, cardEmojis.length * 2 - moves + cardEmojis.length);
+      if (onEnd) onEnd({ score, resultKey: `memory-sp:${Date.now()}:${moves}` });
+    }
+  }, [matchedPairs, moves, onEnd]);
+
+  const reset = () => {
+    setCards(createShuffledCards());
+    setMoves(0);
+    setMatchedPairs(0);
+    setGameOver(false);
+    setIsProcessing(false);
+    onEndCalledRef.current = false;
+  };
+
+  return (
+    <div className="text-center">
+      <h1 className="text-3xl font-bold mb-4">Memory Match</h1>
+      <div className="flex justify-center gap-6 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-md">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Moves</span>
+          <p className="text-2xl font-bold text-blue-500">{moves}</p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-md">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Matched</span>
+          <p className="text-2xl font-bold text-green-500">{matchedPairs} / {cardEmojis.length}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3 max-w-sm mx-auto mb-4">
+        {cards.map(card => (
+          <button
+            key={card.id}
+            onClick={() => handleClick(card)}
+            className={`w-16 h-16 md:w-20 md:h-20 rounded-xl text-3xl flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer ${
+              card.isFlipped || card.isMatched
+                ? 'bg-blue-100 dark:bg-blue-800 scale-105'
+                : 'bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500'
+            } ${card.isMatched ? 'opacity-60' : ''}`}
+          >
+            {card.isFlipped || card.isMatched ? card.content : '?'}
+          </button>
+        ))}
+      </div>
+
+      {gameOver && (
+        <div className="mt-4 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md max-w-md mx-auto">
+          <p className="text-2xl font-bold mb-2">All pairs matched!</p>
+          <p className="text-lg mb-4">Completed in <span className="font-bold text-blue-500">{moves}</span> moves</p>
+          <button onClick={reset} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+            Play Again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MemoryMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
@@ -249,4 +350,11 @@ export default function MemoryGame({ gameId, onEnd }) {
       )}
     </div>
   );
+}
+
+export default function MemoryGame({ gameId, onEnd, singlePlayer = false }) {
+  if (singlePlayer) {
+    return <MemorySinglePlayer onEnd={onEnd} />;
+  }
+  return <MemoryMultiplayer gameId={gameId} onEnd={onEnd} />;
 }

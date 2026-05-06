@@ -30,7 +30,88 @@ function HangmanDrawing({ wrongGuesses }) {
   );
 }
 
-export default function HangmanGame({ gameId, onEnd }) {
+function HangmanSinglePlayer({ onEnd }) {
+  const [word] = useState(randomWord);
+  const [guessedLetters, setGuessedLetters] = useState([]);
+  const [gameOver, setGameOver] = useState(false);
+  const onEndCalledRef = useRef(false);
+
+  const wrongGuesses = guessedLetters.filter(l => !word.includes(l)).length;
+  const wordGuessed = word.split('').every(l => guessedLetters.includes(l));
+  const lost = wrongGuesses >= 6;
+  const wordDisplay = word.split('').map(l => guessedLetters.includes(l) ? l : '_').join(' ');
+
+  useEffect(() => {
+    if ((wordGuessed || lost) && !onEndCalledRef.current) {
+      onEndCalledRef.current = true;
+      setGameOver(true);
+      const score = wordGuessed ? Math.max(1, 10 - wrongGuesses) : 1;
+      if (onEnd) onEnd({ score, resultKey: `hangman-sp:${Date.now()}:${wordGuessed ? 'win' : 'loss'}` });
+    }
+  }, [wordGuessed, lost, wrongGuesses, onEnd]);
+
+  const handleGuess = (letter) => {
+    if (guessedLetters.includes(letter) || gameOver) return;
+    setGuessedLetters(prev => [...prev, letter]);
+  };
+
+  const [resetKey, setResetKey] = useState(0);
+  const reset = () => setResetKey(k => k + 1);
+
+  if (resetKey > 0) {
+    return <HangmanSinglePlayer key={resetKey} onEnd={onEnd} />;
+  }
+
+  return (
+    <div className="text-center max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Hangman</h1>
+
+      <div className="flex justify-center gap-6 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl px-4 py-2 shadow-md">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Wrong Guesses</span>
+          <p className="text-2xl font-bold text-red-500">{wrongGuesses} / 6</p>
+        </div>
+      </div>
+
+      <HangmanDrawing wrongGuesses={wrongGuesses} />
+
+      <p className="text-4xl tracking-[0.3em] mb-6 font-mono font-bold">{wordDisplay}</p>
+
+      {!gameOver && (
+        <div className="mt-4 flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+          {'abcdefghijklmnopqrstuvwxyz'.split('').map(letter => (
+            <button
+              key={letter}
+              onClick={() => handleGuess(letter)}
+              disabled={guessedLetters.includes(letter)}
+              className={`w-10 h-10 rounded-lg font-semibold transition-all duration-200 ${
+                guessedLetters.includes(letter)
+                  ? word.includes(letter)
+                    ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 opacity-60'
+                    : 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 opacity-60'
+                  : 'bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-800 hover:scale-110'
+              } disabled:cursor-not-allowed`}
+            >
+              {letter.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {gameOver && (
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md max-w-md mx-auto">
+          <p className="text-2xl font-bold mb-2">{wordGuessed ? 'You won!' : 'Game Over!'}</p>
+          <p className="text-lg mb-4">The word was: <span className="font-bold text-blue-500">{word}</span></p>
+          <button onClick={reset} className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+            Play Again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HangmanMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
   const [playerSymbol, setPlayerSymbol] = useState(null);
@@ -261,4 +342,11 @@ export default function HangmanGame({ gameId, onEnd }) {
       )}
     </div>
   );
+}
+
+export default function HangmanGame({ gameId, onEnd, singlePlayer = false }) {
+  if (singlePlayer) {
+    return <HangmanSinglePlayer onEnd={onEnd} />;
+  }
+  return <HangmanMultiplayer gameId={gameId} onEnd={onEnd} />;
 }

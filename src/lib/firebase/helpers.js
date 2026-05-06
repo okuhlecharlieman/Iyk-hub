@@ -186,35 +186,55 @@ export async function deleteOpportunity(opportunityId) {
   await deleteDoc(doc(db, 'opportunities', opportunityId));
 }
 
-// Server-side function for fetching approved opportunities
 export async function getApprovedOpportunities(limitN = 50) {
-  const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  try {
+    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch {
+    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
 }
 
-export async function listOpportunitiesPage({ limit = 12, cursor = null } = {}) {
+export async function listOpportunitiesPage({ limit: limitN = 12, cursor = null } = {}) {
   const user = auth.currentUser;
   if (!user) {
     throw new Error('Not authenticated');
   }
 
-  const token = await user.getIdToken();
-  const params = new URLSearchParams({ limit: String(limit) });
-  if (cursor) params.set('cursor', cursor);
+  try {
+    const token = await user.getIdToken();
+    const params = new URLSearchParams({ limit: String(limitN) });
+    if (cursor) params.set('cursor', cursor);
 
-  const res = await fetch(`/api/opportunities?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    const res = await fetch(`/api/opportunities?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json.error || 'Failed to fetch opportunities');
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Failed to fetch opportunities');
+    }
+
+    return { opportunities: json.opportunities || [], nextCursor: json.nextCursor || null };
+  } catch {
+    try {
+      const qy = query(
+        collection(db, 'opportunities'),
+        where('status', '==', 'approved'),
+        limit(limitN)
+      );
+      const snap = await getDocs(qy);
+      const opportunities = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return { opportunities, nextCursor: null };
+    } catch {
+      return { opportunities: [], nextCursor: null };
+    }
   }
-
-  return { opportunities: json.opportunities || [], nextCursor: json.nextCursor || null };
 }
 
 // Client-side real-time listener

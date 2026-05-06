@@ -30,7 +30,7 @@ export default function GamePage() {
   const [mode, setMode] = useState('multiplayer');
   const multiplier = 1;
 
-  const singlePlayerAvailable = ['rps', 'quiz', 'tictactoe'].includes(baseGameId);
+  const singlePlayerAvailable = ['rps', 'quiz', 'tictactoe', 'memory', 'hangman'].includes(baseGameId);
 
   async function finishGame(result = 1, duration = 0) {
     if (!user) return;
@@ -116,7 +116,7 @@ export default function GamePage() {
                   <label htmlFor="mode" className="font-medium">Mode:</label>
                   <select id="mode" value={mode} onChange={(e) => setMode(e.target.value)} className="px-3 py-2 border rounded">
                     <option value="multiplayer">Multiplayer</option>
-                    <option value="singleplayer" disabled={!singlePlayerAvailable}>Single-player{!singlePlayerAvailable ? ' (not available for this game)' : ''}</option>
+                    <option value="singleplayer">Single-player</option>
                   </select>
                 </div>
 

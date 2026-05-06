@@ -4,7 +4,7 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
-import { FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle, FaCrown, FaChartLine, FaCog, FaShieldAlt, FaTrophy } from 'react-icons/fa';
+import { FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle, FaCrown, FaChartLine, FaCog, FaShieldAlt, FaTrophy, FaMoneyBillWave, FaRocket, FaBriefcase, FaBuilding, FaArrowRight } from 'react-icons/fa';
 import { db } from '../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import StatCard from '../../components/admin/StatCard';
@@ -19,11 +19,11 @@ import MonetizationDashboard from '../../components/admin/MonetizationDashboard'
 export default function AdminPage() {
   const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0 });
+  const [stats, setStats] = useState({ users: 0, pending: 0, approved: 0, boostOrders: 0, challengeOrders: 0 });
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (userProfile?.role !== 'admin') {
+    if (userProfile?.role?.toLowerCase() !== 'admin') {
       if (user) setLoading(false);
       return;
     }
@@ -54,6 +54,16 @@ export default function AdminPage() {
       }
     );
 
+    const boostsUnsubscribe = onSnapshot(collection(db, 'creatorBoostOrders'),
+      (snapshot) => setStats(prev => ({ ...prev, boostOrders: snapshot.size })),
+      () => {}
+    );
+
+    const challengesUnsubscribe = onSnapshot(collection(db, 'sponsoredChallenges'),
+      (snapshot) => setStats(prev => ({ ...prev, challengeOrders: snapshot.size })),
+      () => {}
+    );
+
     Promise.allSettled([
         new Promise(res => onSnapshot(collection(db, 'users'), res)),
         new Promise(res => onSnapshot(collection(db, 'opportunities'), res))
@@ -62,6 +72,8 @@ export default function AdminPage() {
     return () => {
       usersUnsubscribe();
       oppsUnsubscribe();
+      boostsUnsubscribe();
+      challengesUnsubscribe();
     };
   }, [user, userProfile]);
 
@@ -174,6 +186,62 @@ export default function AdminPage() {
                     <p className="text-lg font-bold text-green-600">Healthy</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue Streams Quick Access */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+              <FaMoneyBillWave className="mr-3 text-green-600" />
+              Revenue Streams
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link href="/admin/payments" className="group bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-5 border border-green-200 dark:border-green-800 hover:shadow-lg transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="bg-green-100 dark:bg-green-800 rounded-full p-2.5">
+                    <FaRocket className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <FaArrowRight className="text-green-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white">Creator Boosts</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">R20 – R150 per boost</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">{stats.boostOrders} orders</p>
+              </Link>
+
+              <Link href="/sponsored-challenges" className="group bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-2xl p-5 border border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="bg-purple-100 dark:bg-purple-800 rounded-full p-2.5">
+                    <FaTrophy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <FaArrowRight className="text-purple-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white">Sponsored Challenges</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">20% platform fee</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium">{stats.challengeOrders} challenges</p>
+              </Link>
+
+              <Link href="/admin/opportunities" className="group bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-5 border border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="bg-blue-100 dark:bg-blue-800 rounded-full p-2.5">
+                    <FaBriefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <FaArrowRight className="text-blue-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white">Sponsored Opps</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">R50 – R300 per listing</p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">{stats.approved} approved</p>
+              </Link>
+
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl p-5 border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="bg-amber-100 dark:bg-amber-800 rounded-full p-2.5">
+                    <FaBuilding className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                </div>
+                <h4 className="font-bold text-gray-900 dark:text-white">Institution Plans</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">R199 – R999/month</p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">Subscription revenue</p>
               </div>
             </div>
           </div>

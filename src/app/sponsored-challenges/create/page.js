@@ -4,6 +4,8 @@ import { useAuth } from '../../../context/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import { FaRocket, FaTrophy, FaUsers, FaLightbulb, FaCheckCircle, FaArrowRight } from 'react-icons/fa';
+import FileUploadField from '../../../components/ui/FileUploadField';
+import { uploadToStorage } from '../../../lib/firebase/helpers';
 
 export default function CreateSponsoredChallenge() {
   const { user } = useAuth();
@@ -20,6 +22,7 @@ export default function CreateSponsoredChallenge() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [bannerFile, setBannerFile] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,6 +36,11 @@ export default function CreateSponsoredChallenge() {
 
     try {
       const token = await user.getIdToken();
+      let bannerUrl = '';
+      if (bannerFile) {
+        bannerUrl = await uploadToStorage(bannerFile, 'challenges');
+      }
+
       const response = await fetch('/api/sponsored-challenges', {
         method: 'POST',
         headers: {
@@ -42,6 +50,7 @@ export default function CreateSponsoredChallenge() {
         body: JSON.stringify({
           ...formData,
           budgetCents: parseInt(formData.budgetCents),
+          bannerUrl,
         }),
       });
 
@@ -312,6 +321,15 @@ export default function CreateSponsoredChallenge() {
                       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         Platform fee: 20% (${platformFee}) • You pay: ${sponsorReceives}
                       </p>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <FileUploadField
+                        label="Banner Image (optional)"
+                        accept="image/*"
+                        value={bannerFile}
+                        onChange={setBannerFile}
+                      />
                     </div>
                   </div>
 

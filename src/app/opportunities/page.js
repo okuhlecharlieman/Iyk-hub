@@ -35,7 +35,7 @@ function OpportunitiesContent() {
   const [activeTab, setActiveTab] = useState(TABS.ALL);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const isAdmin = useMemo(() => userProfile?.role === 'admin', [userProfile]);
+  const isAdmin = useMemo(() => userProfile?.role?.toLowerCase() === 'admin', [userProfile]);
   const toast = useToast();
 
   const loadOpportunities = useCallback(async ({ cursor = null, append = false } = {}) => {

@@ -30,7 +30,7 @@ export function AuthProvider({ children }) {
         unsubProfile = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
-            const adminStatus = data.role === 'admin';
+            const adminStatus = data.role?.toLowerCase() === 'admin';
             setUserProfile({ id: snap.id, ...data });
             setIsAdmin(adminStatus);
             currentUser.getIdToken(true).catch(console.warn);

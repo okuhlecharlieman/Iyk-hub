@@ -445,24 +445,57 @@ export default function VideoChat() {
     }
   };
 
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   const toggleFullscreen = async () => {
-    const el = videoContainerRef.current;
-    if (!el) return;
     try {
-      if (!document.fullscreenElement) {
-        await el.requestFullscreen();
+      if (isIOS) {
+        // iOS Safari: use webkitEnterFullscreen on the remote video element
+        const vid = remoteVideoRef.current;
+        if (vid && vid.webkitEnterFullscreen) {
+          vid.webkitEnterFullscreen();
+          return;
+        }
+        // Fallback: try webkitRequestFullscreen on the container
+        const el = videoContainerRef.current;
+        if (el && el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+          setIsFullscreen(true);
+          return;
+        }
+      }
+
+      const el = videoContainerRef.current;
+      if (!el) return;
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      if (!fsEl) {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        }
         setIsFullscreen(true);
       } else {
-        await document.exitFullscreen();
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
         setIsFullscreen(false);
       }
     } catch {}
   };
 
   useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
+    };
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
   }, []);
 
   // Keep PiP video in sync with local stream when connected

@@ -10,6 +10,8 @@ import {
   handleDisputeCreated,
   handleDisputeClosed,
 } from '../../../../lib/stripe/stripe-client';
+import { startTrace, endTrace, traceError } from '../../../../lib/api/tracing';
+import { alertWebhookFailure, alertDisputeOpened } from '../../../../lib/api/alerts';
 
 /**
  * Check idempotency: return true if this event was already processed.
@@ -87,9 +89,17 @@ async function handlePaymentEvent(event, db) {
       await handleChargeRefunded(event, { db });
       break;
 
-    case 'charge.dispute.created':
+    case 'charge.dispute.created': {
       await handleDisputeCreated(event, { db });
+      const dispute = event.data.object;
+      await alertDisputeOpened({
+        disputeId: dispute.id,
+        paymentIntentId: dispute.payment_intent,
+        amountCents: dispute.amount,
+        reason: dispute.reason,
+      });
       break;
+    }
 
     case 'charge.dispute.closed':
     case 'charge.dispute.updated':
@@ -102,6 +112,7 @@ async function handlePaymentEvent(event, db) {
 }
 
 export async function POST(request) {
+  const trace = startTrace(request, 'payments:webhook');
   try {
     await initializeFirebaseAdmin();
 
@@ -135,9 +146,15 @@ export async function POST(request) {
     await handlePaymentEvent(event, db);
     await logStripeEvent(db, event, true);
 
-    return NextResponse.json({ received: true }, { status: 200 });
+    const response = NextResponse.json({ received: true }, { status: 200 });
+    return endTrace(trace, 200, response);
   } catch (error) {
-    console.error('Error processing Stripe webhook:', error);
+    traceError(trace, error);
+    await alertWebhookFailure({
+      eventType: 'unknown',
+      eventId: 'unknown',
+      error,
+    });
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }

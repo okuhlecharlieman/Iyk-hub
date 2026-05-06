@@ -127,5 +127,96 @@ service cloud.firestore {
         allow read, write: if request.auth.uid != null;
       }
     }
+
+    // Financial ledger — server-only (Admin SDK), no client access
+    match /financialLedger/{entryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Stripe processed events — server-only idempotency store
+    match /stripeProcessedEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    // Stripe webhook logs — admin read, server write
+    match /stripeWebhookLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Payment records — admin read, server write
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // Payment logs — admin read, server write
+    match /paymentLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Payouts — admin only
+    match /payouts/{payoutId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // System alerts — admin only
+    match /systemAlerts/{alertId} {
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow create, delete: if false;
+    }
+
+    // Rate limits — server-only
+    match /rateLimits/{bucketId} {
+      allow read, write: if false;
+    }
+
+    // Admin audit logs — admin read, server write
+    match /adminAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Security logs — admin read, server write
+    match /securityLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Data access logs — admin read, server write
+    match /dataAccessLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Order collections — admin full access, owner read
+    match /sponsoredChallengeOrders/{orderId} {
+      allow read: if isAdmin() || resource.data.creatorUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /creatorBoostOrders/{orderId} {
+      allow read: if isAdmin() || resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /institutionAccounts/{accountId} {
+      allow read: if isAdmin() || resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /sponsoredOpportunityOrders/{orderId} {
+      allow read: if isAdmin() || resource.data.ownerUid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /placementReports/{reportId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
   }
 }

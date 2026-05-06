@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getOrderConfig } from '../../../../../lib/monetization/constants';
+import { alertReconciliationMismatch } from '../../../../../lib/api/alerts';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payments:reconciliation:get', limit: 60, windowMs: 60 * 1000 });
@@ -59,6 +60,15 @@ export async function GET(request) {
     );
 
     const inconsistent = checks.filter((entry) => !entry.consistent);
+
+    // Alert if mismatches found
+    if (inconsistent.length > 0) {
+      await alertReconciliationMismatch({
+        totalChecked: checks.length,
+        inconsistentCount: inconsistent.length,
+        inconsistentSample: inconsistent,
+      });
+    }
 
     return NextResponse.json({
       totalChecked: checks.length,

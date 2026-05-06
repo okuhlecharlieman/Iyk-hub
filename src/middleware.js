@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { addTraceHeaders } from './lib/api/tracing';
 
 const CSP_DIRECTIVES = [
   "default-src 'self'",
@@ -24,6 +25,8 @@ export function middleware(request) {
   response.headers.set('Content-Security-Policy', CSP_DIRECTIVES);
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   response.headers.set('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+
+  addTraceHeaders(request, response);
 
   if (request.nextUrl.pathname.startsWith('/api/')) {
     response.headers.set('Cache-Control', 'no-store');

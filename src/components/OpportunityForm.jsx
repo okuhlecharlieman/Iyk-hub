@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import Button from './ui/Button';
+import FileUploadField from './ui/FileUploadField';
+import { uploadToStorage } from '../lib/firebase/helpers';
 
 export default function OpportunityForm({ onSubmit, initialFormState, submitButtonText }) {
   const [form, setForm] = useState(initialFormState);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     setForm(initialFormState);
+    setMediaFile(null);
   }, [initialFormState]);
 
   const handleChange = (e) => {
@@ -13,21 +18,42 @@ export default function OpportunityForm({ onSubmit, initialFormState, submitButt
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(form);
+    setUploading(true);
+    try {
+      let mediaUrl = form.mediaUrl || '';
+      if (mediaFile) {
+        mediaUrl = await uploadToStorage(mediaFile, 'opportunities');
+      }
+      onSubmit({ ...form, mediaUrl });
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Failed to upload media: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploading(false);
+    }
   };
+
+  const inputClass = "w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200";
 
   return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Title" name="title" value={form.title} onChange={handleChange} required />
-        <input className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Organization" name="org" value={form.org} onChange={handleChange} required />
-        <input className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Link (https://...)" name="link" type="url" value={form.link} onChange={handleChange} required />
-        <textarea className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Short Description" rows={3} name="description" value={form.description} onChange={handleChange} required />
-        <input className="w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200" placeholder="Tags (e.g., tech, volunteering)" name="tags" value={form.tags} onChange={handleChange} />
+        <input className={inputClass} placeholder="Title" name="title" value={form.title} onChange={handleChange} required />
+        <input className={inputClass} placeholder="Organization" name="org" value={form.org} onChange={handleChange} required />
+        <input className={inputClass} placeholder="Link (https://...)" name="link" type="url" value={form.link} onChange={handleChange} required />
+        <textarea className={inputClass} placeholder="Short Description" rows={3} name="description" value={form.description} onChange={handleChange} required />
+        <input className={inputClass} placeholder="Tags (e.g., tech, volunteering)" name="tags" value={form.tags} onChange={handleChange} />
+        <FileUploadField
+          label="Image / Media (optional)"
+          accept="image/*"
+          value={mediaFile}
+          onChange={setMediaFile}
+          previewUrl={form.mediaUrl || ''}
+        />
         <div className="flex justify-end space-x-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setForm(initialFormState)}>Reset</Button>
-            <Button type="submit" variant="primary">{submitButtonText}</Button>
+            <Button type="button" variant="secondary" onClick={() => { setForm(initialFormState); setMediaFile(null); }}>Reset</Button>
+            <Button type="submit" variant="primary" disabled={uploading}>{uploading ? 'Uploading...' : submitButtonText}</Button>
         </div> 
       </form>
   );

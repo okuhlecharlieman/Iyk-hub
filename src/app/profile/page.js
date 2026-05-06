@@ -117,7 +117,7 @@ export default function ProfilePage() {
                         <button onClick={() => setIsEditing(true)} className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"><FaEdit /></button>
                        </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email}</p>
-                      {doc?.role === 'admin' && (
+                      {doc?.role?.toLowerCase() === 'admin' && (
                           <Link href="/admin" className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all">
                             <FaShieldAlt className="text-sm" />
                             Admin Dashboard

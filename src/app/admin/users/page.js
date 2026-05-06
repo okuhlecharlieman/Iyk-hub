@@ -139,7 +139,7 @@ export default function AdminUsersPage() {
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
-    if (userProfile?.role === 'admin' && user) {
+    if (userProfile?.role?.toLowerCase() === 'admin' && user) {
       let unsubscribe;
 
       (async () => {
@@ -284,7 +284,7 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (userProfile?.role !== 'admin') {
+  if (userProfile?.role?.toLowerCase() !== 'admin') {
     return <p>You are not authorized to view this page.</p>;
   }
 

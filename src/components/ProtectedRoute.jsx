@@ -23,9 +23,8 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
       return;
     }
 
-    if (adminOnly && userProfile?.role !== 'admin') {
+    if (adminOnly && userProfile?.role?.toLowerCase() !== 'admin') {
       // Non-admin trying to access admin page
-      // We don't redirect here; we let the render logic show the detailed access denied message.
     }
 
   }, [isMounted, loading, user, userProfile, adminOnly, router]);
@@ -38,7 +37,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
 
-  if (adminOnly && userProfile?.role !== 'admin') {
+  if (adminOnly && userProfile?.role?.toLowerCase() !== 'admin') {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-center px-4">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full">

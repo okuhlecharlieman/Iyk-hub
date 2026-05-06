@@ -20,7 +20,7 @@ import {
   addDoc,
 } from 'firebase/firestore';
 import Button from './ui/Button';
-import { FaSpinner, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaUserPlus, FaClock, FaUser } from 'react-icons/fa';
+import { FaSpinner, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaUserPlus, FaClock, FaUser, FaExpand, FaCompress } from 'react-icons/fa';
 
 const STUN_SERVERS = {
   iceServers: [
@@ -66,9 +66,12 @@ export default function VideoChat() {
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [timeLeft, setTimeLeft] = useState(INITIAL_TIME_LIMIT);
   const [bonusAdded, setBonusAdded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const localVideoRef = useRef(null);
+  const pipVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const videoContainerRef = useRef(null);
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
   const roomRefRef = useRef(null);
@@ -130,6 +133,7 @@ export default function VideoChat() {
     }
 
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    if (pipVideoRef.current) pipVideoRef.current.srcObject = null;
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
 
     if (roomRefRef.current) {
@@ -171,6 +175,8 @@ export default function VideoChat() {
     setMediaError(null);
     setTimeLeft(INITIAL_TIME_LIMIT);
     setBonusAdded(false);
+    setVideoEnabled(true);
+    setAudioEnabled(true);
   }, [user, cleanup]);
 
   const findPartner = useCallback(async () => {
@@ -180,6 +186,8 @@ export default function VideoChat() {
     setTimeLeft(INITIAL_TIME_LIMIT);
     setBonusAdded(false);
     setPartnerName(null);
+    setVideoEnabled(true);
+    setAudioEnabled(true);
     toast('info', 'Looking for someone to chat with...');
 
     try {
@@ -304,6 +312,7 @@ export default function VideoChat() {
 
     localStreamRef.current = localStream;
     if (localVideoRef.current) localVideoRef.current.srcObject = localStream;
+    if (pipVideoRef.current) pipVideoRef.current.srcObject = localStream;
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
     const roomUnsub = onSnapshot(roomRef, async (snap) => {
@@ -436,6 +445,33 @@ export default function VideoChat() {
     }
   };
 
+  const toggleFullscreen = async () => {
+    const el = videoContainerRef.current;
+    if (!el) return;
+    try {
+      if (!document.fullscreenElement) {
+        await el.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  // Keep PiP video in sync with local stream when connected
+  useEffect(() => {
+    if (status === 'connected' && localStreamRef.current && pipVideoRef.current) {
+      pipVideoRef.current.srcObject = localStreamRef.current;
+    }
+  }, [status]);
+
   return (
     <div className="space-y-6">
       {mediaError && (
@@ -507,41 +543,50 @@ export default function VideoChat() {
           </div>
 
           {/* Video area — PiP layout */}
-          <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg">
+          <div ref={videoContainerRef} className={`relative w-full bg-black rounded-2xl overflow-hidden shadow-lg ${isFullscreen ? '' : 'aspect-video'}`}>
             {/* Remote video (full size) */}
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              className="w-full h-full object-cover"
+              className={`w-full h-full object-cover ${isFullscreen ? 'absolute inset-0' : ''}`}
             />
 
             {/* Partner name overlay */}
             {partnerName && (
-              <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2">
+              <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 z-10">
                 <FaUser className="text-white text-xs" />
                 <span className="text-white text-sm font-medium">{partnerName}</span>
               </div>
             )}
 
             {/* Timer overlay */}
-            <div className={`absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5 ${timeLeft <= 10 ? 'bg-red-600/70' : ''}`}>
+            <div className={`absolute top-4 right-16 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5 z-10 ${timeLeft <= 10 ? 'bg-red-600/70' : ''}`}>
               <span className="text-white text-sm font-mono font-bold">{formatTime(timeLeft)}</span>
             </div>
 
-            {/* Self video (PiP — small overlay) */}
-            <div className="absolute bottom-4 right-4 w-32 sm:w-40 md:w-48 aspect-video rounded-xl overflow-hidden shadow-xl border-2 border-white/30">
+            {/* Fullscreen button */}
+            <button
+              onClick={toggleFullscreen}
+              className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg p-2 text-white hover:bg-black/70 transition-colors z-10"
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <FaCompress /> : <FaExpand />}
+            </button>
+
+            {/* Self video (PiP — small overlay with separate ref) */}
+            <div className="absolute bottom-16 right-4 w-28 sm:w-36 md:w-44 aspect-video rounded-xl overflow-hidden shadow-xl border-2 border-white/30 z-10">
               <video
-                ref={localVideoRef}
+                ref={pipVideoRef}
                 autoPlay
                 muted
                 playsInline
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover bg-gray-900"
               />
             </div>
 
             {/* Controls overlay */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
               <button
                 onClick={toggleVideo}
                 className={`p-3 rounded-full transition-colors shadow-lg ${videoEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white hover:bg-red-600'}`}
@@ -555,6 +600,13 @@ export default function VideoChat() {
                 title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
               >
                 {audioEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
+              </button>
+              <button
+                onClick={toggleFullscreen}
+                className="p-3 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors shadow-lg"
+                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              >
+                {isFullscreen ? <FaCompress /> : <FaExpand />}
               </button>
               <button
                 onClick={stopCall}

@@ -1,4 +1,6 @@
 import Stripe from 'stripe';
+import { ORDER_CONFIG, LEDGER_ENTRY_TYPES } from '../monetization/constants';
+import { appendLedgerEntry, recordChargeWithFees } from '../monetization/ledger';
 
 let stripeInstance = null;
 
@@ -16,9 +18,6 @@ export function getStripeClient() {
   return stripeInstance;
 }
 
-/**
- * Create a Stripe Payment Intent for a sponsored challenge or other order
- */
 export async function createStripePaymentIntent({
   amountCents,
   currency = 'USD',
@@ -54,9 +53,6 @@ export async function createStripePaymentIntent({
   }
 }
 
-/**
- * Retrieve a Stripe Payment Intent
- */
 export async function getStripePaymentIntent(intentId) {
   const stripe = getStripeClient();
   try {
@@ -68,9 +64,6 @@ export async function getStripePaymentIntent(intentId) {
   }
 }
 
-/**
- * Create or get a Stripe Customer
- */
 export async function createOrGetStripeCustomer({
   email,
   name,
@@ -97,9 +90,6 @@ export async function createOrGetStripeCustomer({
   }
 }
 
-/**
- * Verify Stripe webhook signature
- */
 export function verifyStripeWebhookSignature(body, signature) {
   const stripe = getStripeClient();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -117,14 +107,10 @@ export function verifyStripeWebhookSignature(body, signature) {
   }
 }
 
-/**
- * Handle payment intent succeeded event
- */
 export async function handlePaymentIntentSucceeded(event, { db, logPayment }) {
   const paymentIntent = event.data.object;
   const { orderType, orderId } = paymentIntent.metadata;
 
-  // Log the payment
   if (logPayment) {
     await logPayment({
       paymentIntentId: paymentIntent.id,
@@ -137,18 +123,22 @@ export async function handlePaymentIntentSucceeded(event, { db, logPayment }) {
     });
   }
 
-  // Update order status in database
-  const COLLECTIONS_MAP = {
-    sponsoredChallenge: 'sponsoredChallengeOrders',
-    creatorBoost: 'creatorBoostOrders',
-    institutionPlan: 'institutionAccounts',
-  };
+  // Record in financial ledger with fee breakdown
+  await recordChargeWithFees(db, {
+    orderType,
+    orderId,
+    grossAmountCents: paymentIntent.amount,
+    currency: paymentIntent.currency.toUpperCase(),
+    stripeEventId: event.id,
+    stripePaymentIntentId: paymentIntent.id,
+  });
 
-  const collectionName = COLLECTIONS_MAP[orderType];
-  if (collectionName && db) {
-    await db.collection(collectionName).doc(orderId).set(
+  // Update order status using unified config
+  const config = ORDER_CONFIG[orderType];
+  if (config && db) {
+    await db.collection(config.collection).doc(orderId).set(
       {
-        paymentStatus: 'paid',
+        [config.statusField]: 'paid',
         paymentIntentId: paymentIntent.id,
         paidAt: new Date(),
         updatedAt: new Date(),
@@ -157,17 +147,26 @@ export async function handlePaymentIntentSucceeded(event, { db, logPayment }) {
     );
   }
 
+  // Update local payment record
+  const paymentsSnap = await db.collection('payments')
+    .where('stripePaymentIntentId', '==', paymentIntent.id)
+    .limit(1)
+    .get();
+
+  if (!paymentsSnap.empty) {
+    await paymentsSnap.docs[0].ref.update({
+      status: 'paid',
+      updatedAt: new Date(),
+    });
+  }
+
   return true;
 }
 
-/**
- * Handle payment intent failed event
- */
 export async function handlePaymentIntentFailed(event, { db, logPayment }) {
   const paymentIntent = event.data.object;
   const { orderType, orderId } = paymentIntent.metadata;
 
-  // Log the failure
   if (logPayment) {
     await logPayment({
       paymentIntentId: paymentIntent.id,
@@ -180,18 +179,24 @@ export async function handlePaymentIntentFailed(event, { db, logPayment }) {
     });
   }
 
-  // Update order status
-  const COLLECTIONS_MAP = {
-    sponsoredChallenge: 'sponsoredChallengeOrders',
-    creatorBoost: 'creatorBoostOrders',
-    institutionPlan: 'institutionAccounts',
-  };
+  // Record in financial ledger
+  await appendLedgerEntry(db, {
+    entryType: LEDGER_ENTRY_TYPES.CHARGE_FAILED,
+    orderType,
+    orderId,
+    amountCents: paymentIntent.amount,
+    currency: paymentIntent.currency.toUpperCase(),
+    stripeEventId: event.id,
+    stripePaymentIntentId: paymentIntent.id,
+    description: paymentIntent.last_payment_error?.message || 'Payment failed',
+  });
 
-  const collectionName = COLLECTIONS_MAP[orderType];
-  if (collectionName && db) {
-    await db.collection(collectionName).doc(orderId).set(
+  // Update order status using unified config
+  const config = ORDER_CONFIG[orderType];
+  if (config && db) {
+    await db.collection(config.collection).doc(orderId).set(
       {
-        paymentStatus: 'failed',
+        [config.statusField]: 'failed',
         paymentIntentId: paymentIntent.id,
         failureReason: paymentIntent.last_payment_error?.message,
         updatedAt: new Date(),
@@ -199,6 +204,159 @@ export async function handlePaymentIntentFailed(event, { db, logPayment }) {
       { merge: true }
     );
   }
+
+  return true;
+}
+
+/**
+ * Handle charge.refunded webhook event
+ */
+export async function handleChargeRefunded(event, { db }) {
+  const charge = event.data.object;
+  const paymentIntentId = charge.payment_intent;
+  const refundAmountCents = charge.amount_refunded;
+
+  // Look up the original order from the payment intent
+  let orderType = null;
+  let orderId = null;
+
+  if (paymentIntentId) {
+    const paymentsSnap = await db.collection('payments')
+      .where('stripePaymentIntentId', '==', paymentIntentId)
+      .limit(1)
+      .get();
+
+    if (!paymentsSnap.empty) {
+      const paymentData = paymentsSnap.docs[0].data();
+      orderType = paymentData.orderType;
+      orderId = paymentData.orderId;
+
+      await paymentsSnap.docs[0].ref.update({
+        status: 'refunded',
+        refundedAmountCents: refundAmountCents,
+        updatedAt: new Date(),
+      });
+    }
+  }
+
+  // Record refund in ledger
+  await appendLedgerEntry(db, {
+    entryType: LEDGER_ENTRY_TYPES.REFUND_CREATED,
+    orderType,
+    orderId,
+    amountCents: refundAmountCents,
+    currency: charge.currency.toUpperCase(),
+    stripeEventId: event.id,
+    stripePaymentIntentId: paymentIntentId,
+    description: `Refund of ${refundAmountCents} cents`,
+  });
+
+  // Update order status if we found the order
+  if (orderType && orderId) {
+    const config = ORDER_CONFIG[orderType];
+    if (config) {
+      await db.collection(config.collection).doc(orderId).set(
+        {
+          [config.statusField]: 'refunded',
+          refundedAt: new Date(),
+          refundedAmountCents: refundAmountCents,
+          updatedAt: new Date(),
+        },
+        { merge: true }
+      );
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Handle charge.dispute.created webhook event
+ */
+export async function handleDisputeCreated(event, { db }) {
+  const dispute = event.data.object;
+  const paymentIntentId = dispute.payment_intent;
+  const disputeAmountCents = dispute.amount;
+
+  let orderType = null;
+  let orderId = null;
+
+  if (paymentIntentId) {
+    const paymentsSnap = await db.collection('payments')
+      .where('stripePaymentIntentId', '==', paymentIntentId)
+      .limit(1)
+      .get();
+
+    if (!paymentsSnap.empty) {
+      const paymentData = paymentsSnap.docs[0].data();
+      orderType = paymentData.orderType;
+      orderId = paymentData.orderId;
+
+      await paymentsSnap.docs[0].ref.update({
+        status: 'disputed',
+        disputeId: dispute.id,
+        disputeReason: dispute.reason,
+        updatedAt: new Date(),
+      });
+    }
+  }
+
+  await appendLedgerEntry(db, {
+    entryType: LEDGER_ENTRY_TYPES.DISPUTE_OPENED,
+    orderType,
+    orderId,
+    amountCents: disputeAmountCents,
+    currency: dispute.currency.toUpperCase(),
+    stripeEventId: event.id,
+    stripePaymentIntentId: paymentIntentId,
+    description: `Dispute opened: ${dispute.reason}`,
+    metadata: { disputeId: dispute.id, reason: dispute.reason },
+  });
+
+  return true;
+}
+
+/**
+ * Handle charge.dispute.closed webhook event (won or lost)
+ */
+export async function handleDisputeClosed(event, { db }) {
+  const dispute = event.data.object;
+  const paymentIntentId = dispute.payment_intent;
+  const won = dispute.status === 'won';
+
+  let orderType = null;
+  let orderId = null;
+
+  if (paymentIntentId) {
+    const paymentsSnap = await db.collection('payments')
+      .where('stripePaymentIntentId', '==', paymentIntentId)
+      .limit(1)
+      .get();
+
+    if (!paymentsSnap.empty) {
+      const paymentData = paymentsSnap.docs[0].data();
+      orderType = paymentData.orderType;
+      orderId = paymentData.orderId;
+
+      await paymentsSnap.docs[0].ref.update({
+        status: won ? 'paid' : 'dispute_lost',
+        disputeOutcome: dispute.status,
+        updatedAt: new Date(),
+      });
+    }
+  }
+
+  await appendLedgerEntry(db, {
+    entryType: won ? LEDGER_ENTRY_TYPES.DISPUTE_WON : LEDGER_ENTRY_TYPES.DISPUTE_LOST,
+    orderType,
+    orderId,
+    amountCents: dispute.amount,
+    currency: dispute.currency.toUpperCase(),
+    stripeEventId: event.id,
+    stripePaymentIntentId: paymentIntentId,
+    description: `Dispute ${dispute.status}: ${dispute.reason}`,
+    metadata: { disputeId: dispute.id },
+  });
 
   return true;
 }

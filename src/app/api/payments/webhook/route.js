@@ -6,19 +6,44 @@ import {
   verifyStripeWebhookSignature,
   handlePaymentIntentSucceeded,
   handlePaymentIntentFailed,
+  handleChargeRefunded,
+  handleDisputeCreated,
+  handleDisputeClosed,
 } from '../../../../lib/stripe/stripe-client';
 
-// Next.js 13+ App Router - raw body is handled automatically by the route handler
+/**
+ * Check idempotency: return true if this event was already processed.
+ * Uses a Firestore transaction to atomically check-and-set.
+ */
+async function isEventAlreadyProcessed(db, eventId) {
+  const eventRef = db.collection('stripeProcessedEvents').doc(eventId);
 
+  try {
+    const alreadyProcessed = await db.runTransaction(async (txn) => {
+      const doc = await txn.get(eventRef);
+      if (doc.exists) return true;
 
-async function logStripeEvent(db, event) {
+      txn.set(eventRef, {
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return false;
+    });
+
+    return alreadyProcessed;
+  } catch (error) {
+    console.error('Idempotency check failed, proceeding cautiously:', error);
+    return false;
+  }
+}
+
+async function logStripeEvent(db, event, success) {
   try {
     await db.collection('stripeWebhookLogs').add({
       type: event.type,
       eventId: event.id,
       timestamp: new Date(event.created * 1000),
       dataObjectId: event.data.object.id,
-      success: true,
+      success,
       receivedAt: new Date(),
     });
   } catch (error) {
@@ -27,7 +52,7 @@ async function logStripeEvent(db, event) {
 }
 
 async function handlePaymentEvent(event, db) {
-  const { type, data } = event;
+  const { type } = event;
 
   switch (type) {
     case 'payment_intent.succeeded':
@@ -55,13 +80,20 @@ async function handlePaymentEvent(event, db) {
       break;
 
     case 'payment_intent.canceled':
-      // Handle cancellation if needed
-      console.log('Payment intent cancelled:', data.object.id);
+      console.log('Payment intent cancelled:', event.data.object.id);
       break;
 
     case 'charge.refunded':
-      // Handle refund if needed
-      console.log('Charge refunded:', data.object.id);
+      await handleChargeRefunded(event, { db });
+      break;
+
+    case 'charge.dispute.created':
+      await handleDisputeCreated(event, { db });
+      break;
+
+    case 'charge.dispute.closed':
+    case 'charge.dispute.updated':
+      await handleDisputeClosed(event, { db });
       break;
 
     default:
@@ -73,7 +105,6 @@ export async function POST(request) {
   try {
     await initializeFirebaseAdmin();
 
-    // Get raw body for signature verification
     const buf = await buffer(request.body);
     const signature = request.headers.get('stripe-signature');
 
@@ -82,7 +113,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
-    // Verify webhook signature
     let event;
     try {
       event = verifyStripeWebhookSignature(buf, signature);
@@ -91,15 +121,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 401 });
     }
 
-    console.log(`Processing Stripe event: ${event.type}`);
-
     const db = admin.firestore();
 
-    // Handle the event
-    await handlePaymentEvent(event, db);
+    // Idempotency check: skip if already processed
+    const alreadyProcessed = await isEventAlreadyProcessed(db, event.id);
+    if (alreadyProcessed) {
+      console.log(`Skipping duplicate Stripe event: ${event.id}`);
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
 
-    // Log the event for audit trail
-    await logStripeEvent(db, event);
+    console.log(`Processing Stripe event: ${event.type} (${event.id})`);
+
+    await handlePaymentEvent(event, db);
+    await logStripeEvent(db, event, true);
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {

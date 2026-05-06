@@ -1,25 +1,8 @@
 import admin from 'firebase-admin';
+import { getOrderConfig } from './constants';
 
-const SUPPORTED_ORDER_COLLECTIONS = {
-  sponsoredOpportunity: {
-    collection: 'sponsoredOpportunityOrders',
-    statusField: 'paymentStatus',
-  },
-  institution: {
-    collection: 'institutionAccounts',
-    statusField: 'paymentStatus',
-  },
-  creatorBoost: {
-    collection: 'creatorBoostOrders',
-    statusField: 'paymentStatus',
-  },
-  placementFee: {
-    collection: 'placementReports',
-    statusField: 'feeStatus',
-  },
-};
-
-export const getOrderConfig = (orderType) => SUPPORTED_ORDER_COLLECTIONS[orderType] || null;
+// Re-export from constants for backward compatibility
+export { getOrderConfig } from './constants';
 
 export const SOUTH_AFRICA_PAYMENT_OPTIONS = [
   {

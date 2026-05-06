@@ -38,8 +38,12 @@ export default function DashboardPage() {
           const options = { year: 'numeric', month: 'long', day: 'numeric' };
           setFormattedDate(date.toLocaleDateString('en-US', options));
         }
-        const list = await getApprovedOpportunities(3);
-        setOpps(list);
+        try {
+          const list = await getApprovedOpportunities(3);
+          setOpps(list);
+        } catch {
+          setOpps([]);
+        }
       }
       load();
     }

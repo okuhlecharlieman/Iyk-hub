@@ -8,6 +8,7 @@ import ContentCard from '../../../components/ContentCard';
 import ProfileEditor from '../../../components/ProfileEditor';
 import { FaPaintBrush, FaUserCircle, FaPencilAlt } from 'react-icons/fa';
 import LoadingSpinner from '../../../components/LoadingSpinner';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 function normalizeSkills(skills) {
   if (Array.isArray(skills)) {
@@ -42,6 +43,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const toast = useToast();
 
   const isOwner = currentUser && currentUser.uid === id;
 
@@ -102,7 +104,7 @@ export default function ProfilePage() {
       await fetchProfileData();
     } catch (err) {
       console.error('Error saving profile:', err);
-      alert(`Error: ${err.message}`);
+      toast('error', err.message);
     }
   };
 

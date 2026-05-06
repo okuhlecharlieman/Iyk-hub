@@ -8,6 +8,7 @@ export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (post) {
@@ -24,7 +25,7 @@ export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
       onClose();
     } catch (error) {
       console.error("Error updating post:", error);
-      alert("Failed to update post. Please try again.");
+      toast('error', 'Failed to update post. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -4,10 +4,9 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
-import { FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle, FaCrown, FaChartLine, FaCog, FaShieldAlt, FaTrophy, FaMoneyBillWave, FaRocket, FaBriefcase, FaBuilding, FaArrowRight } from 'react-icons/fa';
+import { FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle, FaCrown, FaChartLine, FaShieldAlt, FaTrophy, FaMoneyBillWave, FaRocket, FaBriefcase, FaBuilding, FaArrowRight, FaSyncAlt } from 'react-icons/fa';
 import { db } from '../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
-import StatCard from '../../components/admin/StatCard';
 import UserManagementCard from '../../components/admin/UserManagementCard';
 import PendingOppsCard from '../../components/admin/PendingOppsCard';
 import LeaderboardCard from '../../components/admin/LeaderboardCard';
@@ -79,10 +78,10 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="flex justify-center items-center min-h-[60vh]">
         <div className="text-center">
           <LoadingSpinner />
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">Loading admin dashboard...</p>
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -90,233 +89,158 @@ export default function AdminPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col items-center justify-center text-center px-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 max-w-md">
-          <FaExclamationTriangle className="text-5xl text-red-500 mb-4 mx-auto" />
-          <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">An Error Occurred</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 max-w-md">
+          <FaExclamationTriangle className="text-4xl text-red-500 mb-4 mx-auto" />
+          <h2 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Something went wrong</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium"
           >
-            Try Again
+            <FaSyncAlt className="inline mr-2" /> Try Again
           </button>
         </div>
       </div>
     );
   }
 
+  const statCards = [
+    { label: 'Total Users', value: stats.users, icon: <FaUsers />, color: 'blue', href: '/admin/users' },
+    { label: 'Pending Opps', value: stats.pending, icon: <FaClock />, color: 'amber', href: '/admin/opportunities' },
+    { label: 'Approved Opps', value: stats.approved, icon: <FaCheckCircle />, color: 'green', href: '/admin/opportunities' },
+    { label: 'Boost Orders', value: stats.boostOrders, icon: <FaRocket />, color: 'purple', href: '/admin/payments' },
+  ];
+
+  const colorMap = {
+    blue: { bg: 'bg-blue-50 dark:bg-blue-900/20', icon: 'text-blue-600 dark:text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
+    amber: { bg: 'bg-amber-50 dark:bg-amber-900/20', icon: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
+    green: { bg: 'bg-green-50 dark:bg-green-900/20', icon: 'text-green-600 dark:text-green-400', iconBg: 'bg-green-100 dark:bg-green-900/40' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-900/20', icon: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
+  };
+
+  const revenueCards = [
+    { href: '/admin/payments', icon: <FaRocket />, title: 'Creator Boosts', desc: 'R20 – R150/boost', stat: `${stats.boostOrders} orders`, gradient: 'from-green-500 to-emerald-600' },
+    { href: '/sponsored-challenges', icon: <FaTrophy />, title: 'Challenges', desc: '20% platform fee', stat: `${stats.challengeOrders} challenges`, gradient: 'from-purple-500 to-indigo-600' },
+    { href: '/admin/opportunities', icon: <FaBriefcase />, title: 'Sponsored Opps', desc: 'R50 – R300/listing', stat: `${stats.approved} approved`, gradient: 'from-blue-500 to-cyan-600' },
+    { href: '#', icon: <FaBuilding />, title: 'Institution Plans', desc: 'R199 – R999/month', stat: 'Subscription', gradient: 'from-amber-500 to-orange-600' },
+  ];
+
   return (
     <ProtectedRoute adminOnly={true}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-full p-3">
-                  <FaCrown className="h-8 w-8" />
-                </div>
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold">Admin Dashboard</h1>
-                  <p className="text-blue-100 mt-1">Manage your platform and monitor performance</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-full p-2">
-                  <FaShieldAlt className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium">Admin Access</span>
-              </div>
-            </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Platform overview and management</p>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              System Healthy
+            </span>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Stats Section */}
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <FaChartLine className="mr-3 text-blue-600" />
-              Platform Overview
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-shadow duration-200">
-                <div className="flex items-center">
-                  <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-3 mr-4">
-                    <FaUsers className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Users</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.users}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-shadow duration-200">
-                <div className="flex items-center">
-                  <div className="bg-yellow-100 dark:bg-yellow-900 rounded-full p-3 mr-4">
-                    <FaClock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Opportunities</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-shadow duration-200">
-                <div className="flex items-center">
-                  <div className="bg-green-100 dark:bg-green-900 rounded-full p-3 mr-4">
-                    <FaCheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Approved Opportunities</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.approved}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-shadow duration-200">
-                <div className="flex items-center">
-                  <div className="bg-purple-100 dark:bg-purple-900 rounded-full p-3 mr-4">
-                    <FaCog className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">System Status</p>
-                    <p className="text-lg font-bold text-green-600">Healthy</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Revenue Streams Quick Access */}
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-              <FaMoneyBillWave className="mr-3 text-green-600" />
-              Revenue Streams
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Link href="/admin/payments" className="group bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-5 border border-green-200 dark:border-green-800 hover:shadow-lg transition-all">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {statCards.map((card) => {
+            const colors = colorMap[card.color];
+            return (
+              <Link key={card.label} href={card.href} className="group bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 hover:shadow-md transition-all hover:border-gray-300 dark:hover:border-gray-600">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="bg-green-100 dark:bg-green-800 rounded-full p-2.5">
-                    <FaRocket className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className={`${colors.iconBg} rounded-lg p-2`}>
+                    <span className={`${colors.icon} text-lg`}>{card.icon}</span>
                   </div>
-                  <FaArrowRight className="text-green-400 group-hover:translate-x-1 transition-transform" />
+                  <FaArrowRight className="text-gray-300 dark:text-gray-600 group-hover:text-gray-400 group-hover:translate-x-0.5 transition-all text-xs" />
                 </div>
-                <h4 className="font-bold text-gray-900 dark:text-white">Creator Boosts</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">R20 – R150 per boost</p>
-                <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">{stats.boostOrders} orders</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{card.value}</p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">{card.label}</p>
               </Link>
+            );
+          })}
+        </div>
 
-              <Link href="/sponsored-challenges" className="group bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-2xl p-5 border border-purple-200 dark:border-purple-800 hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="bg-purple-100 dark:bg-purple-800 rounded-full p-2.5">
-                    <FaTrophy className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <FaArrowRight className="text-purple-400 group-hover:translate-x-1 transition-transform" />
+        {/* Revenue Streams */}
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <FaMoneyBillWave className="text-green-500" /> Revenue Streams
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {revenueCards.map((card) => (
+              <Link key={card.title} href={card.href} className="group relative overflow-hidden rounded-xl p-4 text-white hover:shadow-lg transition-all hover:-translate-y-0.5">
+                <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient}`}></div>
+                <div className="relative">
+                  <span className="text-2xl opacity-80">{card.icon}</span>
+                  <h4 className="font-bold mt-2">{card.title}</h4>
+                  <p className="text-sm opacity-80 mt-0.5">{card.desc}</p>
+                  <p className="text-xs font-medium mt-2 bg-white/20 rounded-full px-2 py-0.5 inline-block">{card.stat}</p>
                 </div>
-                <h4 className="font-bold text-gray-900 dark:text-white">Sponsored Challenges</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">20% platform fee</p>
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium">{stats.challengeOrders} challenges</p>
               </Link>
-
-              <Link href="/admin/opportunities" className="group bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl p-5 border border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="bg-blue-100 dark:bg-blue-800 rounded-full p-2.5">
-                    <FaBriefcase className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <FaArrowRight className="text-blue-400 group-hover:translate-x-1 transition-transform" />
-                </div>
-                <h4 className="font-bold text-gray-900 dark:text-white">Sponsored Opps</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">R50 – R300 per listing</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">{stats.approved} approved</p>
-              </Link>
-
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl p-5 border border-amber-200 dark:border-amber-800">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="bg-amber-100 dark:bg-amber-800 rounded-full p-2.5">
-                    <FaBuilding className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                </div>
-                <h4 className="font-bold text-gray-900 dark:text-white">Institution Plans</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">R199 – R999/month</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">Subscription revenue</p>
-              </div>
-            </div>
+            ))}
           </div>
+        </div>
 
-          {/* Main Content Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FaUsers className="text-blue-500" /> User Management
+              </h3>
+              <UserManagementCard />
+            </section>
 
-            {/* Left Column - Primary Management */}
-            <div className="lg:col-span-2 space-y-8">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <FaUsers className="mr-3 text-blue-600" />
-                  User Management
-                </h3>
-                <UserManagementCard />
-              </div>
-            </div>
-
-            {/* Right Column - Quick Actions & Monitoring */}
-            <div className="space-y-8">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <FaClock className="mr-3 text-yellow-600" />
-                  Pending Reviews
-                </h3>
-                <PendingOppsCard />
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <FaCrown className="mr-3 text-purple-600" />
-                  Sponsored Challenges
-                </h3>
-                <SponsoredChallengesCard />
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <FaChartLine className="mr-3 text-green-600" />
-                  Payments
-                </h3>
-                <PaymentsCard />
-              </div>
-            </div>
-          </div>
-
-          {/* Monetization Dashboard - Full Width */}
-          <div className="mb-12">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                <FaChartLine className="mr-3 text-blue-600" />
-                Revenue Analytics
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FaChartLine className="text-blue-500" /> Revenue Analytics
               </h3>
               <MonetizationDashboard />
-            </div>
+            </section>
           </div>
 
-          {/* Additional Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                <FaTrophy className="mr-3 text-yellow-600" />
-                Leaderboard Management
+          {/* Right Column */}
+          <div className="space-y-6">
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FaClock className="text-amber-500" /> Pending Reviews
               </h3>
-              <LeaderboardCard />
-            </div>
+              <PendingOppsCard />
+            </section>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                <FaShieldAlt className="mr-3 text-red-600" />
-                Audit Logs
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FaCrown className="text-purple-500" /> Challenges
               </h3>
-              <AuditLogCard />
-            </div>
+              <SponsoredChallengesCard />
+            </section>
+
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <FaChartLine className="text-green-500" /> Payments
+              </h3>
+              <PaymentsCard />
+            </section>
           </div>
+        </div>
+
+        {/* Bottom Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <FaTrophy className="text-yellow-500" /> Leaderboard
+            </h3>
+            <LeaderboardCard />
+          </section>
+
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <FaShieldAlt className="text-red-500" /> Audit Logs
+            </h3>
+            <AuditLogCard />
+          </section>
         </div>
       </div>
     </ProtectedRoute>

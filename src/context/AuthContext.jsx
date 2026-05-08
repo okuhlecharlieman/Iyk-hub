@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
       if (currentUser) {
-        await ensureUserDoc(currentUser);
+        await ensureUserDoc(currentUser, { displayName: currentUser.displayName, photoURL: currentUser.photoURL });
 
         const userRef = doc(db, 'users', currentUser.uid);
         unsubProfile = onSnapshot(userRef, (snap) => {

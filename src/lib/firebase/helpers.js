@@ -24,6 +24,14 @@ export async function ensureUserDoc(user, profile = {}) {
       role: 'user', // Default role for new users
       createdAt: serverTimestamp(),
     });
+  } else if (profile.displayName || profile.photoURL) {
+    // Update existing document with profile data if provided
+    const updateData = {};
+    if (profile.displayName) updateData.displayName = profile.displayName;
+    if (profile.photoURL) updateData.photoURL = profile.photoURL;
+    if (Object.keys(updateData).length > 0) {
+      await updateDoc(userRef, updateData);
+    }
   }
 }
 

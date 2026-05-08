@@ -54,7 +54,7 @@ export default function LoginPage() {
       if (!cred.user.emailVerified) {
         throw new Error('Please verify your email before logging in.');
       }
-      await ensureUserDoc(cred.user);
+      await ensureUserDoc(cred.user, { displayName: cred.user.displayName, photoURL: cred.user.photoURL });
       router.push('/dashboard');
     } catch (e) {
       setErr(e.message || 'Failed to sign in');
@@ -69,7 +69,7 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       const cred = await signInWithPopup(auth, provider);
-      await ensureUserDoc(cred.user);
+      await ensureUserDoc(cred.user, { displayName: cred.user.displayName, photoURL: cred.user.photoURL });
       router.push('/dashboard');
     } catch (e) {
       setErr(e.message || 'Google sign-in failed');

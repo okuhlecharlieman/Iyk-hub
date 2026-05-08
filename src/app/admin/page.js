@@ -121,7 +121,7 @@ export default function AdminPage() {
 
   const revenueCards = [
     { href: '/admin/payments', icon: <FaRocket />, title: 'Creator Boosts', desc: 'R20 – R150/boost', stat: `${stats.boostOrders} orders`, gradient: 'from-green-500 to-emerald-600' },
-    { href: '/sponsored-challenges', icon: <FaTrophy />, title: 'Challenges', desc: '20% platform fee', stat: `${stats.challengeOrders} challenges`, gradient: 'from-purple-500 to-indigo-600' },
+    { href: '/admin/sponsored-challenges', icon: <FaTrophy />, title: 'Challenges', desc: '20% platform fee', stat: `${stats.challengeOrders} challenges`, gradient: 'from-purple-500 to-indigo-600' },
     { href: '/admin/opportunities', icon: <FaBriefcase />, title: 'Sponsored Opps', desc: 'R50 – R300/listing', stat: `${stats.approved} approved`, gradient: 'from-blue-500 to-cyan-600' },
     { href: '#', icon: <FaBuilding />, title: 'Institution Plans', desc: 'R199 – R999/month', stat: 'Subscription', gradient: 'from-amber-500 to-orange-600' },
   ];

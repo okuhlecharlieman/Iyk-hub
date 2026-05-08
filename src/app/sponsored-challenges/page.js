@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '../../context/AuthContext';
 import { FaPlus, FaCalendarAlt, FaTrophy, FaUser, FaRocket, FaUsers, FaAward, FaStar } from 'react-icons/fa';
 
 export default function SponsoredChallenges() {
@@ -59,16 +60,12 @@ export default function SponsoredChallenges() {
                 <FaPlus className="mr-3" />
                 Create Your Challenge
               </Link>
-              <div className="flex items-center justify-center space-x-8 text-blue-100">
-                <div className="flex items-center">
-                  <FaUsers className="mr-2" />
-                  <span>10K+ Participants</span>
-                </div>
-                <div className="flex items-center">
-                  <FaAward className="mr-2" />
-                  <span>$2M+ in Prizes</span>
-                </div>
-              </div>
+              <Link
+                href="/sponsored-challenges/manage"
+                className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              >
+                Manage Your Challenges
+              </Link>
             </div>
           </div>
         </div>
@@ -172,9 +169,12 @@ export default function SponsoredChallenges() {
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                         {challenge.challengeType}
                       </span>
-                      <button className="text-blue-600 hover:text-blue-800 font-semibold text-sm transition-colors duration-200">
+                      <Link
+                        href={`/sponsored-challenges/${challenge.id}`}
+                        className="text-blue-600 hover:text-blue-800 font-semibold text-sm transition-colors duration-200"
+                      >
                         Learn More →
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>

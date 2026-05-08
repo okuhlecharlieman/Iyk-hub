@@ -2,12 +2,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserDoc } from '../../lib/firebase/user';
-import { listUserShowcasePosts, updateUserDoc } from '../../lib/firebase/helpers';
+import { listUserShowcasePosts, updateUserDoc, uploadToStorage } from '../../lib/firebase/helpers';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { SkeletonProfile, SkeletonGrid } from '../../components/loaders/SkeletonLoader';
 import { ErrorAlert, ErrorEmptyState, SuccessAlert } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
-import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser } from 'react-icons/fa';
+import { updateProfile } from 'firebase/auth';
+import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser, FaCamera } from 'react-icons/fa';
 import Link from 'next/link';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
@@ -22,6 +23,8 @@ export default function ProfilePage() {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({ displayName: '', bio: '', skills: '' });
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const loadProfile = useCallback(async () => {
@@ -40,6 +43,7 @@ export default function ProfilePage() {
         bio: userDoc?.bio || '',
         skills: (Array.isArray(userDoc?.skills) ? userDoc.skills : (typeof userDoc?.skills === 'string' ? userDoc.skills.split(',') : [])).map((skill) => String(skill).trim()).filter(Boolean).join(', '),
       });
+      setProfilePicturePreview(userDoc?.photoURL || user?.photoURL || null);
     } catch (err) {
       console.error("Error loading profile data:", err);
       setError("There was an error loading your profile. Please try again later.");
@@ -56,16 +60,39 @@ export default function ProfilePage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setProfilePictureFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => setProfilePicturePreview(e.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const skillsArray = form.skills.split(',').map(s => s.trim()).filter(Boolean);
-      await updateUserDoc(user.uid, { ...form, skills: skillsArray });
+      const updateData = { ...form, skills: skillsArray };
+
+      // Handle profile picture upload
+      if (profilePictureFile) {
+        const photoURL = await uploadToStorage(profilePictureFile, `profiles/${user.uid}`);
+        updateData.photoURL = photoURL;
+        // Also update Firebase Auth profile
+        await updateProfile(user, { photoURL });
+      }
+
+      await updateUserDoc(user.uid, updateData);
       setIsEditing(false);
+      setProfilePictureFile(null);
       await loadProfile(); // Refresh data
+      toast('success', 'Profile updated successfully!');
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast('error', 'Failed to save profile.');
+      toast('error', 'Failed to save profile. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -90,11 +117,22 @@ export default function ProfilePage() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full opacity-0 group-hover:opacity-20 transition-opacity"></div>
                   <img 
-                    src={doc?.photoURL || user?.photoURL || '/logo.png'} 
+                    src={profilePicturePreview || doc?.photoURL || user?.photoURL || '/logo.png'} 
                     alt={doc?.displayName || user?.email?.split('@')[0] || 'User'} 
                     className="w-32 h-32 rounded-full ring-4 ring-gradient-to-r from-blue-500 to-purple-600 shadow-2xl hover:shadow-none transition-all duration-300"
                     onError={(e)=>{ e.target.src='/logo.png'; }}
                   />
+                  {isEditing && (
+                    <label className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full cursor-pointer transition-colors">
+                      <FaCamera className="text-sm" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
                 
                 <div className="mt-6 w-full">
@@ -107,7 +145,11 @@ export default function ProfilePage() {
                         <Button variant="primary" size="md" onClick={handleSave} disabled={isSaving} className="flex items-center justify-center gap-2">
                           {isSaving ? '...' : <><FaSave className="" /> Save</>}
                         </Button>
-                        <Button variant="secondary" size="md" onClick={() => setIsEditing(false)} className="flex items-center justify-center gap-2"><FaTimes className="" /> Cancel</Button>
+                        <Button variant="secondary" size="md" onClick={() => {
+                          setIsEditing(false);
+                          setProfilePictureFile(null);
+                          setProfilePicturePreview(doc?.photoURL || user?.photoURL || null);
+                        }} className="flex items-center justify-center gap-2"><FaTimes className="" /> Cancel</Button>
                       </div>
                     </div>
                   ) : (

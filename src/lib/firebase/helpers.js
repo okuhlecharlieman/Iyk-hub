@@ -287,13 +287,47 @@ export function onUsersUpdate(callback, onError) {
 }
 
 export async function approveOpportunity(opportunityId) {
-  const docRef = doc(db, 'opportunities', opportunityId);
-  await updateDoc(docRef, { status: 'approved', updatedAt: serverTimestamp() });
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const token = await user.getIdToken();
+  const res = await fetch('/api/admin/opportunities', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id: opportunityId, status: 'approved' }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to approve opportunity');
+  }
+
+  return json;
 }
 
 export async function rejectOpportunity(opportunityId) {
-  const docRef = doc(db, 'opportunities', opportunityId);
-  await updateDoc(docRef, { status: 'rejected', updatedAt: serverTimestamp() });
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const token = await user.getIdToken();
+  const res = await fetch('/api/admin/opportunities', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id: opportunityId, status: 'rejected' }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to reject opportunity');
+  }
+
+  return json;
 }
 
 // Quotes

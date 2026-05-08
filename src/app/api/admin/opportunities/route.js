@@ -44,7 +44,35 @@ export async function PUT(request) {
     const payload = await parseJsonBody(request);
     const { id, status } = validateOpportunityUpdatePayload(payload);
 
-    await updateOpportunity(id, { status });
+    const adminDb = (await import('firebase-admin')).firestore();
+    const oppRef = adminDb.collection('opportunities').doc(id);
+    const oppSnap = await oppRef.get();
+    const updatePayload = {
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (status === 'approved') {
+      const opp = oppSnap.exists ? oppSnap.data() : null;
+      if (opp?.expiresAt) {
+        const expiresAt = opp.expiresAt.toDate ? opp.expiresAt.toDate() : new Date(opp.expiresAt);
+        let deletionDate = new Date(expiresAt.getTime() + 14 * 24 * 60 * 60 * 1000);
+        if (expiresAt <= new Date()) {
+          deletionDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        }
+        updatePayload.deletionScheduledAt = admin.firestore.Timestamp.fromDate(deletionDate);
+      } else {
+        updatePayload.deletionScheduledAt = admin.firestore.FieldValue.delete();
+      }
+      updatePayload.approvedAt = admin.firestore.FieldValue.serverTimestamp();
+      updatePayload.approvedBy = actor.uid;
+    } else {
+      updatePayload.approvedAt = admin.firestore.FieldValue.delete();
+      updatePayload.approvedBy = admin.firestore.FieldValue.delete();
+      updatePayload.deletionScheduledAt = admin.firestore.FieldValue.delete();
+    }
+
+    await oppRef.update(updatePayload);
 
     await logAdminAction({
       request,

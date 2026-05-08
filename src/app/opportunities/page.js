@@ -101,7 +101,11 @@ function OpportunitiesContent() {
   };
 
   const handleEdit = (opp) => {
-    setEditingOpp({ ...opp, tags: opp.tags?.join(', ') });
+    const expiresAtValue = opp.expiresAt
+      ? new Date(opp.expiresAt?.toDate ? opp.expiresAt.toDate() : opp.expiresAt).toISOString().slice(0, 16)
+      : '';
+
+    setEditingOpp({ ...opp, tags: opp.tags?.join(', '), expiresAt: expiresAtValue });
     setIsFormModalOpen(true);
   };
 

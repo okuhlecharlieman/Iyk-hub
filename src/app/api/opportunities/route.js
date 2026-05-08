@@ -64,9 +64,23 @@ export async function GET(request) {
     }
 
     const approvedSnap = await queryRef.get();
-    const approvedOpportunities = approvedSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const serializeOpportunity = (doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.toISOString?.() || data.createdAt || null,
+        updatedAt: data.updatedAt?.toDate?.toISOString?.() || data.updatedAt || null,
+        expiresAt: data.expiresAt?.toDate?.toISOString?.() || data.expiresAt || null,
+        deletionScheduledAt: data.deletionScheduledAt?.toDate?.toISOString?.() || data.deletionScheduledAt || null,
+      };
+    };
 
-    let opportunities = approvedOpportunities;
+    const approvedOpportunities = approvedSnap.docs.map(serializeOpportunity);
+    const now = new Date();
+    const visibleApproved = approvedOpportunities.filter((opp) => !opp.expiresAt || new Date(opp.expiresAt) > now);
+
+    let opportunities = visibleApproved;
 
     // Include the user's own pending opportunities on the first page only.
     if (!cursor) {

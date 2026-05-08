@@ -22,6 +22,11 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
         </div>
         <p className="font-semibold text-blue-600 dark:text-blue-400 text-sm mb-2">{o.org}</p>
         <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 flex-grow">{o.description}</p>
+        {o.expiresAt && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Expires: {new Date(o.expiresAt).toLocaleDateString()} {new Date(o.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        )}
       </div>
       <div className="flex flex-col mt-auto">
         <div className="flex flex-wrap gap-2 mb-4">

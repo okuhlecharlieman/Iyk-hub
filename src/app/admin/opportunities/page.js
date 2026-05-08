@@ -185,6 +185,18 @@ export default function ManageOpportunities() {
                                         </div>
                                         <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{opp.org}</p>
                                         <p className="text-sm mt-1 text-gray-600 dark:text-gray-400 line-clamp-2">{opp.description}</p>
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2 text-sm text-gray-600 dark:text-gray-400">
+                                          {opp.expiresAt && (
+                                            <div>
+                                              <span className="font-semibold text-gray-900 dark:text-white">Expires</span><br />
+                                              {new Date(opp.expiresAt).toLocaleDateString()}
+                                            </div>
+                                          )}
+                                          <div>
+                                            <span className="font-semibold text-gray-900 dark:text-white">Created</span><br />
+                                            {opp.createdAt ? new Date(opp.createdAt?.toDate ? opp.createdAt.toDate() : opp.createdAt).toLocaleDateString() : '—'}
+                                          </div>
+                                        </div>
                                         {opp.link && (
                                           <a href={opp.link} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-sm inline-flex items-center gap-1 mt-2">
                                             <FaExternalLinkAlt size={10} /> Visit Link

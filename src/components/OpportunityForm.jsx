@@ -46,6 +46,18 @@ export default function OpportunityForm({ onSubmit, initialFormState, submitButt
         <input className={inputClass} placeholder="Link (https://...)" name="link" type="url" value={form.link} onChange={handleChange} required />
         <textarea className={inputClass} placeholder="Short Description" rows={3} name="description" value={form.description} onChange={handleChange} required />
         <input className={inputClass} placeholder="Tags (e.g., tech, volunteering)" name="tags" value={form.tags} onChange={handleChange} />
+        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Expiry Date (optional)
+        </label>
+        <input
+          className={inputClass}
+          type="datetime-local"
+          name="expiresAt"
+          value={form.expiresAt || ''}
+          onChange={handleChange}
+          min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400">If set, this opportunity will automatically stop appearing publicly after the expiry date.</p>
         <FileUploadField
           label="Image / Media (optional)"
           accept="image/*"

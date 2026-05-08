@@ -9,15 +9,15 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 // NOTE: This file should ONLY contain client-side safe Firebase functions.
 
 // Users
-export async function ensureUserDoc(user) {
+export async function ensureUserDoc(user, profile = {}) {
   if (!user) return;
   const userRef = doc(db, 'users', user.uid);
   const snap = await getDoc(userRef);
   if (!snap.exists()) {
     await setDoc(userRef, {
-      displayName: user.displayName || 'Intwana',
+      displayName: profile.displayName || user.displayName || 'Intwana',
       email: user.email || null,
-      photoURL: user.photoURL || null,
+      photoURL: profile.photoURL || user.photoURL || null,
       points: { weekly: 0, lifetime: 0 },
       bio: '',
       skills: [],

@@ -31,11 +31,27 @@ const STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
+const formatExpiryCountdown = (expiresAt) => {
+  if (!expiresAt) return null;
+  const target = new Date(expiresAt);
+  const now = new Date();
+  const diff = target.getTime() - now.getTime();
+  if (diff <= 0) {
+    const days = Math.abs(Math.floor(diff / (1000 * 60 * 60 * 24)));
+    return `Expired ${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}`;
+  }
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  if (days > 0) return `${days} day${days === 1 ? '' : 's'} left`;
+  return `${hours} hour${hours === 1 ? '' : 's'} left`;
+};
+
 export default function ManageOpportunities() {
     const { user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
     const [opps, setOpps] = useState([]);
     const [filter, setFilter] = useState('pending');
+    const [searchQuery, setSearchQuery] = useState('');
     const toast = useToast();
 
     useEffect(() => {
@@ -58,15 +74,19 @@ export default function ManageOpportunities() {
             }
 
             const idToken = await firebaseUser.getIdToken(true);
-            const res = await fetch('/api/admin/opportunities', { headers: { Authorization: `Bearer ${idToken}` } });
+            const params = new URLSearchParams();
+            if (searchQuery.trim()) params.set('search', searchQuery.trim());
+            const url = `/api/admin/opportunities?${params.toString()}`;
+
+            const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` } });
             const body = await res.json();
             if (!res.ok) {
               toast('error', body.error || 'Failed to load opportunities');
               setOpps([]);
-            } else if (!Array.isArray(body)) {
+            } else if (!Array.isArray(body.opportunities)) {
               setOpps([]);
             } else {
-              setOpps(body);
+              setOpps(body.opportunities);
             }
         } catch (error) {
             console.error("Error loading opportunities:", error);
@@ -151,21 +171,36 @@ export default function ManageOpportunities() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex flex-wrap gap-2">
-                  {tabs.map(tab => {
-                    const styles = TAB_STYLES[tab.key];
-                    const isActive = filter === tab.key;
-                    return (
-                      <button key={tab.key} onClick={() => setFilter(tab.key)} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                        isActive ? styles.active : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}>
-                        {tab.label}
-                        <span className={`ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 text-xs rounded-full px-1.5 ${
-                          isActive ? styles.badge : 'bg-gray-200 dark:bg-gray-600'
-                        }`}>{tab.count}</span>
-                      </button>
-                    );
-                  })}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    {tabs.map(tab => {
+                      const styles = TAB_STYLES[tab.key];
+                      const isActive = filter === tab.key;
+                      return (
+                        <button key={tab.key} onClick={() => setFilter(tab.key)} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                          isActive ? styles.active : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}>
+                          {tab.label}
+                          <span className={`ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 text-xs rounded-full px-1.5 ${
+                            isActive ? styles.badge : 'bg-gray-200 dark:bg-gray-600'
+                          }`}>{tab.count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search by title, org, description, tags"
+                      className="w-full sm:w-[320px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <Button size="sm" variant="secondary" onClick={loadOpps} disabled={loading}>
+                      Search
+                    </Button>
+                  </div>
                 </div>
 
                 {loading ? (
@@ -185,11 +220,17 @@ export default function ManageOpportunities() {
                                         </div>
                                         <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{opp.org}</p>
                                         <p className="text-sm mt-1 text-gray-600 dark:text-gray-400 line-clamp-2">{opp.description}</p>
-                                        <div className="mt-3 grid gap-2 sm:grid-cols-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-3 text-sm text-gray-600 dark:text-gray-400">
                                           {opp.expiresAt && (
                                             <div>
                                               <span className="font-semibold text-gray-900 dark:text-white">Expires</span><br />
                                               {new Date(opp.expiresAt).toLocaleDateString()}
+                                            </div>
+                                          )}
+                                          {opp.expiresAt && (
+                                            <div>
+                                              <span className="font-semibold text-gray-900 dark:text-white">Countdown</span><br />
+                                              {formatExpiryCountdown(opp.expiresAt)}
                                             </div>
                                           )}
                                           <div>
@@ -203,19 +244,19 @@ export default function ManageOpportunities() {
                                           </a>
                                         )}
                                       </div>
-                                      <div className="flex items-center gap-2 flex-shrink-0">
-                                        {filter === 'pending' && (
-                                            <>
-                                                <Button size="sm" variant="primary" onClick={() => handleStatusUpdate(opp.id, 'approved')}>
-                                                  <FaCheck className="mr-1" /> Approve
-                                                </Button>
-                                                <Button size="sm" variant="danger" onClick={() => handleStatusUpdate(opp.id, 'rejected')}>
-                                                  <FaTimes className="mr-1" /> Reject
-                                                </Button>
-                                            </>
+                                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-shrink-0">
+                                        {opp.status !== 'approved' && (
+                                          <Button size="sm" variant="primary" onClick={() => handleStatusUpdate(opp.id, 'approved')}>
+                                            <FaCheck className="mr-1" /> Approve
+                                          </Button>
                                         )}
-                                        {filter !== 'pending' && (
-                                            <Button size="sm" variant="secondary" onClick={() => handleStatusUpdate(opp.id, 'pending')}>Reset</Button>
+                                        {opp.status !== 'rejected' && (
+                                          <Button size="sm" variant="danger" onClick={() => handleStatusUpdate(opp.id, 'rejected')}>
+                                            <FaTimes className="mr-1" /> Reject
+                                          </Button>
+                                        )}
+                                        {opp.status !== 'pending' && (
+                                          <Button size="sm" variant="secondary" onClick={() => handleStatusUpdate(opp.id, 'pending')}>Reset</Button>
                                         )}
                                         <Button size="sm" variant="danger" onClick={() => handleDelete(opp.id, opp.title)}><FaTrash /></Button>
                                       </div>

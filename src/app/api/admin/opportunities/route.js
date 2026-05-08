@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authenticate, listAllOpportunities, updateOpportunity } from '../../../../lib/firebase/admin';
+import admin from 'firebase-admin';
+import { authenticate, listAllOpportunities } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
@@ -24,8 +25,34 @@ const validateOpportunityUpdatePayload = (payload) => {
 export async function GET(request) {
   try {
     await authenticate(request);
-    const opportunities = await listAllOpportunities();
-    return NextResponse.json({ success: true, opportunities });
+    const { searchParams } = new URL(request.url);
+    const search = (searchParams.get('search') || '').trim().toLowerCase();
+
+    const adminDb = admin.firestore();
+    const snap = await adminDb.collection('opportunities').orderBy('createdAt', 'desc').get();
+    const opportunities = snap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.toISOString?.() || data.createdAt || null,
+        updatedAt: data.updatedAt?.toDate?.toISOString?.() || data.updatedAt || null,
+        expiresAt: data.expiresAt?.toDate?.toISOString?.() || data.expiresAt || null,
+        deletionScheduledAt: data.deletionScheduledAt?.toDate?.toISOString?.() || data.deletionScheduledAt || null,
+      };
+    });
+
+    const filtered = search
+      ? opportunities.filter((opp) => {
+          const haystack = [opp.title, opp.org, opp.description, ...(Array.isArray(opp.tags) ? opp.tags : [])]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(search);
+        })
+      : opportunities;
+
+    return NextResponse.json({ success: true, opportunities: filtered });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });
@@ -44,7 +71,7 @@ export async function PUT(request) {
     const payload = await parseJsonBody(request);
     const { id, status } = validateOpportunityUpdatePayload(payload);
 
-    const adminDb = (await import('firebase-admin')).firestore();
+    const adminDb = admin.firestore();
     const oppRef = adminDb.collection('opportunities').doc(id);
     const oppSnap = await oppRef.get();
     const updatePayload = {
@@ -83,8 +110,7 @@ export async function PUT(request) {
       metadata: { status },
     });
 
-    const adminDb = (await import('firebase-admin')).firestore();
-    const snap = await adminDb.collection('opportunities').doc(id).get();
+    const snap = await oppRef.get();
     const title = snap.exists ? snap.data().title : null;
 
     return NextResponse.json({ success: true, message: 'Opportunity updated successfully', id, title });

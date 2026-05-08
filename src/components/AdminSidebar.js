@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown } from 'react-icons/fa';
+import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding } from 'react-icons/fa';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useState } from 'react';
@@ -13,6 +13,7 @@ const AdminSidebar = () => {
   const links = [
     { href: '/admin', label: 'Dashboard', icon: <FaTachometerAlt /> },
     { href: '/admin/opportunities', label: 'Opportunities', icon: <FaTasks /> },
+    { href: '/admin/InstitutionPlans', label: 'Institution Plans', icon: <FaBuilding /> },
     { href: '/admin/users', label: 'Users', icon: <FaUsers /> },
     { href: '/admin/payments', label: 'Payments', icon: <FaMoneyBillWave /> },
     { href: '/admin/sponsored-challenges', label: 'Challenges', icon: <FaTrophy /> },

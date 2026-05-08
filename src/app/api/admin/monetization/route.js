@@ -108,7 +108,7 @@ export async function GET(request) {
 
         if (paymentLog) {
           // Calculate payout amount (challenge budget minus platform fee)
-          const platformFeeCents = challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2);
+          const platformFeeCents = challenge.platformFeeWaived ? 0 : (challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2));
           const payoutAmountCents = challenge.budgetCents - platformFeeCents;
 
           // Check if payout has been processed (this would need a payouts collection in real implementation)

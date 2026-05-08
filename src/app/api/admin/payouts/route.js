@@ -41,7 +41,7 @@ export async function GET(request) {
           .limit(1)
           .get();
 
-        const payoutAmountCents = challenge.budgetCents - (challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2));
+        const payoutAmountCents = challenge.budgetCents - (challenge.platformFeeWaived ? 0 : (challenge.platformFeeCents || Math.round(challenge.budgetCents * 0.2)));
 
         if (existingPayoutSnap.empty) {
           payouts.push({

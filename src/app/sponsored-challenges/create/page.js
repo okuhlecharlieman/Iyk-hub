@@ -9,22 +9,27 @@ import { uploadToStorage } from '../../../lib/firebase/helpers';
 import { useToast } from '../../../components/ui/ToastProvider';
 
 export default function CreateSponsoredChallenge() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    challengeType: 'coding',
+    challengeType: 'general',
     deadline: '',
     prizeDescription: '',
     sponsorName: '',
     sponsorEmail: '',
-    budgetCents: '',
+    budget: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bannerFile, setBannerFile] = useState(null);
   const toast = useToast();
+
+  const isAdmin = userProfile?.role?.toLowerCase() === 'admin';
+  const budgetValue = parseFloat(formData.budget) || 0;
+  const platformFee = isAdmin ? 0 : Number((budgetValue * 0.2).toFixed(2));
+  const sponsorReceives = Number((budgetValue - platformFee).toFixed(2));
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,7 +56,7 @@ export default function CreateSponsoredChallenge() {
         },
         body: JSON.stringify({
           ...formData,
-          budgetCents: parseInt(formData.budgetCents),
+          budgetCents: parseInt(formData.budget) * 100,
           bannerUrl,
         }),
       });
@@ -71,9 +76,6 @@ export default function CreateSponsoredChallenge() {
     }
   };
 
-  const platformFee = ((parseInt(formData.budgetCents) || 0) * 0.2 / 100).toFixed(2);
-  const sponsorReceives = ((parseInt(formData.budgetCents) || 0) * 0.8 / 100).toFixed(2);
-
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -90,7 +92,7 @@ export default function CreateSponsoredChallenge() {
                 Launch Your Challenge
               </h1>
               <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-                Connect with exceptional talent and drive innovation in your industry
+                Create challenges for any industry—technology, business, marketing, creative arts, nonprofit, or social impact.
               </p>
             </div>
           </div>
@@ -135,22 +137,31 @@ export default function CreateSponsoredChallenge() {
                 </div>
 
                 {/* Pricing Preview */}
-                {formData.budgetCents && (
+                {formData.budget && (
                   <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 rounded-lg">
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Cost Breakdown</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Total Budget:</span>
-                        <span className="font-medium">${(parseInt(formData.budgetCents) / 100).toFixed(2)}</span>
+                        <span className="font-medium">R{(parseInt(formData.budget)).toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Platform Fee (20%):</span>
-                        <span className="font-medium text-red-600">-${platformFee}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span className="font-semibold text-gray-900 dark:text-white">You Pay:</span>
-                        <span className="font-bold text-green-600">${sponsorReceives}</span>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex justify-between border-t pt-2">
+                          <span className="font-semibold text-gray-900 dark:text-white">Platform Fee:</span>
+                          <span className="font-bold text-green-600">FREE (Admin)</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Platform Fee (20%):</span>
+                            <span className="font-medium text-red-600">-R{platformFee}</span>
+                          </div>
+                          <div className="flex justify-between border-t pt-2">
+                            <span className="font-semibold text-gray-900 dark:text-white">You Pay:</span>
+                            <span className="font-bold text-green-600">R{sponsorReceives}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -234,6 +245,9 @@ export default function CreateSponsoredChallenge() {
                         <option value="coding">Coding & Development</option>
                         <option value="design">Design & UX</option>
                         <option value="writing">Writing & Content</option>
+                        <option value="marketing">Marketing & Social Media</option>
+                        <option value="business">Business & Entrepreneurship</option>
+                        <option value="creative">Creative Arts</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
@@ -305,23 +319,23 @@ export default function CreateSponsoredChallenge() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label htmlFor="budgetCents" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Total Budget (in cents) *
+                      <label htmlFor="budget" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Total Budget (in Rand) *
                       </label>
                       <input
                         type="number"
-                        id="budgetCents"
-                        name="budgetCents"
+                        id="budget"
+                        name="budget"
                         required
-                        min={1000}
-                        max={100000}
-                        value={formData.budgetCents}
+                        min={100}
+                        max={10000}
+                        value={formData.budget}
                         onChange={handleChange}
                         className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors duration-200"
-                        placeholder="e.g., 50000 for $500"
+                        placeholder="e.g., 5000 for R5,000"
                       />
                       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        Platform fee: 20% (${platformFee}) • You pay: ${sponsorReceives}
+                        {isAdmin ? 'No platform fees for admin-created challenges' : `Platform fee: 20% (R${platformFee}) • You pay: R${sponsorReceives}`}
                       </p>
                     </div>
 

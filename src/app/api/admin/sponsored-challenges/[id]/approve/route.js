@@ -32,8 +32,8 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Challenge is not pending approval' }, { status: 400 });
     }
 
-    // Calculate platform fee (e.g., 20% of budget)
-    const platformFeeCents = Math.round(challenge.budgetCents * 0.2);
+    // Calculate platform fee (e.g., 20% of budget, waived for admin-created challenges)
+    const platformFeeCents = challenge.platformFeeWaived ? 0 : Math.round(challenge.budgetCents * 0.2);
     const sponsorAmountCents = challenge.budgetCents - platformFeeCents;
 
     // Update challenge status

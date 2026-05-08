@@ -17,8 +17,8 @@ const validateCreatePayload = (payload) => {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'description', message: 'Description is required and must be 1-1000 characters.' }]);
   }
 
-  if (typeof payload.challengeType !== 'string' || !['coding', 'design', 'writing', 'other'].includes(payload.challengeType)) {
-    throw new RequestValidationError('Invalid request payload.', [{ path: 'challengeType', message: 'Challenge type must be one of: coding, design, writing, other.' }]);
+  if (typeof payload.challengeType !== 'string' || !['general','coding', 'design', 'writing', 'marketing', 'business', 'creative', 'other'].includes(payload.challengeType)) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'challengeType', message: 'Challenge type must be one of: general, coding, design, writing, marketing, business, creative, other.' }]);
   }
 
   const deadline = new Date(payload.deadline);
@@ -38,8 +38,8 @@ const validateCreatePayload = (payload) => {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'sponsorEmail', message: 'Valid sponsor email is required.' }]);
   }
 
-  if (typeof payload.budgetCents !== 'number' || payload.budgetCents < 1000 || payload.budgetCents > 100000) {
-    throw new RequestValidationError('Invalid request payload.', [{ path: 'budgetCents', message: 'Budget must be between 1000 and 100000 cents ($10-$1000).' }]);
+  if (typeof payload.budgetCents !== 'number' || payload.budgetCents < 10000 || payload.budgetCents > 1000000) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'budgetCents', message: 'Budget must be between 10000 and 1000000 cents (R100-R10,000).' }]);
   }
 
   return {
@@ -99,6 +99,10 @@ export async function POST(request) {
     await initializeFirebaseAdmin();
     const uid = await authenticateAndGetUid(request);
 
+    // Check if user is admin
+    const userDoc = await admin.firestore().collection('users').doc(uid).get();
+    const isAdmin = userDoc.exists && userDoc.data()?.role === 'admin';
+
     const payload = await parseJsonBody(request);
     const validatedData = validateCreatePayload(payload);
 
@@ -108,7 +112,8 @@ export async function POST(request) {
       ...validatedData,
       id: challengeRef.id,
       creatorUid: uid,
-      status: 'pending', // pending admin approval
+      status: isAdmin ? 'approved' : 'pending', // Auto-approve for admins
+      platformFeeWaived: isAdmin, // No platform fee for admin-created challenges
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };

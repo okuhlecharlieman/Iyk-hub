@@ -129,7 +129,12 @@ async function fetchStreamFallbackItems(streamType, token) {
   if (!response.ok) return [];
 
   const json = await response.json();
-  return (json.items || []).map(config.buildEntry);
+  const items = json.items || [];
+  const paidItems = items.filter(item => {
+    if (streamType === 'placementFee') return item.feeStatus === 'paid';
+    return item.paymentStatus === 'paid';
+  });
+  return paidItems.map(config.buildEntry);
 }
 
 async function fetchStreamFallbackSummary(streamType, token) {
@@ -143,7 +148,11 @@ async function fetchStreamFallbackSummary(streamType, token) {
 
   const json = await response.json();
   const items = json.items || [];
-  return config.buildSummary(items);
+  const paidItems = items.filter(item => {
+    if (streamType === 'placementFee') return item.feeStatus === 'paid';
+    return item.paymentStatus === 'paid';
+  });
+  return config.buildSummary(paidItems);
 }
 
 async function enrichSummaryWithFallbacks(currentSummary, token) {
@@ -177,56 +186,6 @@ export default function AdminPaymentsPage() {
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Helper functions
-  const enrichSummaryWithFallbacks = async (currentSummary, token) => {
-    if (!currentSummary) return currentSummary;
-
-    const updatedSummary = {
-      ...currentSummary,
-      byOrderType: { ...(currentSummary.byOrderType || {}) },
-    };
-
-    for (const streamType of Object.keys(STREAM_FALLBACK_CONFIG)) {
-      const existing = updatedSummary.byOrderType[streamType];
-      if (existing && existing.count > 0) continue;
-
-      const fallbackSummary = await fetchStreamFallbackSummary(streamType, token);
-      if (!fallbackSummary) continue;
-
-      updatedSummary.byOrderType[streamType] = fallbackSummary;
-      updatedSummary.grossRevenueCents = (updatedSummary.grossRevenueCents || 0) + fallbackSummary.grossCents;
-    }
-
-    return updatedSummary;
-  };
-
-  const fetchStreamFallbackSummary = async (streamType, token) => {
-    const config = STREAM_FALLBACK_CONFIG[streamType];
-    if (!config) return null;
-
-    const response = await fetch(config.endpoint, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    if (!response.ok) return null;
-
-    const json = await response.json();
-    const items = json.items || [];
-    return config.buildSummary(items);
-  };
-
-  const fetchStreamFallbackItems = async (streamType, token) => {
-    const config = STREAM_FALLBACK_CONFIG[streamType];
-    if (!config) return [];
-
-    const response = await fetch(config.endpoint, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    if (!response.ok) return [];
-
-    const json = await response.json();
-    return (json.items || []).map(config.buildEntry);
-  };
 
   const fetchData = useCallback(async () => {
     setError(null);
@@ -292,6 +251,7 @@ export default function AdminPaymentsPage() {
         const entriesJson = await entriesRes.json();
         if (entriesRes.ok) {
           loadedEntries = entriesJson.entries || [];
+          loadedEntries = loadedEntries.filter(entry => entry.entryType === 'charge_succeeded');
         } else {
           throw new Error('Financial ledger entries not available');
         }

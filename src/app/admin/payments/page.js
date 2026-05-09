@@ -51,6 +51,73 @@ const REVENUE_STREAM_COLORS = {
   unknown: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
 
+const STREAM_FALLBACK_CONFIG = {
+  creatorBoost: {
+    endpoint: '/api/admin/creator-boosts',
+    buildEntry: (order) => ({
+      id: order.id,
+      orderType: 'creatorBoost',
+      orderId: order.id,
+      amountCents: order.feeCents || order.amountCents || 0,
+      entryType: order.paymentStatus === 'paid' ? 'charge_succeeded' : 'charge_pending',
+      description: order.plan ? `${order.plan} boost` : 'Creator Boost',
+      createdAt: order.createdAt,
+    }),
+    buildSummary: (orders) => ({
+      grossCents: orders.reduce((sum, order) => sum + (order.feeCents || order.amountCents || 0), 0),
+      count: orders.length,
+    }),
+  },
+  institutionPlan: {
+    endpoint: '/api/admin/institutions',
+    buildEntry: (order) => ({
+      id: order.id,
+      orderType: 'institutionPlan',
+      orderId: order.id,
+      amountCents: order.feeCents || order.amountCents || 0,
+      entryType: order.paymentStatus === 'paid' ? 'charge_succeeded' : 'charge_pending',
+      description: order.plan ? `${order.plan} institution plan` : 'Institution Plan',
+      createdAt: order.createdAt,
+    }),
+    buildSummary: (orders) => ({
+      grossCents: orders.reduce((sum, order) => sum + (order.feeCents || order.amountCents || 0), 0),
+      count: orders.length,
+    }),
+  },
+  sponsoredOpportunity: {
+    endpoint: '/api/admin/sponsored-opportunities',
+    buildEntry: (order) => ({
+      id: order.id,
+      orderType: 'sponsoredOpportunity',
+      orderId: order.id,
+      amountCents: order.amountCents || order.feeCents || 0,
+      entryType: order.paymentStatus === 'paid' ? 'charge_succeeded' : 'charge_pending',
+      description: order.title || order.orderId ? `Sponsored opportunity ${order.orderId || order.id}` : 'Sponsored Opportunity',
+      createdAt: order.createdAt,
+    }),
+    buildSummary: (orders) => ({
+      grossCents: orders.reduce((sum, order) => sum + (order.amountCents || order.feeCents || 0), 0),
+      count: orders.length,
+    }),
+  },
+  placementFee: {
+    endpoint: '/api/admin/placements-fees',
+    buildEntry: (order) => ({
+      id: order.id,
+      orderType: 'placementFee',
+      orderId: order.id,
+      amountCents: order.amountCents || order.feeCents || 0,
+      entryType: order.feeStatus === 'paid' ? 'charge_succeeded' : 'charge_pending',
+      description: order.description || order.targetId ? `Placement fee ${order.targetId || order.id}` : 'Placement Fee',
+      createdAt: order.createdAt,
+    }),
+    buildSummary: (orders) => ({
+      grossCents: orders.reduce((sum, order) => sum + (order.amountCents || order.feeCents || 0), 0),
+      count: orders.length,
+    }),
+  },
+};
+
 export default function AdminPaymentsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -81,7 +148,7 @@ export default function AdminPaymentsPage() {
         });
         const summaryJson = await summaryRes.json();
         if (summaryRes.ok) {
-          const enrichedSummary = await enrichSummaryWithBoosts(summaryJson.summary, token);
+          const enrichedSummary = await enrichSummaryWithFallbacks(summaryJson.summary, token);
           setSummary(enrichedSummary);
         } else {
           throw new Error('Financial ledger not available');
@@ -109,7 +176,7 @@ export default function AdminPaymentsPage() {
           };
         });
 
-        const enrichedSummary = await enrichSummaryWithBoosts(convertedSummary, token);
+        const enrichedSummary = await enrichSummaryWithFallbacks(convertedSummary, token);
         setSummary(enrichedSummary);
       }
 
@@ -150,18 +217,18 @@ export default function AdminPaymentsPage() {
         }
       }
 
-      if (selectedStream === 'all' || selectedStream === 'creatorBoost') {
-        const hasCreatorBoostEntries = loadedEntries.some(entry => entry.orderType === 'creatorBoost');
-        if (!hasCreatorBoostEntries) {
-          const boostRes = await fetch('/api/admin/creator-boosts', {
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          });
-          const boostJson = await boostRes.json();
-          if (boostRes.ok) {
-            const boostEntries = buildCreatorBoostEntries(boostJson.items || []);
-            loadedEntries = loadedEntries.concat(boostEntries);
-          }
-        }
+      const loadedTypes = new Set(loadedEntries.map(entry => entry.orderType));
+      const fallbackStreams = selectedStream === 'all'
+        ? Object.keys(STREAM_FALLBACK_CONFIG)
+        : [selectedStream];
+
+      for (const streamType of fallbackStreams) {
+        const config = STREAM_FALLBACK_CONFIG[streamType];
+        if (!config) continue;
+        if (loadedTypes.has(streamType)) continue;
+
+        const fallbackEntries = await fetchStreamFallbackItems(streamType, token);
+        loadedEntries = loadedEntries.concat(fallbackEntries);
       }
 
       setEntries(loadedEntries);
@@ -171,7 +238,7 @@ export default function AdminPaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedStream, selectedMonth]);
+  }, [user, selectedStream, selectedMonth, enrichSummaryWithFallbacks]);
 
   useEffect(() => {
     if (!user) return;
@@ -231,44 +298,54 @@ export default function AdminPaymentsPage() {
     });
   };
 
-  const buildCreatorBoostEntries = (orders) => {
-    return (orders || []).map((order) => ({
-      id: order.id,
-      orderType: 'creatorBoost',
-      orderId: order.id,
-      amountCents: order.feeCents || order.amountCents || 0,
-      entryType: order.paymentStatus === 'paid' ? 'charge_succeeded' : 'charge_pending',
-      description: order.plan ? `${order.plan} boost` : 'Creator Boost',
-      createdAt: order.createdAt,
-    }));
-  };
+  const fetchStreamFallbackItems = useCallback(async (streamType, token) => {
+    const config = STREAM_FALLBACK_CONFIG[streamType];
+    if (!config) return [];
 
-  const enrichSummaryWithBoosts = async (currentSummary, token) => {
-    if (!currentSummary) return currentSummary;
-    if (currentSummary.byOrderType?.creatorBoost) return currentSummary;
-
-    const boostRes = await fetch('/api/admin/creator-boosts', {
+    const response = await fetch(config.endpoint, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
-    const boostJson = await boostRes.json();
-    if (!boostRes.ok) return currentSummary;
+    if (!response.ok) return [];
 
-    const boostOrders = boostJson.items || [];
-    const boostRevenue = boostOrders.reduce((sum, order) => sum + (order.feeCents || order.amountCents || 0), 0);
-    const boostCount = boostOrders.length;
+    const json = await response.json();
+    return (json.items || []).map(config.buildEntry);
+  }, []);
 
-    return {
+  const fetchStreamFallbackSummary = useCallback(async (streamType, token) => {
+    const config = STREAM_FALLBACK_CONFIG[streamType];
+    if (!config) return null;
+
+    const response = await fetch(config.endpoint, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) return null;
+
+    const json = await response.json();
+    const items = json.items || [];
+    return config.buildSummary(items);
+  }, []);
+
+  const enrichSummaryWithFallbacks = useCallback(async (currentSummary, token) => {
+    if (!currentSummary) return currentSummary;
+
+    const updatedSummary = {
       ...currentSummary,
-      grossRevenueCents: (currentSummary.grossRevenueCents || 0) + boostRevenue,
-      byOrderType: {
-        ...(currentSummary.byOrderType || {}),
-        creatorBoost: {
-          grossCents: boostRevenue,
-          count: boostCount,
-        },
-      },
+      byOrderType: { ...(currentSummary.byOrderType || {}) },
     };
-  };
+
+    for (const streamType of Object.keys(STREAM_FALLBACK_CONFIG)) {
+      const existing = updatedSummary.byOrderType[streamType];
+      if (existing && existing.count > 0) continue;
+
+      const fallbackSummary = await fetchStreamFallbackSummary(streamType, token);
+      if (!fallbackSummary) continue;
+
+      updatedSummary.byOrderType[streamType] = fallbackSummary;
+      updatedSummary.grossRevenueCents = (updatedSummary.grossRevenueCents || 0) + fallbackSummary.grossCents;
+    }
+
+    return updatedSummary;
+  }, [fetchStreamFallbackSummary]);
 
   const monthOptions = [
     { value: '7d', label: 'Last 7 days' },

@@ -120,10 +120,10 @@ export default function AdminPage() {
   };
 
   const revenueCards = [
-    { href: '/admin/payments', icon: <FaRocket />, title: 'Creator Boosts', desc: 'R20 – R150/boost', stat: `${stats.boostOrders} orders`, gradient: 'from-green-500 to-emerald-600' },
-    { href: '/admin/sponsored-challenges', icon: <FaTrophy />, title: 'Challenges', desc: '20% platform fee', stat: `${stats.challengeOrders} challenges`, gradient: 'from-purple-500 to-indigo-600' },
     { href: '/admin/opportunities', icon: <FaBriefcase />, title: 'Sponsored Opps', desc: 'R50 – R300/listing', stat: `${stats.approved} approved`, gradient: 'from-blue-500 to-cyan-600' },
-    { href: '#', icon: <FaBuilding />, title: 'Institution Plans', desc: 'R199 – R999/month', stat: 'Subscription', gradient: 'from-amber-500 to-orange-600' },
+    { href: '/admin/InstitutionPlans', icon: <FaBuilding />, title: 'Institution Plans', desc: 'R199 – R999/month', stat: 'Subscription', gradient: 'from-amber-500 to-orange-600' },
+    { href: '/admin/boost-management', icon: <FaRocket />, title: 'Creator Boosts', desc: 'R20 – R150/boost', stat: `${stats.boostOrders} orders`, gradient: 'from-green-500 to-emerald-600' },
+    { href: '/admin/sponsored-challenges', icon: <FaTrophy />, title: 'Challenges', desc: '20% platform fee', stat: `${stats.challengeOrders} challenges`, gradient: 'from-purple-500 to-indigo-600' },
   ];
 
   return (
@@ -188,9 +188,9 @@ export default function AdminPage() {
           <div className="lg:col-span-2 space-y-6">
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FaUsers className="text-blue-500" /> User Management
+                <FaClock className="text-amber-500" /> Pending Reviews
               </h3>
-              <UserManagementCard />
+              <PendingOppsCard />
             </section>
 
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
@@ -205,9 +205,9 @@ export default function AdminPage() {
           <div className="space-y-6">
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <FaClock className="text-amber-500" /> Pending Reviews
+                <FaUsers className="text-blue-500" /> User Management
               </h3>
-              <PendingOppsCard />
+              <UserManagementCard />
             </section>
 
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">

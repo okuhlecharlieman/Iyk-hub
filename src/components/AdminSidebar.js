@@ -15,8 +15,9 @@ const AdminSidebar = () => {
     { href: '/admin/opportunities', label: 'Opportunities', icon: <FaTasks /> },
     { href: '/admin/InstitutionPlans', label: 'Institution Plans', icon: <FaBuilding /> },
     { href: '/admin/users', label: 'Users', icon: <FaUsers /> },
-    { href: '/admin/payments', label: 'Revenue Management', icon: <FaMoneyBillWave /> },
+    { href: '/admin/boost-management', label: 'Boost Management', icon: <FaCrown /> },
     { href: '/admin/sponsored-challenges', label: 'Challenges', icon: <FaTrophy /> },
+    { href: '/admin/payments', label: 'Revenue Management', icon: <FaMoneyBillWave /> },
   ];
 
   const navContent = (

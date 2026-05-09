@@ -9,8 +9,8 @@ export default function PaymentsCard() {
     <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Payments & Boosts</h2>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">View payment plans and manage creator boosts.</p>
+          <h2 className="text-lg font-semibold">Revenue Management</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Track all platform revenue streams and analyze financial performance.</p>
         </div>
         <div className="text-green-600 dark:text-green-300">
           <FaMoneyBillWave className="text-3xl" />
@@ -22,11 +22,11 @@ export default function PaymentsCard() {
           <Button variant="primary">View boost plans</Button>
         </Link>
         <Link href="/admin/payments" className="mt-2 sm:mt-0">
-          <Button variant="secondary">Admin payment tools</Button>
+          <Button variant="secondary">Revenue dashboard</Button>
         </Link>
       </div>
 
-      <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">Use this to review payment-related settings, orders, and boost performance.</p>
+      <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">Monitor revenue by stream, filter by time period, and analyze business performance.</p>
     </div>
   );
 }

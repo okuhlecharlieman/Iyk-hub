@@ -6,7 +6,6 @@ import { useAuth } from '../../../context/AuthContext';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Button from '../../../components/ui/Button';
 import { FaSyncAlt, FaDollarSign, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
-import { useToast } from '../../../components/ui/ToastProvider';
 
 const formatCurrency = (cents) => {
   if (cents === undefined || cents === null) return 'R0.00';
@@ -118,6 +117,55 @@ const STREAM_FALLBACK_CONFIG = {
   },
 };
 
+async function fetchStreamFallbackItems(streamType, token) {
+  const config = STREAM_FALLBACK_CONFIG[streamType];
+  if (!config) return [];
+
+  const response = await fetch(config.endpoint, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) return [];
+
+  const json = await response.json();
+  return (json.items || []).map(config.buildEntry);
+}
+
+async function fetchStreamFallbackSummary(streamType, token) {
+  const config = STREAM_FALLBACK_CONFIG[streamType];
+  if (!config) return null;
+
+  const response = await fetch(config.endpoint, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (!response.ok) return null;
+
+  const json = await response.json();
+  const items = json.items || [];
+  return config.buildSummary(items);
+}
+
+async function enrichSummaryWithFallbacks(currentSummary, token) {
+  if (!currentSummary) return currentSummary;
+
+  const updatedSummary = {
+    ...currentSummary,
+    byOrderType: { ...(currentSummary.byOrderType || {}) },
+  };
+
+  for (const streamType of Object.keys(STREAM_FALLBACK_CONFIG)) {
+    const existing = updatedSummary.byOrderType[streamType];
+    if (existing && existing.count > 0) continue;
+
+    const fallbackSummary = await fetchStreamFallbackSummary(streamType, token);
+    if (!fallbackSummary) continue;
+
+    updatedSummary.byOrderType[streamType] = fallbackSummary;
+    updatedSummary.grossRevenueCents = (updatedSummary.grossRevenueCents || 0) + fallbackSummary.grossCents;
+  }
+
+  return updatedSummary;
+}
+
 export default function AdminPaymentsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -127,7 +175,6 @@ export default function AdminPaymentsPage() {
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const toast = useToast();
 
   const fetchData = useCallback(async () => {
     setError(null);
@@ -238,7 +285,7 @@ export default function AdminPaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedStream, selectedMonth, enrichSummaryWithFallbacks]);
+  }, [user, selectedStream, selectedMonth, enrichSummaryWithFallbacks, fetchStreamFallbackItems]);
 
   useEffect(() => {
     if (!user) return;

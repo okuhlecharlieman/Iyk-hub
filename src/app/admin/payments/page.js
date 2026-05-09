@@ -5,7 +5,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import Button from '../../../components/ui/Button';
-import { FaSyncAlt, FaDollarSign, FaFilter, FaCalendarAlt } from 'react-icons/fa';
+import { FaSyncAlt, FaDollarSign, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 import { useToast } from '../../../components/ui/ToastProvider';
 
 const formatCurrency = (cents) => {
@@ -44,9 +44,9 @@ const REVENUE_STREAM_LABELS = {
 
 const REVENUE_STREAM_COLORS = {
   sponsoredChallenge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  creatorBoost: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  institutionPlan: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  sponsoredOpportunity: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  creatorBoost: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  institutionPlan: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  sponsoredOpportunity: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   placementFee: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
   unknown: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
@@ -59,6 +59,7 @@ export default function AdminPaymentsPage() {
   const [entries, setEntries] = useState([]);
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
 
   const fetchData = useCallback(async () => {
@@ -73,31 +74,84 @@ export default function AdminPaymentsPage() {
         params.set('period', '30d');
       }
 
-      // Fetch summary
-      const summaryRes = await fetch(`/api/admin/financial-ledger?view=summary&${params}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      const summaryJson = await summaryRes.json();
-      if (!summaryRes.ok) throw new Error(summaryJson.error || 'Unable to load financial summary');
+      // Try financial ledger API first
+      try {
+        const summaryRes = await fetch(`/api/admin/financial-ledger?view=summary&${params}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const summaryJson = await summaryRes.json();
+        if (summaryRes.ok) {
+          setSummary(summaryJson.summary);
+        } else {
+          throw new Error('Financial ledger not available');
+        }
+      } catch (ledgerError) {
+        // Fallback to monetization API
+        console.log('Financial ledger not available, using monetization API');
+        const monetizationRes = await fetch(`/api/admin/monetization?${params}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const monetizationJson = await monetizationRes.json();
+        if (!monetizationRes.ok) throw new Error(monetizationJson.error || 'Unable to load revenue data');
 
-      // Fetch entries
-      const entriesParams = new URLSearchParams();
-      if (selectedStream !== 'all') {
-        entriesParams.set('orderType', selectedStream);
+        // Convert monetization data to summary format
+        const convertedSummary = {
+          grossRevenueCents: monetizationJson.summary.totalRevenueCents,
+          byOrderType: {},
+          entryCount: 0,
+        };
+
+        monetizationJson.revenueByType.forEach(item => {
+          convertedSummary.byOrderType[item.type] = {
+            grossCents: item.revenueCents,
+            count: item.count,
+          };
+        });
+
+        setSummary(convertedSummary);
       }
-      entriesParams.set('limit', '200');
 
-      const entriesRes = await fetch(`/api/admin/financial-ledger?view=entries&${entriesParams}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
-      const entriesJson = await entriesRes.json();
-      if (!entriesRes.ok) throw new Error(entriesJson.error || 'Unable to load financial entries');
+      // Fetch entries - try financial ledger first, then fallback
+      try {
+        const entriesParams = new URLSearchParams();
+        if (selectedStream !== 'all') {
+          entriesParams.set('orderType', selectedStream);
+        }
+        entriesParams.set('limit', '200');
 
-      setSummary(summaryJson.summary);
-      setEntries(entriesJson.entries || []);
+        const entriesRes = await fetch(`/api/admin/financial-ledger?view=entries&${entriesParams}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const entriesJson = await entriesRes.json();
+        if (entriesRes.ok) {
+          setEntries(entriesJson.entries || []);
+        } else {
+          throw new Error('Financial ledger entries not available');
+        }
+      } catch (entriesError) {
+        // Fallback: get recent payments from monetization API
+        console.log('Financial ledger entries not available, using recent payments');
+        const monetizationRes = await fetch(`/api/admin/monetization?${params}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const monetizationJson = await monetizationRes.json();
+        if (monetizationRes.ok) {
+          // Convert recent payments to entry format
+          const convertedEntries = (monetizationJson.recentPayments || []).map(payment => ({
+            id: payment.id,
+            orderType: payment.orderType,
+            orderId: payment.orderId,
+            amountCents: payment.amountCents,
+            entryType: 'charge_succeeded',
+            description: `${payment.orderType} payment`,
+            createdAt: payment.createdAt,
+          }));
+          setEntries(convertedEntries);
+        }
+      }
     } catch (err) {
-      console.error('Failed to load financial data:', err);
-      setError(err.message || 'Failed to load financial data');
+      console.error('Failed to load revenue data:', err);
+      setError(err.message || 'Failed to load revenue data');
     } finally {
       setLoading(false);
     }
@@ -109,8 +163,25 @@ export default function AdminPaymentsPage() {
   }, [user, fetchData]);
 
   const filteredEntries = entries.filter(entry => {
-    if (selectedStream === 'all') return true;
-    return entry.orderType === selectedStream;
+    // Filter by revenue stream
+    if (selectedStream !== 'all' && entry.orderType !== selectedStream) {
+      return false;
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const orderId = (entry.orderId || '').toLowerCase();
+      const description = (entry.description || '').toLowerCase();
+      const orderType = (entry.orderType || '').toLowerCase();
+
+      return orderId.includes(term) ||
+             description.includes(term) ||
+             orderType.includes(term) ||
+             REVENUE_STREAM_LABELS[entry.orderType]?.toLowerCase().includes(term);
+    }
+
+    return true;
   });
 
   const getTotalRevenue = () => {
@@ -126,6 +197,22 @@ export default function AdminPaymentsPage() {
       ...data,
       label: REVENUE_STREAM_LABELS[type] || type,
     }));
+  };
+
+  // Get all available revenue streams for dropdown (including ones with 0 revenue)
+  const getAllRevenueStreams = () => {
+    const availableStreams = getRevenueStreams();
+    const allTypes = Object.keys(REVENUE_STREAM_LABELS);
+
+    return allTypes.map(type => {
+      const existing = availableStreams.find(s => s.type === type);
+      return existing || {
+        type,
+        label: REVENUE_STREAM_LABELS[type],
+        grossCents: 0,
+        count: 0
+      };
+    });
   };
 
   const monthOptions = [
@@ -152,7 +239,19 @@ export default function AdminPaymentsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <FaSearch className="inline mr-1" /> Search Transactions
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by order ID, description, or type..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               <FaFilter className="inline mr-1" /> Revenue Stream
@@ -163,7 +262,7 @@ export default function AdminPaymentsPage() {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Revenue Streams</option>
-              {getRevenueStreams().map(stream => (
+              {getAllRevenueStreams().map(stream => (
                 <option key={stream.type} value={stream.type}>
                   {stream.label} ({stream.count} transactions)
                 </option>

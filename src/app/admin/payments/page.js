@@ -81,7 +81,8 @@ export default function AdminPaymentsPage() {
         });
         const summaryJson = await summaryRes.json();
         if (summaryRes.ok) {
-          setSummary(summaryJson.summary);
+          const enrichedSummary = await enrichSummaryWithBoosts(summaryJson.summary, token);
+          setSummary(enrichedSummary);
         } else {
           throw new Error('Financial ledger not available');
         }
@@ -108,10 +109,12 @@ export default function AdminPaymentsPage() {
           };
         });
 
-        setSummary(convertedSummary);
+        const enrichedSummary = await enrichSummaryWithBoosts(convertedSummary, token);
+        setSummary(enrichedSummary);
       }
 
       // Fetch entries - try financial ledger first, then fallback
+      let loadedEntries = [];
       try {
         const entriesParams = new URLSearchParams();
         if (selectedStream !== 'all') {
@@ -124,20 +127,18 @@ export default function AdminPaymentsPage() {
         });
         const entriesJson = await entriesRes.json();
         if (entriesRes.ok) {
-          setEntries(entriesJson.entries || []);
+          loadedEntries = entriesJson.entries || [];
         } else {
           throw new Error('Financial ledger entries not available');
         }
       } catch (entriesError) {
-        // Fallback: get recent payments from monetization API
         console.log('Financial ledger entries not available, using recent payments');
         const monetizationRes = await fetch(`/api/admin/monetization?${params}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
         const monetizationJson = await monetizationRes.json();
         if (monetizationRes.ok) {
-          // Convert recent payments to entry format
-          const convertedEntries = (monetizationJson.recentPayments || []).map(payment => ({
+          loadedEntries = (monetizationJson.recentPayments || []).map(payment => ({
             id: payment.id,
             orderType: payment.orderType,
             orderId: payment.orderId,
@@ -146,9 +147,24 @@ export default function AdminPaymentsPage() {
             description: `${payment.orderType} payment`,
             createdAt: payment.createdAt,
           }));
-          setEntries(convertedEntries);
         }
       }
+
+      if (selectedStream === 'all' || selectedStream === 'creatorBoost') {
+        const hasCreatorBoostEntries = loadedEntries.some(entry => entry.orderType === 'creatorBoost');
+        if (!hasCreatorBoostEntries) {
+          const boostRes = await fetch('/api/admin/creator-boosts', {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          });
+          const boostJson = await boostRes.json();
+          if (boostRes.ok) {
+            const boostEntries = buildCreatorBoostEntries(boostJson.items || []);
+            loadedEntries = loadedEntries.concat(boostEntries);
+          }
+        }
+      }
+
+      setEntries(loadedEntries);
     } catch (err) {
       console.error('Failed to load revenue data:', err);
       setError(err.message || 'Failed to load revenue data');
@@ -210,9 +226,48 @@ export default function AdminPaymentsPage() {
         type,
         label: REVENUE_STREAM_LABELS[type],
         grossCents: 0,
-        count: 0
+        count: 0,
       };
     });
+  };
+
+  const buildCreatorBoostEntries = (orders) => {
+    return (orders || []).map((order) => ({
+      id: order.id,
+      orderType: 'creatorBoost',
+      orderId: order.id,
+      amountCents: order.feeCents || order.amountCents || 0,
+      entryType: order.paymentStatus === 'paid' ? 'charge_succeeded' : 'charge_pending',
+      description: order.plan ? `${order.plan} boost` : 'Creator Boost',
+      createdAt: order.createdAt,
+    }));
+  };
+
+  const enrichSummaryWithBoosts = async (currentSummary, token) => {
+    if (!currentSummary) return currentSummary;
+    if (currentSummary.byOrderType?.creatorBoost) return currentSummary;
+
+    const boostRes = await fetch('/api/admin/creator-boosts', {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    const boostJson = await boostRes.json();
+    if (!boostRes.ok) return currentSummary;
+
+    const boostOrders = boostJson.items || [];
+    const boostRevenue = boostOrders.reduce((sum, order) => sum + (order.feeCents || order.amountCents || 0), 0);
+    const boostCount = boostOrders.length;
+
+    return {
+      ...currentSummary,
+      grossRevenueCents: (currentSummary.grossRevenueCents || 0) + boostRevenue,
+      byOrderType: {
+        ...(currentSummary.byOrderType || {}),
+        creatorBoost: {
+          grossCents: boostRevenue,
+          count: boostCount,
+        },
+      },
+    };
   };
 
   const monthOptions = [

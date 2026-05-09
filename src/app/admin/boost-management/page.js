@@ -2,7 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import LoadingSpinner from '../../../components/LoadingSpinner';
-import { FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaClock, FaPlay, FaPause, FaRocket, FaUser, FaCalendar, FaDollarSign, FaEdit, FaEye } from 'react-icons/fa';
+import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../components/ui/ToastProvider';
+import { FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaClock, FaPlay, FaPause, FaRocket, FaUser, FaCalendar, FaDollarSign, FaEdit, FaEye, FaCopy } from 'react-icons/fa';
 
 const STATUS_COLORS = {
   pending_payment: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
@@ -19,6 +21,8 @@ const PAYMENT_STATUS_OPTIONS = ['pending_payment', 'paid', 'failed', 'refunded']
 const ACTIVATION_STATUS_OPTIONS = ['pending_activation', 'active', 'expired', 'cancelled'];
 
 export default function BoostManagementPage() {
+  const { user } = useAuth();
+  const toast = useToast();
   const [boosts, setBoosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,37 +34,69 @@ export default function BoostManagementPage() {
   const [updating, setUpdating] = useState(false);
 
   const fetchBoosts = useCallback(async () => {
+    if (!user) {
+      setError('You must be signed in to load boost records.');
+      setBoosts([]);
+      setLoading(false);
+      return;
+    }
+
     try {
+      setError(null);
       setLoading(true);
-      const response = await fetch('/api/admin/creator-boosts');
-      if (!response.ok) throw new Error('Failed to fetch boosts');
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/creator-boosts', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       const data = await response.json();
-      setBoosts(data.items);
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to fetch boosts');
+      }
+      setBoosts(data.items || []);
     } catch (err) {
-      setError(err.message);
+      console.error('Boost fetch error:', err);
+      setError(err.message || 'Failed to load boost records');
+      setBoosts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchBoosts();
   }, [fetchBoosts]);
 
   const updateBoostStatus = async (orderId, updates) => {
+    if (!user) {
+      setError('You must be signed in to update boost orders.');
+      return;
+    }
+
     try {
       setUpdating(true);
+      const token = await user.getIdToken();
       const response = await fetch('/api/admin/creator-boosts', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ orderId, ...updates }),
       });
-      if (!response.ok) throw new Error('Failed to update boost');
+      const json = await response.json();
+      if (!response.ok) {
+        throw new Error(json.error || json.message || 'Failed to update boost');
+      }
       await fetchBoosts();
       setShowModal(false);
       setSelectedBoost(null);
+      toast('success', 'Boost order updated successfully.');
     } catch (err) {
-      setError(err.message);
+      console.error('Boost update error:', err);
+      setError(err.message || 'Failed to update boost order');
     } finally {
       setUpdating(false);
     }
@@ -71,7 +107,8 @@ export default function BoostManagementPage() {
       boost.ownerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       boost.ownerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       boost.plan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      boost.targetType?.toLowerCase().includes(searchTerm.toLowerCase());
+      boost.targetType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      boost.id?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesPayment = !paymentFilter || boost.paymentStatus === paymentFilter;
     const matchesActivation = !activationFilter || boost.activationStatus === activationFilter;
@@ -114,7 +151,7 @@ export default function BoostManagementPage() {
                 <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by user name, email, plan, or target..."
+                  placeholder="Search by user name, email, plan, target, or order ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -145,6 +182,12 @@ export default function BoostManagementPage() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4">
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -203,6 +246,7 @@ export default function BoostManagementPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activation</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -233,6 +277,21 @@ export default function BoostManagementPage() {
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[boost.activationStatus] || 'bg-gray-100 text-gray-800'}`}>
                         {boost.activationStatus?.replace('_', ' ') || 'unknown'}
                       </span>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate max-w-[10rem]">{boost.id}</span>
+                        <button
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(boost.id || '');
+                            toast('success', 'Order ID copied to clipboard');
+                          }}
+                          className="text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+                          aria-label="Copy order ID"
+                        >
+                          <FaCopy className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(boost.createdAt)}

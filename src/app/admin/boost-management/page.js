@@ -118,8 +118,24 @@ export default function BoostManagementPage() {
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let date;
+    try {
+      if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+        date = timestamp.toDate();
+      } else if (timestamp?._seconds != null || timestamp?.seconds != null) {
+        const seconds = Number(timestamp._seconds ?? timestamp.seconds);
+        const nanoseconds = Number(timestamp._nanoseconds ?? timestamp.nanoseconds ?? 0);
+        date = new Date(seconds * 1000 + Math.floor(nanoseconds / 1e6));
+      } else if (typeof timestamp === 'string' || typeof timestamp === 'number') {
+        date = new Date(timestamp);
+      }
+    } catch {
+      date = null;
+    }
+
+    if (!date || isNaN(date.getTime())) return 'N/A';
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
   if (loading) {

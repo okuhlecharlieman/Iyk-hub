@@ -16,10 +16,12 @@ const formatDate = (value) => {
   if (!value) return '—';
   try {
     let d;
-    if (typeof value.toDate === 'function') {
+    if (value?.toDate && typeof value.toDate === 'function') {
       d = value.toDate();
-    } else if (value._seconds || value.seconds) {
-      d = new Date((value._seconds || value.seconds) * 1000);
+    } else if (value?._seconds != null || value?.seconds != null) {
+      const seconds = Number(value._seconds ?? value.seconds);
+      const nanoseconds = Number(value._nanoseconds ?? value.nanoseconds ?? 0);
+      d = new Date(seconds * 1000 + Math.floor(nanoseconds / 1e6));
     } else if (typeof value === 'string' || typeof value === 'number') {
       d = new Date(value);
     } else {

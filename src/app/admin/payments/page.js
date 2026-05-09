@@ -283,10 +283,8 @@ export default function AdminPaymentsPage() {
       let loadedEntries = [];
       try {
         const entriesParams = new URLSearchParams();
-        if (selectedStream !== 'all') {
-          entriesParams.set('orderType', selectedStream);
-        }
-        entriesParams.set('limit', '200');
+        // Always fetch all entries - let filteredEntries handle stream filtering
+        entriesParams.set('limit', '500');
 
         const entriesRes = await fetch(`/api/admin/financial-ledger?view=entries&${entriesParams}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,

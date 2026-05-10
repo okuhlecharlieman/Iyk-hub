@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { getApprovedOpportunities } from '../lib/firebase/helpers';
 import ContentCard from '../components/ContentCard';
+import InstallButton from '../components/InstallButton';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush, FaRocket, FaUsers, FaTrophy, FaStar, FaCheckCircle } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -136,6 +137,7 @@ export default function Home() {
                 <FaTrophy className="mr-2 text-yellow-500" />
                 View Challenges
               </Link>
+              <InstallButton />
             </div>
 
             {/* Stats */}

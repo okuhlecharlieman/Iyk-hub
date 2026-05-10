@@ -168,10 +168,14 @@ function XOMultiplayer({ gameId, onEnd }) {
             setPlayerSymbol('X');
           } else if (data.players.O?.uid === user.uid) {
             setPlayerSymbol('O');
+          } else {
+            setError('This game room is full. Please create a new game.');
+            setLoading(false);
+            return;
           }
         }
       } catch (e) {
-        setError('Failed to join game: ' + e.message);
+        setError('Failed to join game. The room may no longer exist.');
         setLoading(false);
       }
     }

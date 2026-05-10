@@ -32,8 +32,8 @@ function ContentCard({ p, react }) {
               <p className={`text-sm font-medium ${color}`}>{p.type?.toUpperCase()}</p>
             </div>
           </div>
-          <Link href={`/profile/${p.uid}`}>
-            <a className="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">Profile</a>
+          <Link href={`/profile/${p.uid}`} className="text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400">
+            Profile
           </Link>
         </div>
 

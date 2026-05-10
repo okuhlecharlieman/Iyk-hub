@@ -1,13 +1,14 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { ensureUserDoc } from '../../lib/firebase/helpers';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
+import { getFriendlyError } from '../../lib/firebaseErrors';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const validateEmail = (value) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -57,7 +60,7 @@ export default function LoginPage() {
       await ensureUserDoc(cred.user, { displayName: cred.user.displayName, photoURL: cred.user.photoURL });
       router.push('/dashboard');
     } catch (e) {
-      setErr(e.message || 'Failed to sign in');
+      setErr(getFriendlyError(e));
     } finally {
       setLoading(false);
     }
@@ -72,9 +75,27 @@ export default function LoginPage() {
       await ensureUserDoc(cred.user, { displayName: cred.user.displayName, photoURL: cred.user.photoURL });
       router.push('/dashboard');
     } catch (e) {
-      setErr(e.message || 'Google sign-in failed');
+      setErr(getFriendlyError(e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setErr('');
+    setResetSent(false);
+    if (!email || !validateEmail(email)) {
+      setErr('Please enter a valid email address first.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetSent(true);
+    } catch (e) {
+      setErr(getFriendlyError(e));
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -116,7 +137,22 @@ export default function LoginPage() {
           <Button type="submit" className="w-full rounded-lg py-3" variant="primary" disabled={loading}>{loading ? <LoadingSpinner /> : 'Sign in'}</Button>
         </form>
         <Button onClick={signGoogle} className="w-full mt-4 rounded-lg py-3" variant="secondary">Continue with Google</Button>
-        <p className="mt-6 text-sm text-center text-gray-600 dark:text-gray-400">
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            disabled={resetLoading}
+            className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
+          >
+            {resetLoading ? 'Sending...' : 'Forgot your password?'}
+          </button>
+          {resetSent && (
+            <p className="text-green-600 dark:text-green-400 text-sm mt-2">
+              Password reset email sent! Check your inbox.
+            </p>
+          )}
+        </div>
+        <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">
           No account? <a className="underline hover:text-blue-500" href="/signup">Sign up</a>
         </p>
       </div>

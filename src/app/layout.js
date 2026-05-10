@@ -41,15 +41,25 @@ export const metadata = {
     description:
       'Join South Africa\'s premier youth innovation platform. Play games, showcase your talent, and discover real opportunities.',
   },
+  manifest: '/manifest.json',
   robots: {
     index: true,
     follow: true,
   },
 };
 
+export const viewport = {
+  themeColor: '#3b82f6',
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/logo.png" />
+      </head>
       <body className="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100">
         <Providers>
           <AuthProvider>

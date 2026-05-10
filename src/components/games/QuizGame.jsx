@@ -173,10 +173,14 @@ function QuizMultiplayer({ gameId, onEnd }) {
             setPlayerRole('player1');
           } else if (data.players.player2?.uid === user.uid) {
             setPlayerRole('player2');
+          } else {
+            setError('This game room is full. Please create a new game.');
+            setLoading(false);
+            return;
           }
         }
       } catch (e) {
-        setError('Failed to join game: ' + e.message);
+        setError('Failed to join game. The room may no longer exist.');
         setLoading(false);
       }
     };

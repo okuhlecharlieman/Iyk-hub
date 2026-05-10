@@ -68,6 +68,10 @@ export async function GET(request) {
     const averageTransactionCents = successfulPayments.length > 0
       ? totalRevenueCents / successfulPayments.length
       : 0;
+    const totalDonationRevenueCents = successfulPayments
+      .filter((p) => (p.orderType || '').toLowerCase() === 'donation')
+      .reduce((sum, p) => sum + (p.amountCents || 0), 0);
+    const donationCount = successfulPayments.filter((p) => (p.orderType || '').toLowerCase() === 'donation').length;
 
     // Revenue by type
     const revenueByType = {};
@@ -133,6 +137,8 @@ export async function GET(request) {
       successfulPayments: successfulPayments.length,
       uniqueCustomers,
       averageTransactionCents,
+      totalDonationRevenueCents,
+      donationCount,
       totalDownloads,
       period,
       startDate: startDate.toISOString(),

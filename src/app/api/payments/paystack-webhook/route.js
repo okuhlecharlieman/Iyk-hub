@@ -27,6 +27,17 @@ export async function POST(request) {
       const { reference, metadata } = data;
       const db = admin.firestore();
 
+      await db.collection('paymentLogs').add({
+        paystackReference: reference,
+        orderType: metadata?.orderType || 'donation',
+        orderId: metadata?.orderId || null,
+        amountCents: data.amount,
+        currency: data.currency,
+        status: 'succeeded',
+        customerEmail: data.customer?.email || null,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
       const paymentsSnap = await db.collection('payments')
         .where('paystackReference', '==', reference)
         .limit(1)

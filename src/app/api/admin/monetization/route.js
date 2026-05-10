@@ -82,6 +82,9 @@ export async function GET(request) {
 
     const revenueByTypeArray = Object.values(revenueByType).sort((a, b) => b.revenueCents - a.revenueCents);
 
+    const downloadsDoc = await db.collection('appStats').doc('downloads').get();
+    const totalDownloads = downloadsDoc.exists ? downloadsDoc.data()?.count || 0 : 0;
+
     // Recent payments (last 20)
     const recentPayments = payments.slice(0, 20).map(payment => ({
       id: payment.id,
@@ -130,6 +133,7 @@ export async function GET(request) {
       successfulPayments: successfulPayments.length,
       uniqueCustomers,
       averageTransactionCents,
+      totalDownloads,
       period,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),

@@ -54,6 +54,28 @@ export default function MonetizationDashboard() {
     }
   };
 
+  const exportData = async () => {
+    try {
+      const response = await fetch(`/api/admin/monetization/export?period=${selectedPeriod}`);
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const filename = `monetization-report-${selectedPeriod}-${new Date().toISOString().split('T')[0]}.csv`;
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      toast('error', 'Export failed: ' + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
@@ -115,7 +137,7 @@ export default function MonetizationDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -189,6 +211,26 @@ export default function MonetizationDashboard() {
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     ZAR {(summary.averageTransactionCents / 100).toFixed(2)}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <FaDownload className="h-6 w-6 text-teal-400" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Total Downloads
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {summary.totalDownloads ?? 0}
                   </dd>
                 </dl>
               </div>

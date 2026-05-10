@@ -51,7 +51,26 @@ const InstallButton = () => {
     };
   }, []);
 
+  const trackDownload = async () => {
+    try {
+      await fetch('/api/downloads/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: isIos ? 'iOS' : 'web',
+          userAgent: window.navigator.userAgent,
+          url: window.location.href,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error('Download tracking failed:', error);
+    }
+  };
+
   const handleInstallClick = async () => {
+    trackDownload();
+
     if (deferredPrompt) {
       try {
         deferredPrompt.prompt();

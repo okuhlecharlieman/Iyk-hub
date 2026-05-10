@@ -334,6 +334,7 @@ export default function Home() {
               <FaTrophy className="mr-2" />
               Sponsor a Challenge
             </Link>
+            <InstallButton />
           </div>
         </div>
       </div>

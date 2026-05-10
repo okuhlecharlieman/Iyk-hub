@@ -39,19 +39,24 @@ const InstallButton = () => {
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
 
-    // Show the install prompt
-    deferredPrompt.prompt();
+    try {
+      // Show the install prompt
+      deferredPrompt.prompt();
 
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
+      // Wait for the user to respond to the prompt
+      const { outcome } = await deferredPrompt.userChoice;
 
-    // Reset the deferred prompt
-    setDeferredPrompt(null);
+      // Reset the deferred prompt
+      setDeferredPrompt(null);
 
-    if (outcome === 'accepted') {
-      console.log('User accepted the install prompt');
-    } else {
-      console.log('User dismissed the install prompt');
+      if (outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+        setIsInstallable(false);
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+    } catch (error) {
+      console.error('Error during install prompt:', error);
     }
   };
 

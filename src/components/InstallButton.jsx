@@ -105,7 +105,7 @@ const InstallButton = () => {
       aria-label="Install Intwana Hub"
     >
       <FaDownload className="mr-2" />
-      Download App
+      
     </button>
   );
 };

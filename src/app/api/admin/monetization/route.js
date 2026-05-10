@@ -41,6 +41,8 @@ export async function GET(request) {
     const period = searchParams.get('period') || '30d';
     const { startDate, endDate } = getDateRange(period);
 
+    console.log(`[Monetization API] Fetching data for period: ${period}, range: ${startDate.toISOString()} - ${endDate.toISOString()}`);
+
     const db = admin.firestore();
 
     // Fetch payment logs within date range
@@ -60,6 +62,8 @@ export async function GET(request) {
 
     const paymentLogs = paymentLogsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    console.log(`[Monetization API] Found ${paymentLogs.length} payment logs, ${payments.length} payments`);
 
     // Calculate summary metrics
     const successfulPayments = paymentLogs.filter(p => p.status === 'succeeded');
@@ -137,13 +141,15 @@ export async function GET(request) {
       successfulPayments: successfulPayments.length,
       uniqueCustomers,
       averageTransactionCents,
-      totalDonationRevenueCents,
-      donationCount,
-      totalDownloads,
+      totalDonationRevenueCents: totalDonationRevenueCents || 0,
+      donationCount: donationCount || 0,
+      totalDownloads: totalDownloads || 0,
       period,
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
     };
+
+    console.log(`[Monetization API] Summary: Revenue=${(totalRevenueCents/100).toFixed(2)}, Downloads=${totalDownloads}, Donations=${(totalDonationRevenueCents/100).toFixed(2)}`);
 
     return NextResponse.json({
       summary,

@@ -17,12 +17,20 @@ export default function MonetizationDashboard() {
   const fetchMonetizationData = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch(`/api/admin/monetization?period=${selectedPeriod}`);
-      if (!response.ok) throw new Error('Failed to fetch data');
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error('Monetization API error:', response.status, errText);
+        throw new Error(`API error (${response.status}): ${errText || 'Failed to fetch data'}`);
+      }
       const result = await response.json();
       setData(result);
+      setError(null);
     } catch (err) {
-      setError(err.message);
+      console.error('Monetization fetch error:', err);
+      setError(err.message || 'Failed to fetch data');
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -105,7 +113,22 @@ export default function MonetizationDashboard() {
 
   if (!data) return null;
 
-  const { summary, recentPayments, pendingPayouts, revenueByType } = data;
+  const { summary = {}, recentPayments = [], pendingPayouts = [], revenueByType = [] } = data;
+  const safeData = {
+    summary: {
+      totalRevenueCents: summary.totalRevenueCents ?? 0,
+      successfulPayments: summary.successfulPayments ?? 0,
+      uniqueCustomers: summary.uniqueCustomers ?? 0,
+      averageTransactionCents: summary.averageTransactionCents ?? 0,
+      totalDownloads: summary.totalDownloads ?? 0,
+      totalDonationRevenueCents: summary.totalDonationRevenueCents ?? 0,
+      donationCount: summary.donationCount ?? 0,
+      ...summary,
+    },
+    recentPayments,
+    pendingPayouts,
+    revenueByType,
+  };
 
   return (
     <div className="space-y-6">
@@ -150,7 +173,7 @@ export default function MonetizationDashboard() {
                     Total Revenue
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    ZAR {(summary.totalRevenueCents / 100).toFixed(2)}
+                    ZAR {(safeData.summary.totalRevenueCents / 100).toFixed(2)}
                   </dd>
                 </dl>
               </div>
@@ -170,7 +193,7 @@ export default function MonetizationDashboard() {
                     Successful Payments
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {summary.successfulPayments}
+                    {safeData.summary.successfulPayments}
                   </dd>
                 </dl>
               </div>
@@ -190,7 +213,7 @@ export default function MonetizationDashboard() {
                     Paying Customers
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {summary.uniqueCustomers}
+                    {safeData.summary.uniqueCustomers}
                   </dd>
                 </dl>
               </div>
@@ -210,7 +233,7 @@ export default function MonetizationDashboard() {
                     Avg. Transaction
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    ZAR {(summary.averageTransactionCents / 100).toFixed(2)}
+                    ZAR {(safeData.summary.averageTransactionCents / 100).toFixed(2)}
                   </dd>
                 </dl>
               </div>
@@ -230,7 +253,7 @@ export default function MonetizationDashboard() {
                     Total Downloads
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {summary.totalDownloads ?? 0}
+                    {safeData.summary.totalDownloads ?? 0}
                   </dd>
                 </dl>
               </div>
@@ -250,7 +273,7 @@ export default function MonetizationDashboard() {
                     Donation Revenue
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    ZAR {(((summary.totalDonationRevenueCents ?? 0) / 100).toFixed(2))}
+                    ZAR {(((safeData.summary.totalDonationRevenueCents ?? 0) / 100).toFixed(2))}
                   </dd>
                 </dl>
               </div>
@@ -266,7 +289,7 @@ export default function MonetizationDashboard() {
             Revenue by Type
           </h3>
           <div className="space-y-4">
-            {revenueByType.map((item) => (
+            {safeData.revenueByType.map((item) => (
               <div key={item.type} className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="text-sm font-medium text-gray-900 dark:text-white capitalize">
@@ -313,7 +336,7 @@ export default function MonetizationDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {recentPayments.map((payment) => (
+                {safeData.recentPayments.map((payment) => (
                   <tr key={payment.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div>
@@ -353,14 +376,14 @@ export default function MonetizationDashboard() {
       </div>
 
       {/* Pending Payouts */}
-      {pendingPayouts.length > 0 && (
+      {safeData.pendingPayouts.length > 0 && (
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-              Pending Payouts ({pendingPayouts.length})
+              Pending Payouts ({safeData.pendingPayouts.length})
             </h3>
             <div className="space-y-4">
-              {pendingPayouts.map((payout) => (
+              {safeData.pendingPayouts.map((payout) => (
                 <div key={payout.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <div>
                     <div className="font-medium text-gray-900 dark:text-white">

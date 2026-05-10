@@ -10,7 +10,7 @@ import HangmanGame from '../../../components/games/HangmanGame';
 import QuizGame from '../../../components/games/QuizGame';
 import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain } from 'react-icons/gi';
 import Link from 'next/link';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaCopy, FaCheck } from 'react-icons/fa';
 import { db } from '../../../lib/firebase';
 import { doc, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -28,7 +28,16 @@ export default function GamePage() {
   const baseGameId = gameId.split('-')[0];
   const awardedResultKeys = useRef(new Set());
   const [mode, setMode] = useState('multiplayer');
+  const [copied, setCopied] = useState(false);
   const multiplier = 1;
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(gameId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
 
   const singlePlayerAvailable = ['rps', 'quiz', 'tictactoe', 'memory', 'hangman'].includes(baseGameId);
 
@@ -104,11 +113,23 @@ export default function GamePage() {
             </Link>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center gap-4">
-              <div className="text-blue-500 dark:text-blue-400">
-                {gameDetails?.icon}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-4">
+                <div className="text-blue-500 dark:text-blue-400">
+                  {gameDetails?.icon}
+                </div>
+                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{gameDetails?.name || 'Game'}</h1>
               </div>
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{gameDetails?.name || 'Game'}</h1>
+              <div className="mt-3 flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Room ID:</span>
+                <code className="text-sm font-mono text-gray-800 dark:text-gray-200 flex-1 truncate">{gameId}</code>
+                <button
+                  onClick={handleCopyId}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+                >
+                  {copied ? <><FaCheck /> Copied</> : <><FaCopy /> Copy</>}
+                </button>
+              </div>
             </div>
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">

@@ -1,18 +1,17 @@
 'use client';
 import Link from 'next/link';
-import { FaThumbsUp, FaHeart, FaLaugh, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaThumbsUp, FaEdit, FaTrash } from 'react-icons/fa';
 
-// This is the component for each individual card in the showcase.
-// It now includes a clickable author section and management buttons.
 export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
 
-  const handleReaction = (reactionType) => {
+  const handleReaction = () => {
     if (react) {
-      react(p.id, reactionType);
+      react(p.id);
     }
   };
 
-  const safeReactions = p.reactions || { likes: 0, hearts: 0, laughs: 0 };
+  const voteCount = p.votes ?? 0;
+  const hasVoted = Array.isArray(p.voters) && typeof window !== 'undefined';
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden relative">
@@ -58,23 +57,12 @@ export default function ContentCard({ p, react, onEdit, onDelete, canManage }) {
 
         <p className="text-gray-700 dark:text-gray-300 mb-4">{p.description}</p>
 
-        {/* Reactions */}
         {react && (
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
-            <div className="flex space-x-4">
-              <button onClick={() => handleReaction('likes')} className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 dark:hover:text-blue-400">
-                <FaThumbsUp />
-                <span className="text-sm">{safeReactions.likes}</span>
-              </button>
-              <button onClick={() => handleReaction('hearts')} className="flex items-center space-x-2 text-gray-500 hover:text-red-500 dark:hover:text-red-400">
-                <FaHeart />
-                <span className="text-sm">{safeReactions.hearts}</span>
-              </button>
-              <button onClick={() => handleReaction('laughs')} className="flex items-center space-x-2 text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400">
-                <FaLaugh />
-                <span className="text-sm">{safeReactions.laughs}</span>
-              </button>
-            </div>
+            <button onClick={handleReaction} className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">
+              <FaThumbsUp />
+              <span className="text-sm font-medium">{voteCount}</span>
+            </button>
           </div>
         )}
       </div>

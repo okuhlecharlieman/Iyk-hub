@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
 import { useAuth } from '../../context/AuthContext';
+import { togglePostVote } from '../../lib/firebase/helpers';
 import { SkeletonGrid } from '../../components/loaders/SkeletonLoader';
 import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
@@ -194,6 +195,35 @@ export default function ShowcasePage() {
     }
   };
 
+  const handlePostReaction = async (postId) => {
+    if (!user) {
+      toast('warning', 'Please log in to react to posts.');
+      return;
+    }
+
+    const currentPost = posts.find((p) => p.id === postId);
+    if (!currentPost) return;
+
+    const hasVoted = Array.isArray(currentPost.voters) && currentPost.voters.includes(user.uid);
+    const updatedPost = {
+      ...currentPost,
+      votes: hasVoted ? Math.max(0, (currentPost.votes || 0) - 1) : (currentPost.votes || 0) + 1,
+      voters: hasVoted
+        ? (currentPost.voters || []).filter((uid) => uid !== user.uid)
+        : [...(currentPost.voters || []), user.uid],
+    };
+
+    setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
+
+    try {
+      await togglePostVote(postId, user.uid);
+    } catch (err) {
+      console.error('Failed to react to post:', err);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? currentPost : p)));
+      toast('error', `Unable to update reaction: ${err.message || 'Please try again.'}`);
+    }
+  };
+
   const filteredPosts = posts.filter((p) => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
@@ -214,6 +244,7 @@ export default function ShowcasePage() {
             <ContentCard
               key={p.id}
               p={p}
+              react={handlePostReaction}
               onEdit={() => handleEditPost(p)}
               onDelete={() => handleDeletePost(p.id, p.uid)}
               canManage={isAdmin || (user && user.uid === p.uid)}

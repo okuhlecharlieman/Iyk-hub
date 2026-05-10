@@ -20,12 +20,16 @@ No chats, no negativity — just a space for kasi youth to shine.
 ---
 
 ## 🛠️ Features
-- **Dashboard** with greetings, games, quotes, and opportunity highlights.  
-- **Mini Games**: rock-paper-scissors, tic-tac-toe, memory match, hangman, quizzes, and more.  
-- **Leaderboard** – gamified points system with weekly challenges.  
-- **Creativity Wall** – upload art, music, code, poems; users can react with emojis ❤️🎉👍.  
-- **Opportunities Board** – curated gigs and collabs (admin-approved).  
-- **Profiles** (optional) – showcase skills, uploads, and scores.  
+- **Dashboard experience**: Personalized welcome messages, featured content, daily quotes, and quick access to games, talent showcase, and opportunities.
+- **Mini Games collection**: Play fun, casual games like rock-paper-scissors, tic-tac-toe, memory match, hangman, quizzes, and more to relax and earn points.
+- **Leaderboard system**: Track progress with weekly challenges, compare scores, and celebrate top performers in the community.
+- **Creativity Wall**: Upload and share creations across art, music, code snippets, stories, and poems. Users can react with emojis and discover new talent.
+- **Opportunities Board**: Browse curated jobs, gigs, and collaboration opportunities that are reviewed and approved by administrators.
+- **User profiles**: Create a profile to showcase your skills, earned points, uploaded content, and participation history.
+- **Admin portal**: Manage platform content, users, and monetization settings through a protected admin interface.
+- **Revenue Management (new)**: Admin-only financial dashboard for tracking paid revenue streams, transaction history, and revenue breakdown across creator boosts, sponsored challenges, institution plans, sponsored opportunities, and placement fees.
+- **Reactive search and filters**: Search transactions by order ID, description, or type, filter revenue streams, and view performance over different time periods.
+- **Secure authentication**: Firebase Auth protects user and admin access while supporting a safe, moderated community.
 
 ---
 

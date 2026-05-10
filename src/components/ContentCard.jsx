@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import Link from 'next/link';
-import { FaHeart, FaThumbsUp, FaRegComment } from 'react-icons/fa';
+import { FaThumbsUp } from 'react-icons/fa';
 import { Code, Music, FileText } from 'lucide-react';
 
 const TYPE_STYLES = {
@@ -12,6 +12,12 @@ const TYPE_STYLES = {
 
 function ContentCard({ p, react }) {
   const { icon, color, bg } = TYPE_STYLES[p.type] || TYPE_STYLES.art;
+  const voteCount = p.votes ?? ((p.reactions && p.reactions['👍']) || 0);
+  const canReact = typeof react === 'function';
+  const handleVote = () => {
+    if (!canReact) return;
+    react(p.id);
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out">
@@ -49,16 +55,14 @@ function ContentCard({ p, react }) {
       </div>
       
       <div className="bg-gray-50 dark:bg-gray-700/50 px-5 py-3 flex items-center justify-between">
-        <div className="flex gap-4">
-          <button onClick={() => react(p.id, '❤️')} className="flex items-center gap-2 text-gray-600 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-500 transition-colors">
-            <FaHeart /> 
-            <span className="font-medium">{(p.reactions && p.reactions['❤️']) || 0}</span>
-          </button>
-          <button onClick={() => react(p.id, '👍')} className="flex items-center gap-2 text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-500 transition-colors">
-            <FaThumbsUp /> 
-            <span className="font-medium">{(p.reactions && p.reactions['👍']) || 0}</span>
-          </button>
-        </div>
+        <button
+          onClick={handleVote}
+          disabled={!canReact}
+          className={`flex items-center gap-2 text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors ${!canReact ? 'cursor-not-allowed opacity-70' : ''}`}
+        >
+          <FaThumbsUp />
+          <span className="font-medium">{voteCount}</span>
+        </button>
       </div>
     </div>
   );

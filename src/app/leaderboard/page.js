@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { listTopUsersPage } from '../../lib/firebase/helpers';
 import Podium from '../../components/Podium';
 import LeaderboardItem from '../../components/LeaderboardItem';
+import InstallButton from '../../components/InstallButton';
 import { SkeletonTable } from '../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
@@ -119,9 +120,12 @@ export default function LeaderboardPage() {
                 <FaTrophy className="h-8 w-8" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Leaderboard
-            </h1>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+              <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Leaderboard
+              </h1>
+              <InstallButton />
+            </div>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
               See who is leading the ranks!
             </p>

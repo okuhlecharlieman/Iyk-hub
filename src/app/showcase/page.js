@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
+import InstallButton from '../../components/InstallButton';
 import { useAuth } from '../../context/AuthContext';
 import { togglePostVote } from '../../lib/firebase/helpers';
 import { SkeletonGrid } from '../../components/loaders/SkeletonLoader';
@@ -276,7 +277,10 @@ export default function ShowcasePage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
             <div className="flex-1">
-              <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Community Showcase</h1>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+                <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Community Showcase</h1>
+                <InstallButton />
+              </div>
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
             </div>
 

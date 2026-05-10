@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import GameCard from '../../components/GameCard';
 import UserRoomsList from '../../components/UserRoomsList';
+import InstallButton from '../../components/InstallButton';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaGamepad, FaSearch } from 'react-icons/fa';
 
@@ -26,7 +27,10 @@ export default function GamesPage() {
                 <FaGamepad className="h-8 w-8" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Intwana Games</h1>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+              <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Intwana Games</h1>
+              <InstallButton />
+            </div>
             <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Test your skills, challenge friends, and earn points!</p>
           </div>
 

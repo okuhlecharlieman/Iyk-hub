@@ -12,6 +12,7 @@ import { FaArrowRight, FaGamepad, FaBriefcase, FaVideo, FaPalette, FaTrophy, FaR
 import PointsCard from '../../components/PointsCard';
 import LeaderboardPreview from '../../components/LeaderboardPreview';
 import OnlineCount from '../../components/OnlineCount';
+import InstallButton from '../../components/InstallButton';
 import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger } from 'react-icons/gi';
 
 const GAME_ICONS = {
@@ -82,7 +83,10 @@ export default function DashboardPage() {
                   {quote?.text ? <em>&ldquo;{quote.text}&rdquo;</em> : 'Your journey to greatness starts now.'}
                 </p>
               </div>
-              <OnlineCount />
+              <div className="flex items-center gap-3">
+                <InstallButton />
+                <OnlineCount />
+              </div>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { FaGithub, FaBookOpen, FaUsers, FaCode } from 'react-icons/fa';
+import InstallButton from './InstallButton';
 
 const productLinks = [
   { label: 'Games', href: '/games' },
@@ -64,7 +65,10 @@ export default function Footer() {
 
         <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <p>&copy; {new Date().getFullYear()} Intwana Hub</p>
-          <span className="inline-flex items-center gap-1"><FaBookOpen className="h-3.5 w-3.5" /> Built for community growth</span>
+          <div className="flex items-center gap-4">
+            <InstallButton />
+            <span className="inline-flex items-center gap-1"><FaBookOpen className="h-3.5 w-3.5" /> Built for community growth</span>
+          </div>
         </div>
       </div>
     </footer>

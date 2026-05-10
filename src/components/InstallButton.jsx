@@ -3,21 +3,29 @@
 import { useState, useEffect } from 'react';
 import { FaDownload } from 'react-icons/fa';
 
+const isIosBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+};
+
+const isStandaloneMode = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+};
+
 const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later
       setDeferredPrompt(e);
       setIsInstallable(true);
     };
 
     const handleAppInstalled = () => {
-      // Hide the install button after installation
       setIsInstallable(false);
       setDeferredPrompt(null);
     };
@@ -25,8 +33,15 @@ const InstallButton = () => {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    const ios = isIosBrowser();
+    const standalone = isStandaloneMode();
+    setIsIos(ios);
+
+    if (!standalone && ios) {
+      setIsInstallable(true);
+    }
+
+    if (standalone) {
       setIsInstallable(false);
     }
 
@@ -37,26 +52,28 @@ const InstallButton = () => {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        setDeferredPrompt(null);
 
-    try {
-      // Show the install prompt
-      deferredPrompt.prompt();
-
-      // Wait for the user to respond to the prompt
-      const { outcome } = await deferredPrompt.userChoice;
-
-      // Reset the deferred prompt
-      setDeferredPrompt(null);
-
-      if (outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-        setIsInstallable(false);
-      } else {
-        console.log('User dismissed the install prompt');
+        if (outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+          setIsInstallable(false);
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+      } catch (error) {
+        console.error('Error during install prompt:', error);
       }
-    } catch (error) {
-      console.error('Error during install prompt:', error);
+      return;
+    }
+
+    if (isIos) {
+      window.alert(
+        'To install Intwana Hub on iOS Safari, tap the Share button and choose "Add to Home Screen."'
+      );
     }
   };
 
@@ -66,6 +83,7 @@ const InstallButton = () => {
     <button
       onClick={handleInstallClick}
       className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+      aria-label="Install Intwana Hub"
     >
       <FaDownload className="mr-2" />
       Download App

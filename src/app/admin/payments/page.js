@@ -40,6 +40,7 @@ const REVENUE_STREAM_LABELS = {
   institutionPlan: 'Institution Plans',
   sponsoredOpportunity: 'Sponsored Opportunities',
   placementFee: 'Placement Fees',
+  donation: 'Donations',
   unknown: 'Other',
 };
 
@@ -49,6 +50,7 @@ const REVENUE_STREAM_COLORS = {
   institutionPlan: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   sponsoredOpportunity: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   placementFee: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+  donation: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   unknown: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
 

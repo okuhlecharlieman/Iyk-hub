@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import crypto from 'crypto';
+import { appendLedgerEntry, LEDGER_ENTRY_TYPES } from '../../../../lib/monetization/ledger';
+
+const extractMetadataField = (metadata, field) => {
+  if (!metadata) return undefined;
+  if (metadata[field] !== undefined) return metadata[field];
+  if (Array.isArray(metadata.custom_fields)) {
+    const found = metadata.custom_fields.find(
+      (item) => item.variable_name === field || item.display_name === field
+    );
+    return found?.value;
+  }
+  return undefined;
+};
 
 export async function POST(request) {
   try {
@@ -26,16 +39,34 @@ export async function POST(request) {
       const data = event.data;
       const { reference, metadata } = data;
       const db = admin.firestore();
+      let orderType = extractMetadataField(metadata, 'orderType') || extractMetadataField(metadata, 'order_type') || 'donation';
+      let orderId = extractMetadataField(metadata, 'orderId') || extractMetadataField(metadata, 'order_id') || null;
+      if (typeof orderType === 'string') {
+        orderType = orderType.trim();
+        if (orderType.toLowerCase() === 'donation') orderType = 'donation';
+      }
+      if (typeof orderId === 'string') {
+        orderId = orderId.trim() || null;
+      }
 
       await db.collection('paymentLogs').add({
         paystackReference: reference,
-        orderType: metadata?.orderType || 'donation',
-        orderId: metadata?.orderId || null,
+        orderType,
+        orderId,
         amountCents: data.amount,
         currency: data.currency,
         status: 'succeeded',
         customerEmail: data.customer?.email || null,
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await appendLedgerEntry(db, {
+        entryType: LEDGER_ENTRY_TYPES.CHARGE_SUCCEEDED,
+        orderType,
+        orderId,
+        amountCents: data.amount,
+        currency: data.currency?.toUpperCase() || 'ZAR',
+        description: `Paystack charge succeeded for ${orderType} ${orderId || reference}`,
       });
 
       const paymentsSnap = await db.collection('payments')
@@ -51,15 +82,15 @@ export async function POST(request) {
         });
       }
 
-      if (metadata?.orderType && metadata?.orderId) {
+      if (orderType && orderId) {
         const collectionMap = {
           creatorBoost: 'creatorBoosts',
           sponsoredChallenge: 'sponsoredChallenges',
           donation: 'donations',
         };
-        const col = collectionMap[metadata.orderType];
+        const col = collectionMap[orderType];
         if (col) {
-          await db.collection(col).doc(metadata.orderId).set({
+          await db.collection(col).doc(orderId).set({
             paymentStatus: 'paid',
             paidAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),

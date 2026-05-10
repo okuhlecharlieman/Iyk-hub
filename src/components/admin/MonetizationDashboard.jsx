@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import { FaDollarSign, FaCreditCard, FaUsers, FaChartLine, FaDownload, FaEye, FaHeart } from 'react-icons/fa';
 import { useToast } from '../ui/ToastProvider';
 
 export default function MonetizationDashboard() {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,14 +13,18 @@ export default function MonetizationDashboard() {
   const toast = useToast();
 
   useEffect(() => {
+    if (!user) return;
     fetchMonetizationData();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, user]);
 
   const fetchMonetizationData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/admin/monetization?period=${selectedPeriod}`);
+      const token = user ? await user.getIdToken() : null;
+      const response = await fetch(`/api/admin/monetization?period=${selectedPeriod}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (!response.ok) {
         const errText = await response.text();
         console.error('Monetization API error:', response.status, errText);

@@ -227,6 +227,10 @@ export async function buildFinancialSummary(db, { startDate = null, endDate = nu
 
   summary.netRevenueCents = summary.grossRevenueCents - summary.refundsCents - summary.disputesCents - summary.processorFeesCents;
   summary.unpaidPayoutLiabilityCents = summary.payoutsScheduledCents - summary.payoutsPaidCents;
+  summary.contributionMarginCents = summary.netRevenueCents - summary.operatingSpendCents;
+  summary.contributionMarginPct = summary.grossRevenueCents > 0
+    ? Number(((summary.contributionMarginCents / summary.grossRevenueCents) * 100).toFixed(2))
+    : 0;
 
   return summary;
 }

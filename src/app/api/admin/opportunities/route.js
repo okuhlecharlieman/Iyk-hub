@@ -23,13 +23,28 @@ const validateOpportunityUpdatePayload = (payload) => {
 };
 
 export async function GET(request) {
+  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:get', limit: 60, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     await authenticate(request);
     const { searchParams } = new URL(request.url);
     const search = (searchParams.get('search') || '').trim().toLowerCase();
+    const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
+    const cursor = searchParams.get('cursor');
 
     const adminDb = admin.firestore();
-    const snap = await adminDb.collection('opportunities').orderBy('createdAt', 'desc').get();
+    let queryRef = adminDb.collection('opportunities').orderBy('createdAt', 'desc').limit(limitN);
+
+    if (cursor) {
+      const cursorSnap = await adminDb.collection('opportunities').doc(cursor).get();
+      if (cursorSnap.exists) {
+        queryRef = queryRef.startAfter(cursorSnap);
+      }
+    }
+
+    const snap = await queryRef.get();
     const opportunities = snap.docs.map((doc) => {
       const data = doc.data();
       return {
@@ -52,7 +67,10 @@ export async function GET(request) {
         })
       : opportunities;
 
-    return NextResponse.json({ success: true, opportunities: filtered });
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    const nextCursor = snap.docs.length === limitN ? lastDoc?.id : null;
+
+    return NextResponse.json({ success: true, opportunities: filtered, nextCursor });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });

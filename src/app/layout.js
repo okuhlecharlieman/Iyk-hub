@@ -5,6 +5,8 @@ import Footer from '../components/Footer';
 import { AuthProvider } from '../context/AuthContext';
 import Presence from '../components/Presence';
 import { Providers } from './providers';
+import CookieConsent from '../components/CookieConsent';
+import AgeVerification from '../components/AgeVerification';
 
 
 export const metadata = {
@@ -68,6 +70,8 @@ export default function RootLayout({ children }) {
             <Navbar />
             <main id="content">{children}</main>
             <Footer />
+            <CookieConsent />
+            <AgeVerification />
           </AuthProvider>
         </Providers>
       </body>

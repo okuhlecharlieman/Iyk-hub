@@ -474,7 +474,7 @@ export default function AdminPaymentsPage() {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Revenue by Stream</h3>
                 </div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {getRevenueStreams().map(stream => (
+                  {getAllRevenueStreams().filter(s => s.type !== 'unknown').map(stream => (
                     <div key={stream.type} className="px-6 py-4 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`px-2 py-1 rounded-lg text-xs font-semibold ${REVENUE_STREAM_COLORS[stream.type] || REVENUE_STREAM_COLORS.unknown}`}>

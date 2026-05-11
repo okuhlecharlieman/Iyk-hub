@@ -62,24 +62,81 @@ export async function GET(request) {
 
     const paymentLogs = paymentLogsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const payments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const creatorBoosts = creatorBoostsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const sponsoredChallenges = sponsoredChallengesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const institutions = institutionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    console.log(`[Monetization API] Found ${paymentLogs.length} payment logs, ${payments.length} payments`);
+    console.log(`[Monetization API] Found ${paymentLogs.length} payment logs, ${payments.length} payments, ${creatorBoosts.length} boost orders`);
 
-    // Calculate summary metrics
-    const successfulPayments = paymentLogs.filter(p => p.status === 'succeeded');
-    const totalRevenueCents = successfulPayments.reduce((sum, p) => sum + (p.amountCents || 0), 0);
-    const uniqueCustomers = new Set(successfulPayments.map(p => p.customerId)).size;
-    const averageTransactionCents = successfulPayments.length > 0
-      ? totalRevenueCents / successfulPayments.length
+    // Merge all payment sources to calculate summary metrics
+    // 1. Payment logs with status 'succeeded'
+    const successfulFromLogs = paymentLogs.filter(p => p.status === 'succeeded');
+    // 2. Payments collection with status 'succeeded' or 'paid'
+    const successfulFromPayments = payments.filter(p => p.status === 'succeeded' || p.status === 'paid');
+    // 3. Creator boost orders with paymentStatus 'paid'
+    const paidBoosts = creatorBoosts.filter(o => o.paymentStatus === 'paid');
+    // 4. Sponsored challenge orders with paymentStatus 'paid'
+    const paidChallenges = sponsoredChallenges.filter(o => o.paymentStatus === 'paid');
+
+    // Deduplicate by tracking seen order IDs
+    const seenIds = new Set();
+    const allSuccessful = [];
+
+    for (const p of successfulFromLogs) {
+      const key = p.orderId || p.id;
+      if (!seenIds.has(key)) {
+        seenIds.add(key);
+        allSuccessful.push(p);
+      }
+    }
+    for (const p of successfulFromPayments) {
+      const key = p.orderId || p.id;
+      if (!seenIds.has(key)) {
+        seenIds.add(key);
+        allSuccessful.push({
+          ...p,
+          customerId: p.customerId || p.userId || p.email,
+        });
+      }
+    }
+    for (const o of paidBoosts) {
+      if (!seenIds.has(o.id)) {
+        seenIds.add(o.id);
+        allSuccessful.push({
+          id: o.id,
+          orderType: 'creatorBoost',
+          amountCents: o.feeCents || o.amountCents || 0,
+          customerId: o.userId || o.email,
+          status: 'succeeded',
+        });
+      }
+    }
+    for (const o of paidChallenges) {
+      if (!seenIds.has(o.id)) {
+        seenIds.add(o.id);
+        allSuccessful.push({
+          id: o.id,
+          orderType: 'sponsoredChallenge',
+          amountCents: o.feeCents || o.amountCents || o.budgetCents || 0,
+          customerId: o.userId || o.sponsorEmail,
+          status: 'succeeded',
+        });
+      }
+    }
+
+    const totalRevenueCents = allSuccessful.reduce((sum, p) => sum + (p.amountCents || 0), 0);
+    const uniqueCustomers = new Set(allSuccessful.map(p => p.customerId).filter(Boolean)).size;
+    const averageTransactionCents = allSuccessful.length > 0
+      ? totalRevenueCents / allSuccessful.length
       : 0;
-    const totalDonationRevenueCents = successfulPayments
+    const totalDonationRevenueCents = allSuccessful
       .filter((p) => (p.orderType || '').toLowerCase() === 'donation')
       .reduce((sum, p) => sum + (p.amountCents || 0), 0);
-    const donationCount = successfulPayments.filter((p) => (p.orderType || '').toLowerCase() === 'donation').length;
+    const donationCount = allSuccessful.filter((p) => (p.orderType || '').toLowerCase() === 'donation').length;
 
     // Revenue by type
     const revenueByType = {};
-    successfulPayments.forEach(payment => {
+    allSuccessful.forEach(payment => {
       const type = payment.orderType || 'unknown';
       if (!revenueByType[type]) {
         revenueByType[type] = { type, revenueCents: 0, count: 0 };
@@ -107,7 +164,6 @@ export async function GET(request) {
     const pendingPayouts = [];
 
     // Check sponsored challenges for completed ones that need payouts
-    const sponsoredChallenges = sponsoredChallengesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     for (const challenge of sponsoredChallenges) {
       if (challenge.status === 'approved' && challenge.stripePaymentIntentId) {
         // Check if payment was successful
@@ -138,7 +194,7 @@ export async function GET(request) {
 
     const summary = {
       totalRevenueCents,
-      successfulPayments: successfulPayments.length,
+      successfulPayments: allSuccessful.length,
       uniqueCustomers,
       averageTransactionCents,
       totalDonationRevenueCents: totalDonationRevenueCents || 0,

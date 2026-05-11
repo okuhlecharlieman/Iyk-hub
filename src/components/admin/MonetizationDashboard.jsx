@@ -288,32 +288,6 @@ export default function MonetizationDashboard() {
         </div>
       </div>
 
-      {/* Revenue by Type */}
-      <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-            Revenue by Type
-          </h3>
-          <div className="space-y-4">
-            {safeData.revenueByType.map((item) => (
-              <div key={item.type} className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                    {item.type.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                  </div>
-                  <div className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                    ({item.count} transactions)
-                  </div>
-                </div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  ZAR {(item.revenueCents / 100).toFixed(2)}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Recent Payments */}
       <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">

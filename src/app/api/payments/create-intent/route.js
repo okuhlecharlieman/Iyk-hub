@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
-import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+import { enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logDataAccess } from '../../../../lib/api/logging';
 import { createStripePaymentIntent, createOrGetStripeCustomer } from '../../../../lib/stripe/stripe-client';
 import { getOrderConfig } from '../../../../lib/monetization/constants';
@@ -26,7 +26,7 @@ const validatePayload = (payload) => {
 };
 
 export async function POST(request) {
-  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'payments:create-intent', limit: 20, windowMs: 60 * 1000 });
+  const rateLimitResponse = await enforceDistributedRateLimit(request, { keyPrefix: 'payments:create-intent', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
 
   try {

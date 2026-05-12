@@ -3,7 +3,21 @@ import { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaCloudUploadAlt, FaImage, FaTrash } from 'react-icons/fa';
 import { uploadToStorage } from '../lib/firebase/helpers';
 
-const POST_TYPES = ['Art', 'Code', 'Game', 'Design', 'Music', 'Other'];
+const POST_TYPES = [
+  { label: 'Art', value: 'art' },
+  { label: 'Code', value: 'code' },
+  { label: 'Game', value: 'game' },
+  { label: 'Design', value: 'design' },
+  { label: 'Music', value: 'music' },
+  { label: 'Other', value: 'other' },
+];
+const DEFAULT_POST_TYPE = 'art';
+const POST_TYPE_VALUES = new Set(POST_TYPES.map((postType) => postType.value));
+
+const normalizePostType = (value) => {
+  const normalized = String(value || DEFAULT_POST_TYPE).trim().toLowerCase();
+  return POST_TYPE_VALUES.has(normalized) ? normalized : DEFAULT_POST_TYPE;
+};
 
 export default function PostEditor({ post, onSave, onClose }) {
   const [title, setTitle] = useState('');
@@ -12,7 +26,7 @@ export default function PostEditor({ post, onSave, onClose }) {
   const [mediaPreview, setMediaPreview] = useState('');
   const [existingMediaUrl, setExistingMediaUrl] = useState('');
   const [link, setLink] = useState('');
-  const [type, setType] = useState(POST_TYPES[0]);
+  const [type, setType] = useState(DEFAULT_POST_TYPE);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -23,14 +37,14 @@ export default function PostEditor({ post, onSave, onClose }) {
       setTitle(post.title || '');
       setDescription(post.description || '');
       setLink(post.link || '');
-      setType(post.type || POST_TYPES[0]);
+      setType(normalizePostType(post.type));
       setExistingMediaUrl(post.mediaUrl || '');
       setMediaPreview(post.mediaUrl || '');
     } else {
       setTitle('');
       setDescription('');
       setLink('');
-      setType(POST_TYPES[0]);
+      setType(DEFAULT_POST_TYPE);
       setExistingMediaUrl('');
       setMediaPreview('');
     }
@@ -82,7 +96,7 @@ export default function PostEditor({ post, onSave, onClose }) {
       if (mediaFile) {
         mediaUrl = await uploadToStorage(mediaFile, 'showcase');
       }
-      onSave({ title, description, mediaUrl, link, type });
+      onSave({ title, description, mediaUrl, link, type: normalizePostType(type) });
     } catch (err) {
       setError('Failed to upload media: ' + (err.message || 'Unknown error'));
     } finally {
@@ -108,7 +122,7 @@ export default function PostEditor({ post, onSave, onClose }) {
               id="type" value={type} onChange={(e) => setType(e.target.value)}
               className="block w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm p-3 transition-colors"
             >
-              {POST_TYPES.map(t => <option key={t} value={t.toLowerCase()}>{t}</option>)}
+              {POST_TYPES.map((postType) => <option key={postType.value} value={postType.value}>{postType.label}</option>)}
             </select>
           </div>
 

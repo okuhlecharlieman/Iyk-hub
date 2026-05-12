@@ -7,7 +7,7 @@ import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/mo
 
 const validateOpportunityPayload = (payload) => {
   ensurePlainObject(payload);
-  validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags', 'expiresAt']);
+  validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags', 'expiresAt', 'mediaUrl']);
 
   if (typeof payload.title !== 'string' || payload.title.trim().length === 0) {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'title', message: 'title is required.' }]);
@@ -39,6 +39,7 @@ const validateOpportunityPayload = (payload) => {
     description: payload.description.trim(),
     tags,
     expiresAt,
+    mediaUrl: typeof payload.mediaUrl === 'string' ? payload.mediaUrl.trim() : '',
   };
 };
 

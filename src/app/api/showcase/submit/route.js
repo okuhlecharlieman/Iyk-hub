@@ -7,6 +7,11 @@ import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/mo
 
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
 
+const normalizeShowcaseType = (value) => {
+  if (value === undefined) return 'other';
+  return typeof value === 'string' ? value.trim().toLowerCase() : value;
+};
+
 const validateShowcasePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'description', 'link', 'mediaUrl', 'type']);
@@ -27,8 +32,9 @@ const validateShowcasePayload = (payload) => {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'mediaUrl', message: 'mediaUrl must be a string.' }]);
   }
 
-  if (payload.type !== undefined && (typeof payload.type !== 'string' || !allowedTypes.has(payload.type))) {
-    throw new RequestValidationError('Invalid request payload.', [{ path: 'type', message: 'invalid type.' }]);
+  const type = normalizeShowcaseType(payload.type);
+  if (typeof type !== 'string' || !allowedTypes.has(type)) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'type', message: 'type must be one of art, code, game, design, music, other.' }]);
   }
 
   return {
@@ -36,7 +42,7 @@ const validateShowcasePayload = (payload) => {
     description: payload.description?.trim() || '',
     link: payload.link?.trim() || '',
     mediaUrl: payload.mediaUrl?.trim() || null,
-    type: payload.type || 'other',
+    type,
   };
 };
 

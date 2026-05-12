@@ -7,7 +7,7 @@ import { logAdminAction, logDataAccess } from '../../../lib/api/logging';
 
 const validateCreatePayload = (payload) => {
   ensurePlainObject(payload);
-  validateNoExtraFields(payload, ['title', 'description', 'challengeType', 'deadline', 'prizeDescription', 'sponsorName', 'sponsorEmail', 'budgetCents']);
+  validateNoExtraFields(payload, ['title', 'description', 'challengeType', 'deadline', 'prizeDescription', 'sponsorName', 'sponsorEmail', 'budgetCents', 'bannerUrl']);
 
   if (typeof payload.title !== 'string' || payload.title.trim().length === 0 || payload.title.length > 100) {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'title', message: 'Title is required and must be 1-100 characters.' }]);
@@ -51,6 +51,7 @@ const validateCreatePayload = (payload) => {
     sponsorName: payload.sponsorName.trim(),
     sponsorEmail: payload.sponsorEmail.trim(),
     budgetCents: payload.budgetCents,
+    bannerUrl: typeof payload.bannerUrl === 'string' ? payload.bannerUrl.trim() : '',
   };
 };
 

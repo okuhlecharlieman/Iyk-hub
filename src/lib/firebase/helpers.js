@@ -1,10 +1,9 @@
-import { auth, db, storage } from './../firebase';
+import { auth, db } from './../firebase';
 import {
   addDoc, collection, doc, getDoc, getDocs, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,
   updateDoc, where, deleteDoc, onSnapshot
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // NOTE: This file should ONLY contain client-side safe Firebase functions.
 
@@ -343,9 +342,40 @@ export async function fetchLatestQuote() {
 
 
 // Storage
+const IMAGE_UPLOAD_CONTEXTS = {
+  challenges: 'sponsored-challenges',
+  opportunities: 'opportunities',
+  showcase: 'showcase',
+};
+
+const resolveImageUploadContext = (prefix = 'uploads') => {
+  const [basePrefix] = String(prefix || 'uploads').split('/');
+  return IMAGE_UPLOAD_CONTEXTS[basePrefix] || basePrefix || 'uploads';
+};
+
 export async function uploadToStorage(file, prefix = 'uploads') {
-  if(!file) return null;
-  const fileRef = ref(storage, `${prefix}/${Date.now()}-${file.name}`);
-  await uploadBytes(fileRef, file);
-  return getDownloadURL(fileRef);
+  if (!file) return null;
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('context', resolveImageUploadContext(prefix));
+
+  const token = await user.getIdToken();
+  const res = await fetch('/api/uploads/images', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to upload image');
+  }
+
+  return json.url;
 }

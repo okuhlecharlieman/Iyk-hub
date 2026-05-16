@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import { FaExclamationTriangle } from 'react-icons/fa';
 import Button from './ui/Button';
+import { hasAdminDashboardAccess, formatRoleLabel } from '../lib/roles';
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading, userProfile } = useAuth();
@@ -23,8 +24,8 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
       return;
     }
 
-    if (adminOnly && userProfile?.role?.toLowerCase() !== 'admin') {
-      // Non-admin trying to access admin page
+    if (adminOnly && !hasAdminDashboardAccess(userProfile?.role)) {
+      // Non-team member trying to access admin pages
     }
 
   }, [isMounted, loading, user, userProfile, adminOnly, router]);
@@ -37,23 +38,23 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
 
-  if (adminOnly && userProfile?.role?.toLowerCase() !== 'admin') {
+  if (adminOnly && !hasAdminDashboardAccess(userProfile?.role)) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 text-center px-4">
             <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-md w-full">
                 <FaExclamationTriangle className="text-5xl text-red-500 mb-4 mx-auto" />
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Access Denied</h1>
-                <p className="text-gray-600 dark:text-gray-300 mt-2">You do not have the required admin privileges to view this page.</p>
+                <p className="text-gray-600 dark:text-gray-300 mt-2">You do not have the required team privileges to view this page.</p>
                 
                 <div className="text-left mt-6 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                   <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Account Status</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">Logged in as: <strong>{user.email}</strong></p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Account Role: <strong>{userProfile?.role || 'Not Set'}</strong></p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Account Role: <strong>{formatRoleLabel(userProfile?.role) || 'Not Set'}</strong></p>
                 </div>
 
                 <div className="text-left mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <h3 className="font-semibold text-gray-800 dark:text-white mb-2">How to Fix This</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Please log out and log back in with an administrator account.</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Please log out and log back in with a Business Owner, Admin, Operations, Developer Support, or Customer Support account.</p>
                 </div>
 
                 <Button onClick={() => router.push('/dashboard')} className="mt-6 w-full" variant="primary">Return to Dashboard</Button>

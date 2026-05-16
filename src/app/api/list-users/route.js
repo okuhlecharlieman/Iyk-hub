@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { authenticateWithRoles, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { TEAM_MANAGEMENT_ROLES } from '../../../lib/roles';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
@@ -44,7 +45,7 @@ export async function GET(request) {
   }
 
   try {
-    await authenticate(request);
+    await authenticateWithRoles(request, TEAM_MANAGEMENT_ROLES);
     await initializeFirebaseAdmin();
     const admin = await import('firebase-admin');
 

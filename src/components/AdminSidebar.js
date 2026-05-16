@@ -1,20 +1,25 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding } from 'react-icons/fa';
+import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding, FaUserCog } from 'react-icons/fa';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { canManageTeam, formatRoleLabel } from '../lib/roles';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { userProfile } = useAuth();
+  const userCanManageTeam = canManageTeam(userProfile?.role);
 
   const links = [
     { href: '/admin', label: 'Dashboard', icon: <FaTachometerAlt /> },
     { href: '/admin/opportunities', label: 'Opportunities', icon: <FaTasks /> },
     { href: '/admin/InstitutionPlans', label: 'Institution Plans', icon: <FaBuilding /> },
-    { href: '/admin/users', label: 'Users', icon: <FaUsers /> },
+    { href: '/admin/users', label: 'Users', icon: <FaUsers />, manageTeamOnly: true },
+    { href: '/admin/roles', label: 'Roles & Permissions', icon: <FaUserCog />, manageTeamOnly: true },
     { href: '/admin/boost-management', label: 'Boost Management', icon: <FaCrown /> },
     { href: '/admin/sponsored-challenges', label: 'Challenges', icon: <FaTrophy /> },
     { href: '/admin/payments', label: 'Revenue Management', icon: <FaMoneyBillWave /> },
@@ -30,7 +35,7 @@ const AdminSidebar = () => {
             </div>
             <div>
               <span className="text-lg font-bold text-gray-800 dark:text-white block">Admin</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">Manage platform</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{formatRoleLabel(userProfile?.role)} workspace</span>
             </div>
           </div>
           <button onClick={() => setOpen(false)} className="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -42,7 +47,7 @@ const AdminSidebar = () => {
       <nav className="flex-1 p-3 overflow-y-auto">
         <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-3">Menu</p>
         <ul className="space-y-0.5">
-          {links.map((link) => {
+          {links.filter((link) => !link.manageTeamOnly || userCanManageTeam).map((link) => {
             const isActive = pathname === link.href;
             return (
               <li key={link.href}>

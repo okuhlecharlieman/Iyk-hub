@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { authenticate, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { authenticateWithRoles, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
+import { TEAM_MANAGEMENT_ROLES, VALID_ROLE_KEYS } from '../../../lib/roles';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../lib/api/validation';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../lib/api/audit-log';
@@ -13,11 +14,12 @@ const validateSetRolePayload = (payload) => {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'uid', message: 'UID is required.' }]);
   }
 
-  if (typeof payload.role !== 'string' || !['admin', 'user'].includes(payload.role)) {
-    throw new RequestValidationError('Invalid request payload.', [{ path: 'role', message: 'role must be admin or user.' }]);
+  const normalizedRole = typeof payload.role === 'string' ? payload.role.trim().toLowerCase() : '';
+  if (!VALID_ROLE_KEYS.includes(normalizedRole)) {
+    throw new RequestValidationError('Invalid request payload.', [{ path: 'role', message: `role must be one of: ${VALID_ROLE_KEYS.join(', ')}.` }]);
   }
 
-  return { uid: payload.uid.trim(), role: payload.role };
+  return { uid: payload.uid.trim(), role: normalizedRole };
 };
 
 export async function POST(req) {
@@ -31,7 +33,7 @@ export async function POST(req) {
   }
 
   try {
-    const actor = await authenticate(req);
+    const actor = await authenticateWithRoles(req, TEAM_MANAGEMENT_ROLES);
 
     const payload = await parseJsonBody(req);
     const { uid, role } = validateSetRolePayload(payload);

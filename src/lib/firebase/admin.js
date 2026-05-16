@@ -96,6 +96,7 @@ export const requireRole = async (req, allowedRoles = ['admin']) => {
 
 // Authenticates a request and verifies the user is an admin.
 export const authenticate = async (req) => requireRole(req, ['admin']);
+export const authenticateWithRoles = async (req, allowedRoles = ['admin']) => requireRole(req, allowedRoles);
 
 // Authenticates a request and returns the user's UID.
 export const authenticateAndGetUid = async (req) => {

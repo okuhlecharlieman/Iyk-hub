@@ -4,6 +4,7 @@ import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ensureUserDoc } from '../lib/firebase/helpers';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { hasAdminDashboardAccess } from '../lib/roles';
 
 const AuthContext = createContext({ 
   user: null, 
@@ -30,7 +31,7 @@ export function AuthProvider({ children }) {
         unsubProfile = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
-            const adminStatus = data.role?.toLowerCase() === 'admin';
+            const adminStatus = hasAdminDashboardAccess(data.role);
             setUserProfile({ id: snap.id, ...data });
             setIsAdmin(adminStatus);
             currentUser.getIdToken(true).catch(console.warn);

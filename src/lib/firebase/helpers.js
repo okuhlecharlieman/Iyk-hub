@@ -125,8 +125,16 @@ export async function updateShowcasePost(postId, data) {
     await updateDoc(postRef, { ...data, updatedAt: serverTimestamp() });
 }
 
-export async function togglePostVote(postId, uid) {
+const REACTION_FIELDS = {
+  thumbsUp: { votersField: 'voters', countField: 'votes' },
+  fire: { votersField: 'fireVoters', countField: 'fireCount' },
+  heart: { votersField: 'heartVoters', countField: 'heartCount' },
+};
+
+export async function togglePostVote(postId, uid, reactionType = 'thumbsUp') {
   const postRef = doc(db, "wallPosts", postId);
+  const fields = REACTION_FIELDS[reactionType] || REACTION_FIELDS.thumbsUp;
+
   return runTransaction(db, async (transaction) => {
     const postDoc = await transaction.get(postRef);
     if (!postDoc.exists()) {
@@ -134,20 +142,19 @@ export async function togglePostVote(postId, uid) {
     }
 
     const data = postDoc.data();
-    const voters = data.voters || [];
-    let newVotes = data.votes || 0;
+    const voters = data[fields.votersField] || [];
 
     if (voters.includes(uid)) {
-      // User is unvoting
+      const newVoters = voters.filter(voterId => voterId !== uid);
       transaction.update(postRef, {
-        voters: voters.filter(voterId => voterId !== uid),
-        votes: newVotes - 1,
+        [fields.votersField]: newVoters,
+        [fields.countField]: newVoters.length,
       });
     } else {
-      // User is voting
+      const newVoters = [...voters, uid];
       transaction.update(postRef, {
-        voters: [...voters, uid],
-        votes: newVotes + 1,
+        [fields.votersField]: newVoters,
+        [fields.countField]: newVoters.length,
       });
     }
   });
@@ -327,6 +334,61 @@ export async function rejectOpportunity(opportunityId) {
   }
 
   return json;
+}
+
+// Streaks & Activity
+export async function recordDailyLogin(uid) {
+  if (!uid) return null;
+
+  const streakRef = doc(db, 'users', uid);
+  const today = new Date().toISOString().slice(0, 10);
+
+  return runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(streakRef);
+    if (!userDoc.exists()) return null;
+
+    const data = userDoc.data();
+    const streak = data.streak || { current: 0, longest: 0, lastLoginDate: null };
+
+    if (streak.lastLoginDate === today) {
+      return streak;
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    let newCurrent = 1;
+    if (streak.lastLoginDate === yesterdayStr) {
+      newCurrent = (streak.current || 0) + 1;
+    }
+
+    const newLongest = Math.max(newCurrent, streak.longest || 0);
+
+    const newStreak = {
+      current: newCurrent,
+      longest: newLongest,
+      lastLoginDate: today,
+    };
+
+    transaction.update(streakRef, { streak: newStreak });
+    return newStreak;
+  });
+}
+
+export function getAchievements(userProfile) {
+  const achievements = [];
+  const streak = userProfile?.streak || {};
+  const points = userProfile?.points || {};
+
+  if (streak.current >= 3) achievements.push({ id: 'streak3', label: '3-Day Streak', icon: '🔥', color: 'orange' });
+  if (streak.current >= 7) achievements.push({ id: 'streak7', label: 'Week Warrior', icon: '⚡', color: 'yellow' });
+  if (streak.current >= 30) achievements.push({ id: 'streak30', label: 'Monthly Master', icon: '🏆', color: 'amber' });
+  if ((streak.longest || 0) >= 14) achievements.push({ id: 'dedicated', label: 'Dedicated', icon: '💪', color: 'blue' });
+  if ((points.total || 0) >= 100) achievements.push({ id: 'centurion', label: 'Centurion', icon: '💯', color: 'purple' });
+  if ((points.total || 0) >= 500) achievements.push({ id: 'elite', label: 'Elite', icon: '👑', color: 'gold' });
+
+  return achievements;
 }
 
 // Quotes

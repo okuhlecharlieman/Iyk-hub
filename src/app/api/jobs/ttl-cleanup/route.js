@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 
-const CRON_SECRET = process.env.CRON_SECRET;
-
-export async function POST(request) {
-  if (CRON_SECRET) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export async function GET(request) {
+  if (!isAuthorizedCron(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

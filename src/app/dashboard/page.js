@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { fetchLatestQuote, getApprovedOpportunities } from '../../lib/firebase/helpers';
+import { fetchLatestQuote, getApprovedOpportunities, recordDailyLogin, getAchievements } from '../../lib/firebase/helpers';
 import Link from 'next/link';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaVideo, FaPalette, FaTrophy, FaRocket, FaUsers } from 'react-icons/fa';
 
@@ -30,17 +30,24 @@ const GAME_COLORS = {
 };
 
 export default function DashboardPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, userProfile, isAdmin } = useAuth();
   const router = useRouter();
   const [quote, setQuote] = useState(null);
   const [opps, setOpps] = useState([]);
+  const [streak, setStreak] = useState(null);
   const [formattedDate, setFormattedDate] = useState('');
+
+  const achievements = getAchievements(userProfile);
 
   useEffect(() => {
     if (user) {
       async function load() {
-        const q = await fetchLatestQuote();
+        const [q, streakData] = await Promise.all([
+          fetchLatestQuote(),
+          recordDailyLogin(user.uid).catch(() => null),
+        ]);
         setQuote(q);
+        setStreak(streakData);
         if (q && q.createdAt) {
           const date = new Date(q.createdAt.seconds * 1000);
           setFormattedDate(date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
@@ -80,7 +87,12 @@ export default function DashboardPage() {
                   Welcome back{user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}
                 </h1>
                 <p className="mt-2 text-blue-100 text-sm sm:text-base max-w-xl">
-                  {quote?.text ? <em>&ldquo;{quote.text}&rdquo;</em> : 'Your journey to greatness starts now.'}
+                  {quote?.text ? (
+                    <>
+                      <em>&ldquo;{quote.text}&rdquo;</em>
+                      {quote.author && <span className="block text-xs text-blue-200 mt-1">&mdash; {quote.author}</span>}
+                    </>
+                  ) : 'Your journey to greatness starts now.'}
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -192,6 +204,45 @@ export default function DashboardPage() {
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Streak Card */}
+              {streak && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+                  <h3 className="font-bold text-gray-800 dark:text-white text-sm mb-3 flex items-center gap-2">
+                    <span className="text-orange-500 text-lg">🔥</span> Daily Streak
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-extrabold text-orange-500">{streak.current || 0}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Current</p>
+                    </div>
+                    <div className="h-10 w-px bg-gray-200 dark:bg-gray-700"></div>
+                    <div className="text-center flex-1">
+                      <p className="text-3xl font-extrabold text-purple-500">{streak.longest || 0}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Best</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-center text-gray-400 dark:text-gray-500 mt-3">
+                    Log in every day to keep your streak going!
+                  </p>
+                </div>
+              )}
+
+              {/* Achievements */}
+              {achievements.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+                  <h3 className="font-bold text-gray-800 dark:text-white text-sm mb-3 flex items-center gap-2">
+                    <span className="text-amber-500 text-lg">🏅</span> Achievements
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {achievements.map((a) => (
+                      <span key={a.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                        <span>{a.icon}</span> {a.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <PointsCard />
               <LeaderboardPreview weekly />
             </div>

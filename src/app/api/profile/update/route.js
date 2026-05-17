@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '@/lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
+import { enforceRateLimit } from '@/lib/api/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -10,7 +11,7 @@ const validateProfileUpdatePayload = (payload) => {
   validateNoExtraFields(payload, ['updates']);
 
   ensurePlainObject(payload.updates, 'updates must be a JSON object.');
-  validateNoExtraFields(payload.updates, ['displayName', 'bio', 'skills']);
+  validateNoExtraFields(payload.updates, ['displayName', 'bio', 'skills', 'photoURL']);
 
   const updates = {};
 
@@ -33,6 +34,13 @@ const validateProfileUpdatePayload = (payload) => {
       throw new RequestValidationError('Invalid request payload.', [{ path: 'updates.skills', message: 'skills must be an array of up to 50 non-empty strings (max 50 chars each).' }]);
     }
     updates.skills = payload.updates.skills.map((skill) => skill.trim());
+  }
+
+  if (payload.updates.photoURL !== undefined) {
+    if (typeof payload.updates.photoURL !== 'string' || payload.updates.photoURL.length > 2048) {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'updates.photoURL', message: 'photoURL must be a valid URL string (max 2048 chars).' }]);
+    }
+    updates.photoURL = payload.updates.photoURL;
   }
 
   if (Object.keys(updates).length === 0) {

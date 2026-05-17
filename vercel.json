@@ -7,6 +7,14 @@
     {
       "path": "/api/jobs/creator-boost-lifecycle",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/jobs/ttl-cleanup",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/jobs/daily-quote",
+      "schedule": "0 5 * * *"
     }
   ]
 }

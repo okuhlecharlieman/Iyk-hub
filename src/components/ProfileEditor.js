@@ -1,34 +1,69 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { FaTimes } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { FaTimes, FaCamera, FaSpinner } from 'react-icons/fa';
+import { uploadToStorage } from '../lib/firebase/helpers';
 
-// A reusable modal form for editing a user's profile.
 export default function ProfileEditor({ profile, onSave, onClose }) {
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [skills, setSkills] = useState([]);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef(null);
 
-  // When the editor opens, populate the form with the current profile data.
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.displayName || '');
       setBio(profile.bio || '');
       setSkills(profile.skills || []);
+      setPhotoPreview(profile.photoURL || '');
     }
   }, [profile]);
 
-  const handleSave = () => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Photo must be under 5MB.');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file.');
+      return;
+    }
+    setError('');
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
     if (!displayName.trim()) {
       setError('Display Name is required.');
       return;
     }
-    
-    // The onSave function will handle the API call.
-    onSave({ displayName, bio, skills });
+    setError('');
+    setUploading(true);
+
+    try {
+      let photoURL = profile?.photoURL || '';
+      if (photoFile) {
+        photoURL = await uploadToStorage(photoFile, 'profiles');
+      }
+
+      const updates = { displayName, bio, skills };
+      if (photoURL) updates.photoURL = photoURL;
+      onSave(updates);
+    } catch (err) {
+      setError('Failed to upload photo: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploading(false);
+    }
   };
 
-  // Handles changes to the skills input (comma-separated).
   const handleSkillsChange = (e) => {
     const skillsArray = e.target.value.split(',').map(skill => skill.trim()).filter(Boolean);
     setSkills(skillsArray);
@@ -42,9 +77,38 @@ export default function ProfileEditor({ profile, onSave, onClose }) {
         </button>
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-6">Edit Profile</h2>
         
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {error && <p className="text-red-500 mb-4 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">{error}</p>}
 
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Profile Photo */}
+          <div className="flex flex-col items-center">
+            <div className="relative w-24 h-24 mb-3">
+              {photoPreview ? (
+                <img src={photoPreview} alt="Profile" className="w-full h-full rounded-full object-cover shadow-md" />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                  <FaCamera className="text-gray-400 text-2xl" />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-2 shadow-lg hover:bg-blue-700 transition-colors"
+                title="Change photo"
+              >
+                <FaCamera size={12} />
+              </button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400">Click the camera icon to change your photo</p>
+          </div>
+
           {/* Display Name */}
           <div>
             <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Display Name</label>
@@ -88,8 +152,13 @@ export default function ProfileEditor({ profile, onSave, onClose }) {
           <button onClick={onClose} className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
             Cancel
           </button>
-          <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Save Profile
+          <button
+            onClick={handleSave}
+            disabled={uploading}
+            className="px-6 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60 flex items-center gap-2"
+          >
+            {uploading && <FaSpinner className="animate-spin" />}
+            {uploading ? 'Saving...' : 'Save Profile'}
           </button>
         </div>
       </div>

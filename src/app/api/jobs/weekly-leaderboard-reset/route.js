@@ -1,16 +1,9 @@
 import { NextResponse } from 'next/server';
 import { resetWeeklyLeaderboardPoints } from '../../../../lib/jobs/leaderboard-reset';
 import { logAdminAction } from '../../../../lib/api/audit-log';
+import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 
 export const runtime = 'nodejs';
-
-const isAuthorizedCron = (request) => {
-  const configuredSecret = process.env.CRON_SECRET;
-  if (!configuredSecret) return false;
-
-  const authHeader = request.headers.get('authorization') || '';
-  return authHeader === `Bearer ${configuredSecret}`;
-};
 
 export async function GET(request) {
   if (!isAuthorizedCron(request)) {

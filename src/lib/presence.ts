@@ -32,18 +32,15 @@ let presenceUsers = 0;
 let activeConnectionCleanup: (() => void) | null = null;
 let activeUserStatusRef: ReturnType<typeof ref> | null = null;
 
-function countActiveConnections(status: StatusRecord) {
-  const connections = status.connections;
-
-  if (!connections) return status.state === "online" ? 1 : 0;
-
-  return Object.values(connections).filter(Boolean).length;
+function hasActiveConnection(status: StatusRecord) {
+  return Object.values(status.connections || {}).some(Boolean);
 }
 
-function countOnlinePresence(value: unknown) {
-  if (!value || typeof value !== "object") return 0;
+function isOnlineStatus(value: unknown) {
+  if (!value || typeof value !== "object") return false;
 
-  return countActiveConnections(value as StatusRecord);
+  const status = value as StatusRecord;
+  return status.state === "online" || hasActiveConnection(status);
 }
 
 function stopActiveConnection() {
@@ -149,10 +146,7 @@ export function subscribeOnlineCount(cb: (n: number) => void): Unsubscribe {
     statusRef,
     (snap) => {
       const val = snap.val() || {};
-      const count = Object.values(val).reduce<number>(
-        (total, status) => total + countOnlinePresence(status),
-        0,
-      );
+      const count = Object.values(val).filter(isOnlineStatus).length;
       cb(count);
     },
     (error) => {

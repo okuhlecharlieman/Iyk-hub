@@ -6,7 +6,11 @@ import { startPresence } from '../lib/presence';
 
 export default function Presence() {
   useEffect(() => {
-    startPresence();
+    const stopPresence = startPresence();
+
+    return () => {
+      if (stopPresence) stopPresence();
+    };
   }, []);
 
   return null;

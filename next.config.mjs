@@ -58,7 +58,7 @@ const nextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://lh3.googleusercontent.com https://*.googleusercontent.com",
               "connect-src 'self' https://*.googleapis.com https://storage.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.paystack.co https://firebasestorage.googleapis.com",
-              "frame-src 'self' https://js.paystack.co https://accounts.google.com https://*.firebaseapp.com",
+              "frame-src 'self' https://js.paystack.co https://checkout.paystack.com https://accounts.google.com https://*.firebaseapp.com",
               "media-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",

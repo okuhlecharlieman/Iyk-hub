@@ -1,22 +1,45 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { FaLock } from 'react-icons/fa';
+
+const PAYSTACK_SCRIPT_ID = 'paystack-script';
+const PAYSTACK_SCRIPT_SRC = 'https://js.paystack.co/v2/inline.js';
 
 export default function PaystackCheckout({ email, amountCents, reference, onSuccess, onError, metadata = {} }) {
   const [loading, setLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !document.getElementById('paystack-script')) {
-      const script = document.createElement('script');
-      script.id = 'paystack-script';
-      script.src = 'https://js.paystack.co/v1/inline.js';
-      script.onload = () => setScriptLoaded(true);
-      document.body.appendChild(script);
-    } else if (typeof window !== 'undefined' && window.PaystackPop) {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleLoad = () => setScriptLoaded(Boolean(window.PaystackPop));
+    const handleError = () => {
+      setScriptLoaded(false);
+      onError?.({ message: 'Payment system failed to load. Please refresh and try again.' });
+    };
+
+    if (window.PaystackPop) {
       setScriptLoaded(true);
+      return undefined;
     }
-  }, []);
+
+    let script = document.getElementById(PAYSTACK_SCRIPT_ID);
+    if (!script) {
+      script = document.createElement('script');
+      script.id = PAYSTACK_SCRIPT_ID;
+      script.src = PAYSTACK_SCRIPT_SRC;
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    script.addEventListener('load', handleLoad);
+    script.addEventListener('error', handleError);
+
+    return () => {
+      script.removeEventListener('load', handleLoad);
+      script.removeEventListener('error', handleError);
+    };
+  }, [onError]);
 
   const handlePay = () => {
     if (!scriptLoaded || !window.PaystackPop) {
@@ -32,13 +55,15 @@ export default function PaystackCheckout({ email, amountCents, reference, onSucc
 
     setLoading(true);
 
-    const handler = window.PaystackPop.setup({
+    const popup = new window.PaystackPop();
+    popup.newTransaction({
       key: publicKey,
       email,
       amount: amountCents,
       currency: 'ZAR',
-      ref: reference,
+      reference,
       metadata: {
+        ...metadata,
         custom_fields: [
           { display_name: 'Order Reference', variable_name: 'reference', value: reference },
           ...Object.entries(metadata).map(([key, value]) => ({
@@ -48,16 +73,18 @@ export default function PaystackCheckout({ email, amountCents, reference, onSucc
           })),
         ],
       },
-      onClose: () => {
+      onCancel: () => {
         setLoading(false);
       },
-      callback: (response) => {
+      onError: (error) => {
+        setLoading(false);
+        onError?.({ message: error?.message || 'Payment failed. Please try again.' });
+      },
+      onSuccess: (response) => {
         setLoading(false);
         onSuccess?.(response);
       },
     });
-
-    handler.openIframe();
   };
 
   return (

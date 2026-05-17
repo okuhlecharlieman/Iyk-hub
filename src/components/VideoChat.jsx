@@ -80,6 +80,8 @@ export default function VideoChat() {
   const timerRef = useRef(null);
   const timeLeftRef = useRef(timeLeft);
   const autoRematchRef = useRef(false);
+  const searchRetryRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
   const canShareProfile = partnerConsented && youConsented;
 
@@ -119,6 +121,8 @@ export default function VideoChat() {
 
   const cleanup = useCallback(async (isInitiator) => {
     clearTimer();
+    if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+    if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
     listenersRef.current.forEach(unsubscribe => unsubscribe());
     listenersRef.current = [];
 
@@ -179,6 +183,57 @@ export default function VideoChat() {
     setAudioEnabled(true);
   }, [user, cleanup]);
 
+  const tryMatchOrCreateRoom = useCallback(async () => {
+    const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), limit(20));
+    const querySnapshot = await getDocs(q);
+
+    let roomToJoin = null;
+    let myExistingRoom = null;
+
+    const sortedDocs = querySnapshot.docs.sort((a, b) => {
+      const aTime = a.data().createdAt?.toMillis?.() || 0;
+      const bTime = b.data().createdAt?.toMillis?.() || 0;
+      return aTime - bTime;
+    });
+
+    for (const d of sortedDocs) {
+      if (d.data().userA === user.uid) {
+        myExistingRoom = d;
+      } else {
+        roomToJoin = d;
+      }
+    }
+
+    if (myExistingRoom && roomToJoin) {
+      if (user.uid < roomToJoin.data().userA) {
+        await deleteDoc(myExistingRoom.ref);
+      } else {
+        await deleteDoc(roomToJoin.ref);
+        roomToJoin = null;
+      }
+    }
+
+    if (roomToJoin) {
+      // Found a partner - stop retrying
+      if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+      if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
+
+      const roomRef = roomToJoin.ref;
+      const roomData = roomToJoin.data();
+      setRoomId(roomToJoin.id);
+      setPartnerId(roomData.userA);
+      await updateDoc(roomRef, {
+        userB: user.uid,
+        status: 'connecting',
+        consent: { [roomData.userA]: false, [user.uid]: false },
+      });
+      await setupCall(roomToJoin.id, false);
+      return true;
+    }
+
+    return myExistingRoom || null;
+  }, [user]);
+
   const findPartner = useCallback(async () => {
     if (!user) return;
     setStatus('searching');
@@ -190,52 +245,25 @@ export default function VideoChat() {
     setAudioEnabled(true);
     toast('info', 'Looking for someone to chat with...');
 
+    // Clear any previous search intervals
+    if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+    if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
+
     try {
-      const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), limit(20));
-      const querySnapshot = await getDocs(q);
+      const result = await tryMatchOrCreateRoom();
 
-      let roomToJoin = null;
-      let myExistingRoom = null;
-
-      const sortedDocs = querySnapshot.docs.sort((a, b) => {
-        const aTime = a.data().createdAt?.toMillis?.() || 0;
-        const bTime = b.data().createdAt?.toMillis?.() || 0;
-        return aTime - bTime;
-      });
-
-      for (const d of sortedDocs) {
-        if (d.data().userA === user.uid) {
-          myExistingRoom = d;
-        } else {
-          roomToJoin = d;
-        }
+      if (result === true) {
+        // Matched immediately
+        return;
       }
 
-      if (myExistingRoom && roomToJoin) {
-        if (user.uid < roomToJoin.data().userA) {
-          await deleteDoc(myExistingRoom.ref);
-        } else {
-          await deleteDoc(roomToJoin.ref);
-          roomToJoin = null;
-        }
-      }
-
-      if (roomToJoin) {
-        const roomRef = roomToJoin.ref;
-        const roomData = roomToJoin.data();
-        setRoomId(roomToJoin.id);
-        setPartnerId(roomData.userA);
-        await updateDoc(roomRef, {
-          userB: user.uid,
-          status: 'connecting',
-          consent: { [roomData.userA]: false, [user.uid]: false },
-        });
-        await setupCall(roomToJoin.id, false);
-      } else if (myExistingRoom) {
-        setRoomId(myExistingRoom.id);
+      if (result) {
+        // We have an existing room, wait for partner
+        setRoomId(result.id);
         setPartnerId(null);
-        await setupCall(myExistingRoom.id, true);
+        await setupCall(result.id, true);
       } else {
+        // Create a new room and wait
         const roomRef = await addDoc(collection(db, 'videoRooms'), {
           userA: user.uid,
           status: 'waiting',
@@ -246,6 +274,33 @@ export default function VideoChat() {
         setPartnerId(null);
         await setupCall(roomRef.id, true);
       }
+
+      // Actively poll for available partners every 5 seconds while waiting
+      searchRetryRef.current = setInterval(async () => {
+        if (statusRef.current !== 'searching') {
+          clearInterval(searchRetryRef.current);
+          searchRetryRef.current = null;
+          return;
+        }
+        try {
+          const matched = await tryMatchOrCreateRoom();
+          if (matched === true) {
+            // Found a match via retry
+          }
+        } catch {
+          // Retry silently
+        }
+      }, 5000);
+
+      // Auto-cancel search after 60 seconds if no match
+      searchTimeoutRef.current = setTimeout(() => {
+        if (statusRef.current === 'searching') {
+          if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+          toast('info', 'No one available right now. Try again later!');
+          stopCall();
+        }
+      }, 60000);
+
     } catch (err) {
       console.error('Error finding partner:', err);
       const msg = err?.code === 'failed-precondition'
@@ -257,7 +312,7 @@ export default function VideoChat() {
       setStatus('idle');
       toast('error', 'Failed to connect. Please try again.');
     }
-  }, [user, toast]);
+  }, [user, toast, tryMatchOrCreateRoom, stopCall]);
 
   // Auto-rematch when timer expires
   useEffect(() => {
@@ -452,17 +507,20 @@ export default function VideoChat() {
       if (isIOS) {
         // iOS Safari: use webkitEnterFullscreen on the remote video element
         const vid = remoteVideoRef.current;
-        if (vid && vid.webkitEnterFullscreen) {
+        if (vid && typeof vid.webkitEnterFullscreen === 'function') {
+          // Ensure video has playsinline attribute set for iOS
+          vid.setAttribute('playsinline', '');
+          vid.setAttribute('webkit-playsinline', '');
           vid.webkitEnterFullscreen();
           return;
         }
-        // Fallback: try webkitRequestFullscreen on the container
-        const el = videoContainerRef.current;
-        if (el && el.webkitRequestFullscreen) {
-          el.webkitRequestFullscreen();
+        // Fallback: toggle CSS-based fullscreen for iOS
+        if (isFullscreen) {
+          setIsFullscreen(false);
+        } else {
           setIsFullscreen(true);
-          return;
         }
+        return;
       }
 
       const el = videoContainerRef.current;
@@ -576,12 +634,13 @@ export default function VideoChat() {
           </div>
 
           {/* Video area — PiP layout */}
-          <div ref={videoContainerRef} className={`relative w-full bg-black rounded-2xl overflow-hidden shadow-lg ${isFullscreen ? '' : 'aspect-video'}`}>
+          <div ref={videoContainerRef} className={`relative w-full bg-black rounded-2xl overflow-hidden shadow-lg ${isFullscreen && isIOS ? 'fixed inset-0 z-50 rounded-none' : isFullscreen ? '' : 'aspect-video'}`}>
             {/* Remote video (full size) */}
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
+              webkit-playsinline=""
               className={`w-full h-full object-cover ${isFullscreen ? 'absolute inset-0' : ''}`}
             />
 

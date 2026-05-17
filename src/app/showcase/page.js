@@ -196,7 +196,13 @@ export default function ShowcasePage() {
     }
   };
 
-  const handlePostReaction = async (postId) => {
+  const REACTION_FIELDS_MAP = {
+    thumbsUp: { votersField: 'voters', countField: 'votes' },
+    fire: { votersField: 'fireVoters', countField: 'fireCount' },
+    heart: { votersField: 'heartVoters', countField: 'heartCount' },
+  };
+
+  const handlePostReaction = async (postId, reactionType = 'thumbsUp') => {
     if (!user) {
       toast('warning', 'Please log in to react to posts.');
       return;
@@ -205,19 +211,24 @@ export default function ShowcasePage() {
     const currentPost = posts.find((p) => p.id === postId);
     if (!currentPost) return;
 
-    const hasVoted = Array.isArray(currentPost.voters) && currentPost.voters.includes(user.uid);
+    const fields = REACTION_FIELDS_MAP[reactionType] || REACTION_FIELDS_MAP.thumbsUp;
+    const currentVoters = Array.isArray(currentPost[fields.votersField]) ? currentPost[fields.votersField] : [];
+    const hasVoted = currentVoters.includes(user.uid);
+
+    const newVoters = hasVoted
+      ? currentVoters.filter((uid) => uid !== user.uid)
+      : [...currentVoters, user.uid];
+
     const updatedPost = {
       ...currentPost,
-      votes: hasVoted ? Math.max(0, (currentPost.votes || 0) - 1) : (currentPost.votes || 0) + 1,
-      voters: hasVoted
-        ? (currentPost.voters || []).filter((uid) => uid !== user.uid)
-        : [...(currentPost.voters || []), user.uid],
+      [fields.votersField]: newVoters,
+      [fields.countField]: newVoters.length,
     };
 
     setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
 
     try {
-      await togglePostVote(postId, user.uid);
+      await togglePostVote(postId, user.uid, reactionType);
     } catch (err) {
       console.error('Failed to react to post:', err);
       setPosts((prev) => prev.map((p) => (p.id === postId ? currentPost : p)));

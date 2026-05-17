@@ -8,7 +8,7 @@ import { db } from '../../../lib/firebase';
 import { collection, query, where, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
-import { FaExternalLinkAlt, FaTrash, FaPlus, FaSpinner } from 'react-icons/fa';
+import { FaExternalLinkAlt, FaTrash, FaPlus, FaSpinner, FaPencilAlt } from 'react-icons/fa';
 
 const STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
@@ -125,6 +125,11 @@ export default function ManageUserSponsoredChallenges() {
                         <Link href={`/sponsored-challenges/${challenge.id}`} className="inline-flex items-center justify-center rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
                           <FaExternalLinkAlt className="mr-2" /> View
                         </Link>
+                        {(challenge.status === 'pending' || challenge.status === 'approved') && (
+                          <Link href={`/sponsored-challenges/${challenge.id}/edit`} className="inline-flex items-center justify-center rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600">
+                            <FaPencilAlt className="mr-2" /> Edit
+                          </Link>
+                        )}
                         {(challenge.status === 'pending' || challenge.status === 'rejected') && (
                           <Button
                             size="sm"

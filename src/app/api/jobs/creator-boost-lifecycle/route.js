@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
 import { runCreatorBoostLifecycleJob } from '../../../../lib/jobs/creator-boost-lifecycle';
 import { logAdminAction } from '../../../../lib/api/audit-log';
-
-const isAuthorizedCron = (request) => {
-  const configuredSecret = process.env.CRON_SECRET;
-  if (!configuredSecret) return false;
-
-  const authHeader = request.headers.get('authorization') || '';
-  return authHeader === `Bearer ${configuredSecret}`;
-};
+import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 
 export async function GET(request) {
   if (!isAuthorizedCron(request)) {

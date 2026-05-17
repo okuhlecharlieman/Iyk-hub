@@ -1,43 +1,157 @@
-import { ref, onDisconnect, serverTimestamp, set, onValue, Unsubscribe } from "firebase/database";
-import { User } from "firebase/auth";
-import { rtdb } from "./firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import {
+  child,
+  onDisconnect,
+  onValue,
+  push,
+  ref,
+  serverTimestamp,
+  set,
+  update,
+  type Unsubscribe,
+} from "firebase/database";
+import { auth, rtdb } from "./firebase";
 
-// Pass the active user into this function
-export function startPresence(user: User): Unsubscribe {
+type StatusRecord = {
+  state?: string;
+  connections?: Record<string, unknown>;
+};
+
+const ONLINE_STATE = {
+  state: "online",
+  last_changed: serverTimestamp(),
+};
+
+const OFFLINE_STATE = {
+  state: "offline",
+  last_changed: serverTimestamp(),
+};
+
+let stopPresence: Unsubscribe | null = null;
+let presenceUsers = 0;
+let activeConnectionCleanup: (() => void) | null = null;
+let activeUserStatusRef: ReturnType<typeof ref> | null = null;
+
+function hasActiveConnection(status: StatusRecord) {
+  return Object.values(status.connections || {}).some(Boolean);
+}
+
+function isOnlineStatus(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+
+  const status = value as StatusRecord;
+  return status.state === "online" || hasActiveConnection(status);
+}
+
+function stopActiveConnection() {
+  if (activeConnectionCleanup) {
+    activeConnectionCleanup();
+    activeConnectionCleanup = null;
+  }
+}
+
+function trackUserPresence(user: User) {
   const userRef = ref(rtdb, `status/${user.uid}`);
   const connectedRef = ref(rtdb, ".info/connected");
 
-  // Listen to connection state changes to handle initial loads AND internet drops/reconnects
-  return onValue(connectedRef, (snap) => {
-    if (snap.val() === true) {
-      console.log(`[Presence] Connected to database. Marking user ${user.uid} as online.`);
-      
-      // 1. Set status to online
-      set(userRef, { 
-        state: "online", 
-        last_changed: serverTimestamp(),
-        email: user.email 
-      }).catch(err => console.error("[Presence] Write error:", err));
+  return onValue(
+    connectedRef,
+    (snap) => {
+      if (snap.val() !== true) return;
 
-      // 2. Queue up the offline change for when they close the app or disconnect
-      onDisconnect(userRef).set({ 
-        state: "offline", 
-        last_changed: serverTimestamp() 
-      }).catch(err => console.error("[Presence] onDisconnect setup error:", err));
+      stopActiveConnection();
+
+      const connectionRef = push(child(userRef, "connections"));
+
+      onDisconnect(connectionRef)
+        .remove()
+        .catch((err) => console.error("[Presence] Disconnect cleanup error:", err));
+
+      onDisconnect(userRef)
+        .update(OFFLINE_STATE)
+        .catch((err) => console.error("[Presence] Disconnect status error:", err));
+
+      set(connectionRef, true).catch((err) =>
+        console.error("[Presence] Connection write error:", err),
+      );
+
+      update(userRef, {
+        ...ONLINE_STATE,
+        email: user.email || null,
+      }).catch((err) => console.error("[Presence] Status write error:", err));
+
+      activeConnectionCleanup = () => {
+        set(connectionRef, null).catch((err) =>
+          console.error("[Presence] Connection cleanup error:", err),
+        );
+      };
+    },
+    (error) => {
+      console.error("[Presence] .info/connected listener failed:", error);
+    },
+  );
+}
+
+export function startPresence(): Unsubscribe {
+  presenceUsers += 1;
+
+  if (!stopPresence) {
+    let unsubscribeConnected: Unsubscribe | null = null;
+
+    stopPresence = onAuthStateChanged(auth, (user) => {
+      if (unsubscribeConnected) {
+        unsubscribeConnected();
+        unsubscribeConnected = null;
+      }
+
+      stopActiveConnection();
+
+      if (activeUserStatusRef) {
+        update(activeUserStatusRef, OFFLINE_STATE).catch((err) =>
+          console.error("[Presence] Sign-out status error:", err),
+        );
+        activeUserStatusRef = null;
+      }
+
+      if (!user) return;
+
+      activeUserStatusRef = ref(rtdb, `status/${user.uid}`);
+      unsubscribeConnected = trackUserPresence(user);
+    });
+  }
+
+  return () => {
+    presenceUsers = Math.max(0, presenceUsers - 1);
+
+    if (presenceUsers > 0 || !stopPresence) return;
+
+    stopActiveConnection();
+
+    if (activeUserStatusRef) {
+      update(activeUserStatusRef, OFFLINE_STATE).catch((err) =>
+        console.error("[Presence] Stop status error:", err),
+      );
+      activeUserStatusRef = null;
     }
-  }, (error) => {
-    console.error("[Presence] CRITICAL: .info/connected permission denied or failed:", error);
-  });
+
+    stopPresence();
+    stopPresence = null;
+  };
 }
 
 export function subscribeOnlineCount(cb: (n: number) => void): Unsubscribe {
   const statusRef = ref(rtdb, "status");
-  
-  return onValue(statusRef, (snap) => {
-    const val = snap.val() || {};
-    const count = Object.values(val).filter((v: any) => v?.state === "online").length;
-    cb(count);
-  }, (error) => {
-    console.error("[Presence] CRITICAL: subscribeOnlineCount read permission denied:", error);
-  });
+
+  return onValue(
+    statusRef,
+    (snap) => {
+      const val = snap.val() || {};
+      const count = Object.values(val).filter(isOnlineStatus).length;
+      cb(count);
+    },
+    (error) => {
+      console.error("[Presence] subscribeOnlineCount read failed:", error);
+      cb(0);
+    },
+  );
 }

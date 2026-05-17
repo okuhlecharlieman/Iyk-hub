@@ -4,7 +4,11 @@ import { startPresence } from "../lib/presence";
 
 export default function PresenceProvider({ children }) {
   useEffect(() => {
-    startPresence();
+    const stopPresence = startPresence();
+
+    return () => {
+      if (stopPresence) stopPresence();
+    };
   }, []);
   return children;
 }

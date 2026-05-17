@@ -4,7 +4,7 @@ import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 
 const NINJAS_API_KEY = process.env.NINJAS_API_KEY;
-const NINJAS_API_URL = 'https://api.api-ninjas.com/v1/quotes?category=inspirational';
+const NINJAS_API_URL = 'https://api.api-ninjas.com/v2/quotes';
 
 export async function GET(request) {
   console.log('[Cron: Daily Quote] Job triggered at:', new Date().toISOString());

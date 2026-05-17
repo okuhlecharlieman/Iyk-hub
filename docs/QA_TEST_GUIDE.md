@@ -29,6 +29,15 @@
 19. [Error Handling](#19-error-handling)
 20. [Responsive Design](#20-responsive-design)
 21. [Performance & Loading States](#21-performance--loading-states)
+22. [Multi-Reaction System](#22-multi-reaction-system-pr-68)
+23. [Footer Social & Legal Links](#23-footer-social--legal-links-pr-68)
+24. [Role-Based Access Pages](#24-role-based-access-pages-pr-68)
+25. [Showcase Post Improvements](#25-showcase-post-improvements-pr-68)
+26. [Sponsored Challenge Editing](#26-sponsored-challenge-editing-pr-68)
+27. [Video Chat Improvements](#27-video-chat-improvements-pr-68)
+28. [Cron Jobs & Quote of the Day](#28-cron-jobs--quote-of-the-day-pr-68)
+29. [Profile Picture Upload](#29-profile-picture-upload-pr-68)
+30. [User Retention: Streaks & Achievements](#30-user-retention-streaks--achievements-pr-68)
 
 ---
 
@@ -1287,6 +1296,109 @@
   "createdAt": "Timestamp"
 }
 ```
+
+---
+
+## 22. Multi-Reaction System (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-22.1 | Like reaction (thumbs up)                    | Click thumbs up on a showcase post | Count increments, icon highlights |
+| TC-22.2 | Fire reaction                                | Click fire icon on a showcase post | Fire count increments independently |
+| TC-22.3 | Heart reaction                               | Click heart icon on a showcase post | Heart count increments independently |
+| TC-22.4 | Toggle off reaction                          | Click same reaction again | Count decrements, reaction removed |
+| TC-22.5 | Cross-auth consistency                       | Vote with Google account, check with email account | Same vote counts displayed |
+
+---
+
+## 23. Footer Social & Legal Links (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-23.1 | Social media icons visible                   | Scroll to footer | LinkedIn, Instagram, TikTok, website icons visible |
+| TC-23.2 | Social links navigate correctly              | Click each social icon | Opens correct external URL in new tab |
+| TC-23.3 | Legal links visible                          | Scroll to footer | Privacy Policy and Terms of Service links visible |
+| TC-23.4 | Privacy Policy page                          | Click Privacy Policy link | Navigates to `/privacy` page |
+| TC-23.5 | Terms of Service page                        | Click Terms link | Navigates to `/terms` page |
+
+---
+
+## 24. Role-Based Access Pages (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-24.1 | Admin page as regular user                   | Navigate to `/admin` as non-admin | Shows "Admin Area" restricted page with current role |
+| TC-24.2 | Required roles displayed                     | View restricted page | Shows list of required role badges |
+| TC-24.3 | Navigation buttons                           | View restricted page | "Go to Dashboard" and "Go Back" buttons functional |
+
+---
+
+## 25. Showcase Post Improvements (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-25.1 | Post creation date displayed                 | View showcase post | Date shown at bottom of card (e.g., "10 May 2026") |
+| TC-25.2 | Author name displayed                        | View showcase post | Author name shown if available |
+| TC-25.3 | Description preview                          | View post with long description | Description truncated to 3 lines |
+| TC-25.4 | Edit/delete controls for owner               | View own post | Edit (pencil) and delete (trash) icons visible |
+| TC-25.5 | No edit/delete for non-owner                 | View another user's post | No edit/delete controls shown |
+
+---
+
+## 26. Sponsored Challenge Editing (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-26.1 | Edit button on manage page                   | Go to `/sponsored-challenges/manage` | Edit button visible for pending/approved challenges |
+| TC-26.2 | Edit form loads data                         | Click Edit on a challenge | Form pre-populated with existing data |
+| TC-26.3 | Update challenge                             | Modify fields and save | Challenge updated, redirect to manage page |
+| TC-26.4 | Banner image upload                          | Upload new banner on edit | New banner shown, old one replaced |
+| TC-26.5 | Non-owner cannot edit                        | Try to edit another user's challenge | Error: "You can only edit your own challenges" |
+
+---
+
+## 27. Video Chat Improvements (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-27.1 | Active partner polling                       | Start search, no partner available | System polls every 5 seconds for new matches |
+| TC-27.2 | Search timeout                               | Wait 60 seconds with no partner | Toast: "No one available right now. Try again later!" |
+| TC-27.3 | iOS fullscreen fallback                      | Test on iOS device, tap fullscreen | Video container goes full-screen via CSS |
+
+---
+
+## 28. Cron Jobs & Quote of the Day (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-28.1 | Daily quote cron                             | Call `GET /api/jobs/daily-quote` | Returns quote from API Ninjas, stored in Firestore |
+| TC-28.2 | Quote on dashboard                           | Log in to dashboard | Quote text and author shown in welcome header |
+| TC-28.3 | Cron auth without CRON_SECRET                | Call cron endpoint without auth | Vercel cron user-agent accepted |
+| TC-28.4 | Cron auth with CRON_SECRET                   | Set CRON_SECRET, call with Bearer token | Authorized and executes |
+
+---
+
+## 29. Profile Picture Upload (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-29.1 | Photo upload in editor                       | Open profile editor, click camera icon | File picker opens |
+| TC-29.2 | Photo preview                                | Select an image file | Preview shown in circular frame |
+| TC-29.3 | Photo saved to GCS                           | Save profile with new photo | Photo uploaded to GCS, URL saved to Firestore |
+| TC-29.4 | File size validation                         | Try to upload 6MB image | Error: "Photo must be under 5MB" |
+| TC-29.5 | Non-image rejection                          | Try to upload a PDF | Error: "Please select an image file" |
+
+---
+
+## 30. User Retention: Streaks & Achievements (PR #68)
+
+| TC     | Test Case                                     | Steps | Expected Result |
+|--------|-----------------------------------------------|-------|-----------------|
+| TC-30.1 | Streak card on dashboard                     | Log in to dashboard | "Daily Streak" card shows current and best streak |
+| TC-30.2 | Streak increments on consecutive login       | Log in on consecutive days | Current streak count increases |
+| TC-30.3 | Streak resets after missed day               | Skip a day, log in | Current streak resets to 1 |
+| TC-30.4 | Achievement badges                           | Reach 3-day streak | "3-Day Streak" badge appears on dashboard |
+| TC-30.5 | Points-based achievements                    | Accumulate 100+ total points | "Centurion" badge appears |
 
 ---
 

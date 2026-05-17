@@ -152,7 +152,7 @@ function OpportunitiesContent() {
     }
     if (!query) return items;
     return items.filter((o) => {
-      const haystack = [o.title, o.org, o.description, ...(Array.isArray(o.tags) ? o.tags : [])]
+      const haystack = [o.title, o.org, o.company, o.contactName, o.contactEmail, o.sourceLabel, o.description, ...(Array.isArray(o.tags) ? o.tags : [])]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();

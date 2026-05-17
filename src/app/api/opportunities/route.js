@@ -6,6 +6,95 @@ import { enforceRateLimit } from '../../../lib/api/rate-limit';
 export const runtime = 'nodejs';
 
 const MAX_LIMIT = 30;
+const EXTERNAL_OPPORTUNITIES_API_URL =
+  process.env.SMART_JOB_PORTAL_OPPORTUNITIES_API_URL ||
+  'https://multi-tenant-smart-job-application.vercel.app/api/opportunities';
+const EXTERNAL_OPPORTUNITIES_SOURCE_LABEL = 'Smart Job Portal';
+
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.toDate === 'function') return value.toDate().getTime();
+  return 0;
+};
+
+const normalizeExternalOpportunity = (opportunity) => {
+  if (!opportunity || typeof opportunity !== 'object' || !opportunity.id) return null;
+
+  const title = typeof opportunity.title === 'string' ? opportunity.title.trim() : '';
+  const org = typeof opportunity.company === 'string' ? opportunity.company.trim() : '';
+  const description = typeof opportunity.description === 'string' ? opportunity.description.trim() : '';
+
+  if (!title || !org || !description) return null;
+
+  const tags = Array.isArray(opportunity.tags)
+    ? opportunity.tags.filter((tag) => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean)
+    : [];
+
+  const status = ['pending', 'approved', 'rejected'].includes(opportunity.status)
+    ? opportunity.status
+    : 'approved';
+
+  return {
+    id: `smart-job-portal:${opportunity.id}`,
+    externalId: opportunity.id,
+    externalSource: 'smart-job-portal',
+    sourceLabel: EXTERNAL_OPPORTUNITIES_SOURCE_LABEL,
+    readOnly: true,
+    tenantId: opportunity.tenantId || 'platform',
+    title,
+    org,
+    company: org,
+    contactName: typeof opportunity.contactName === 'string' ? opportunity.contactName.trim() : '',
+    contactEmail: typeof opportunity.contactEmail === 'string' ? opportunity.contactEmail.trim() : '',
+    description,
+    value: typeof opportunity.value === 'number' ? opportunity.value : null,
+    status,
+    tags,
+    link: '',
+    createdAt: opportunity.createdAt || null,
+    updatedAt: opportunity.updatedAt || null,
+  };
+};
+
+const fetchExternalOpportunities = async ({ limit, search = '' } = {}) => {
+  const url = new URL(EXTERNAL_OPPORTUNITIES_API_URL);
+  url.searchParams.set('status', 'approved');
+  url.searchParams.set('limit', String(Math.min(Math.max(limit || 12, 1), 100)));
+  if (search) url.searchParams.set('search', search);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const res = await fetch(url.toString(), {
+      headers: { Accept: 'application/json' },
+      next: { revalidate: 300 },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      console.warn(`External opportunities fetch failed with status ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    const items = Array.isArray(data?.items) ? data.items : [];
+    return items.map(normalizeExternalOpportunity).filter(Boolean);
+  } catch (error) {
+    console.warn('External opportunities fetch failed:', error?.message || error);
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const sortOpportunitiesByCreatedAt = (items) => [...items].sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
 
 const getRoleForUid = async (uid) => {
   const userDoc = await admin.firestore().collection('users').doc(uid).get();
@@ -26,6 +115,8 @@ export async function GET(request) {
     const rawLimit = Number.parseInt(searchParams.get('limit') || '12', 10);
     const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 12 : rawLimit, 1), MAX_LIMIT);
     let cursor = searchParams.get('cursor');
+    const search = (searchParams.get('search') || '').trim();
+    const includeExternal = !cursor && searchParams.get('includeExternal') !== 'false';
 
     const db = admin.firestore();
 
@@ -40,11 +131,22 @@ export async function GET(request) {
       }
 
       const snap = await queryRef.get();
-      const opportunities = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const opportunities = snap.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.toISOString?.() || data.createdAt || null,
+          updatedAt: data.updatedAt?.toDate?.toISOString?.() || data.updatedAt || null,
+          expiresAt: data.expiresAt?.toDate?.toISOString?.() || data.expiresAt || null,
+          deletionScheduledAt: data.deletionScheduledAt?.toDate?.toISOString?.() || data.deletionScheduledAt || null,
+        };
+      });
+      const externalOpportunities = includeExternal ? await fetchExternalOpportunities({ limit: limitN, search }) : [];
       const lastDoc = snap.docs[snap.docs.length - 1];
       const nextCursor = snap.docs.length === limitN ? lastDoc.id : null;
 
-      return NextResponse.json({ opportunities, nextCursor });
+      return NextResponse.json({ opportunities: sortOpportunitiesByCreatedAt([...opportunities, ...externalOpportunities]), nextCursor });
     }
 
     // Only load approved opportunities in the main paged query.
@@ -113,7 +215,10 @@ export async function GET(request) {
     const lastDoc = approvedSnap.docs[approvedSnap.docs.length - 1];
     const nextCursor = approvedSnap.docs.length === limitN ? lastDoc.id : null;
 
-    return NextResponse.json({ opportunities, nextCursor });
+    const externalOpportunities = includeExternal ? await fetchExternalOpportunities({ limit: limitN, search }) : [];
+    const mergedOpportunities = sortOpportunitiesByCreatedAt([...opportunities, ...externalOpportunities]);
+
+    return NextResponse.json({ opportunities: mergedOpportunities, nextCursor });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });

@@ -1,137 +1,85 @@
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import {
-  child,
-  onDisconnect,
-  onValue,
-  push,
-  ref,
+  collection,
+  doc,
+  onSnapshot,
+  query,
   serverTimestamp,
-  set,
-  update,
+  setDoc,
+  where,
   type Unsubscribe,
-} from "firebase/database";
-import { auth, rtdb } from "./firebase";
+} from "firebase/firestore";
+import { auth, db } from "./firebase";
 
-type StatusRecord = {
-  state?: string;
-  connections?: Record<string, unknown>;
-};
-
-const ONLINE_STATE = {
-  state: "online",
-  last_changed: serverTimestamp(),
-};
-
-const OFFLINE_STATE = {
-  state: "offline",
-  last_changed: serverTimestamp(),
-};
+const HEARTBEAT_INTERVAL = 60_000;
+const STALE_THRESHOLD = 2 * 60_000;
 
 let stopPresence: Unsubscribe | null = null;
 let presenceUsers = 0;
-let activeConnectionCleanup: (() => void) | null = null;
-let activeUserStatusRef: ReturnType<typeof ref> | null = null;
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+let unloadHandler: (() => void) | null = null;
 
-function hasActiveConnection(status: StatusRecord) {
-  return Object.values(status.connections || {}).some(Boolean);
+function setPresenceStatus(uid: string, state: "online" | "offline") {
+  if (!db) return;
+  const presenceRef = doc(db, "presence", uid);
+  setDoc(
+    presenceRef,
+    { state, lastSeen: serverTimestamp() },
+    { merge: true },
+  ).catch((err) => console.error("[Presence] Status write error:", err));
 }
 
-function isOnlineStatus(value: unknown) {
-  if (!value || typeof value !== "object") return false;
-
-  const status = value as StatusRecord;
-  return status.state === "online" || hasActiveConnection(status);
+function startHeartbeat(uid: string) {
+  stopHeartbeat();
+  heartbeatTimer = setInterval(() => {
+    setPresenceStatus(uid, "online");
+  }, HEARTBEAT_INTERVAL);
 }
 
-function stopActiveConnection() {
-  if (activeConnectionCleanup) {
-    activeConnectionCleanup();
-    activeConnectionCleanup = null;
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
   }
 }
 
-function trackUserPresence(user: User) {
-  const userRef = ref(rtdb, `status/${user.uid}`);
-  const connectedRef = ref(rtdb, ".info/connected");
-
-  return onValue(
-    connectedRef,
-    (snap) => {
-      if (snap.val() !== true) return;
-
-      stopActiveConnection();
-
-      const connectionRef = push(child(userRef, "connections"));
-
-      onDisconnect(connectionRef)
-        .remove()
-        .catch((err) => console.error("[Presence] Disconnect cleanup error:", err));
-
-      onDisconnect(userRef)
-        .update(OFFLINE_STATE)
-        .catch((err) => console.error("[Presence] Disconnect status error:", err));
-
-      set(connectionRef, true).catch((err) =>
-        console.error("[Presence] Connection write error:", err),
-      );
-
-      update(userRef, {
-        ...ONLINE_STATE,
-        email: user.email || null,
-      }).catch((err) => console.error("[Presence] Status write error:", err));
-
-      activeConnectionCleanup = () => {
-        set(connectionRef, null).catch((err) =>
-          console.error("[Presence] Connection cleanup error:", err),
-        );
-      };
-    },
-    (error) => {
-      console.error("[Presence] .info/connected listener failed:", error);
-    },
-  );
+function removeUnloadHandler() {
+  if (unloadHandler && typeof window !== "undefined") {
+    window.removeEventListener("beforeunload", unloadHandler);
+    unloadHandler = null;
+  }
 }
 
 export function startPresence(): Unsubscribe {
   presenceUsers += 1;
 
-  if (!stopPresence) {
-    let unsubscribeConnected: Unsubscribe | null = null;
-
+  if (!stopPresence && auth) {
     stopPresence = onAuthStateChanged(auth, (user) => {
-      if (unsubscribeConnected) {
-        unsubscribeConnected();
-        unsubscribeConnected = null;
-      }
-
-      stopActiveConnection();
-
-      if (activeUserStatusRef) {
-        update(activeUserStatusRef, OFFLINE_STATE).catch((err) =>
-          console.error("[Presence] Sign-out status error:", err),
-        );
-        activeUserStatusRef = null;
-      }
+      stopHeartbeat();
+      removeUnloadHandler();
 
       if (!user) return;
 
-      activeUserStatusRef = ref(rtdb, `status/${user.uid}`);
-      unsubscribeConnected = trackUserPresence(user);
+      setPresenceStatus(user.uid, "online");
+      startHeartbeat(user.uid);
+
+      if (typeof window !== "undefined") {
+        const handler = () => setPresenceStatus(user.uid, "offline");
+        window.addEventListener("beforeunload", handler);
+        unloadHandler = handler;
+      }
     });
   }
 
   return () => {
     presenceUsers = Math.max(0, presenceUsers - 1);
-
     if (presenceUsers > 0 || !stopPresence) return;
 
-    stopActiveConnection();
+    stopHeartbeat();
+    removeUnloadHandler();
 
-    if (activeUserStatusRef) {
-      update(activeUserStatusRef, OFFLINE_STATE).catch((err) =>
-        console.error("[Presence] Stop status error:", err),
-      );
-      activeUserStatusRef = null;
+    if (auth?.currentUser) {
+      setPresenceStatus(auth.currentUser.uid, "offline");
     }
 
     stopPresence();
@@ -140,18 +88,46 @@ export function startPresence(): Unsubscribe {
 }
 
 export function subscribeOnlineCount(cb: (n: number) => void): Unsubscribe {
-  const statusRef = ref(rtdb, "status");
+  if (!db) {
+    cb(0);
+    return () => {};
+  }
 
-  return onValue(
-    statusRef,
+  const presenceRef = collection(db, "presence");
+  const q = query(presenceRef, where("state", "==", "online"));
+
+  let latestSnap: import("firebase/firestore").QuerySnapshot | null = null;
+
+  const recount = () => {
+    if (!latestSnap) return;
+    const now = Date.now();
+    let count = 0;
+    latestSnap.forEach((d) => {
+      const data = d.data();
+      const lastSeen = data.lastSeen?.toMillis?.() || 0;
+      if (lastSeen === 0 || now - lastSeen < STALE_THRESHOLD) {
+        count++;
+      }
+    });
+    cb(count);
+  };
+
+  const unsub = onSnapshot(
+    q,
     (snap) => {
-      const val = snap.val() || {};
-      const count = Object.values(val).filter(isOnlineStatus).length;
-      cb(count);
+      latestSnap = snap;
+      recount();
     },
     (error) => {
       console.error("[Presence] subscribeOnlineCount read failed:", error);
       cb(0);
     },
   );
+
+  const interval = setInterval(recount, 60_000);
+
+  return () => {
+    unsub();
+    clearInterval(interval);
+  };
 }

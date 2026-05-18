@@ -12,11 +12,14 @@ import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser, FaCamera } from 'react-ic
 import Link from 'next/link';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
+import { useActiveBoost } from '../../hooks/useActiveBoost';
+import BoostBadge from '../../components/BoostBadge';
 
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const toast = useToast();
+  const { boost: activeBoost } = useActiveBoost();
   const [loading, setLoading] = useState(true);
   const [doc, setDoc] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -158,6 +161,11 @@ export default function ProfilePage() {
                         <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{doc?.displayName || 'Anonymous'}</h2>
                         <button onClick={() => setIsEditing(true)} className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"><FaEdit /></button>
                        </div>
+                      {activeBoost && (
+                        <div className="mt-2">
+                          <BoostBadge badge={activeBoost.badge} label={activeBoost.badgeLabel} />
+                        </div>
+                      )}
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email}</p>
                       {doc?.role?.toLowerCase() === 'admin' && (
                           <Link href="/admin" className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all">

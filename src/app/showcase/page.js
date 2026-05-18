@@ -8,7 +8,7 @@ import { togglePostVote } from '../../lib/firebase/helpers';
 import { SkeletonGrid } from '../../components/loaders/SkeletonLoader';
 import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
-import { FaPlus, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaExclamationTriangle, FaRocket } from 'react-icons/fa';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useToast } from '../../components/ui/ToastProvider';
 
@@ -237,13 +237,36 @@ export default function ShowcasePage() {
     );
   });
 
+  const featuredPosts = filteredPosts.filter((p) => p.isBoosted);
+  const regularPosts = filteredPosts.filter((p) => !p.isBoosted);
+
   const content = (
     loading ? <LoadingSpinner /> :
     error ? <div className="text-red-500 text-center py-10">{error}</div> :
     filteredPosts.length > 0 ? (
       <>
+        {featuredPosts.length > 0 && !searchTerm && (
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <FaRocket className="text-purple-500" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">Featured Creators</h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredPosts.map(p => (
+                <ContentCard
+                  key={p.id}
+                  p={p}
+                  react={handlePostReaction}
+                  onEdit={() => handleEditPost(p)}
+                  onDelete={() => handleDeletePost(p.id, p.uid)}
+                  canManage={isAdmin || (user && user.uid === p.uid)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPosts.map(p => (
+          {(searchTerm ? filteredPosts : regularPosts).map(p => (
             <ContentCard
               key={p.id}
               p={p}

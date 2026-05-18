@@ -125,11 +125,11 @@ export async function POST(request) {
       }
 
       if (orderType && orderId) {
-        const collectionMap = {
-          creatorBoost: 'creatorBoosts',
-          sponsoredChallenge: 'sponsoredChallenges',
-          donation: 'donations',
-        };
+          const collectionMap = {
+            creatorBoost: 'creatorBoostOrders',
+            sponsoredChallenge: 'sponsoredChallenges',
+            donation: 'donations',
+          };
         const col = collectionMap[orderType];
         if (col) {
           await db.collection(col).doc(orderId).set({

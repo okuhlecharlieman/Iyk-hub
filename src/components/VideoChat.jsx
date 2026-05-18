@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './ui/ToastProvider';
+import { useActiveBoost } from '../hooks/useActiveBoost';
 import {
   collection,
   doc,
@@ -30,7 +31,7 @@ const STUN_SERVERS = {
   ],
 };
 
-const INITIAL_TIME_LIMIT = 60;
+const DEFAULT_TIME_LIMIT = 60;
 const BONUS_TIME = 60;
 
 const createPeerConnection = (onTrack, onIceCandidate) => {
@@ -55,6 +56,8 @@ const formatTime = (seconds) => {
 export default function VideoChat() {
   const { user, userProfile } = useAuth();
   const toast = useToast();
+  const { boost: activeBoost } = useActiveBoost();
+  const initialTimeLimit = activeBoost?.videoChatSeconds || DEFAULT_TIME_LIMIT;
   const [status, setStatus] = useState('idle');
   const [roomId, setRoomId] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -64,7 +67,7 @@ export default function VideoChat() {
   const [mediaError, setMediaError] = useState(null);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(INITIAL_TIME_LIMIT);
+  const [timeLeft, setTimeLeft] = useState(initialTimeLimit);
   const [bonusAdded, setBonusAdded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -177,11 +180,11 @@ export default function VideoChat() {
     setYouConsented(false);
     setPartnerConsented(false);
     setMediaError(null);
-    setTimeLeft(INITIAL_TIME_LIMIT);
+    setTimeLeft(initialTimeLimit);
     setBonusAdded(false);
     setVideoEnabled(true);
     setAudioEnabled(true);
-  }, [user, cleanup]);
+  }, [user, cleanup, initialTimeLimit]);
 
   const tryMatchOrCreateRoom = useCallback(async () => {
     const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), limit(20));
@@ -249,7 +252,7 @@ export default function VideoChat() {
     if (!user) return;
     setStatus('searching');
     setMediaError(null);
-    setTimeLeft(INITIAL_TIME_LIMIT);
+    setTimeLeft(initialTimeLimit);
     setBonusAdded(false);
     setPartnerName(null);
     setVideoEnabled(true);
@@ -323,7 +326,7 @@ export default function VideoChat() {
       setStatus('idle');
       toast('error', 'Failed to connect. Please try again.');
     }
-  }, [user, toast, tryMatchOrCreateRoom, stopCall]);
+  }, [user, toast, tryMatchOrCreateRoom, stopCall, initialTimeLimit]);
 
   // Auto-rematch when timer expires
   useEffect(() => {
@@ -401,7 +404,8 @@ export default function VideoChat() {
 
       if (data.status === 'connected' && statusRef.current !== 'connected') {
         setStatus('connected');
-        toast('success', 'Connected! You have 1 minute.');
+        const mins = Math.floor(initialTimeLimit / 60);
+              toast('success', `Connected! You have ${mins} minute${mins !== 1 ? 's' : ''}.`);
         startTimer();
       }
       if (isCaller && data.userB && !partnerId) {
@@ -588,7 +592,7 @@ export default function VideoChat() {
             <FaVideo className="h-10 w-10 text-purple-500" />
           </div>
           <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
-            Press the button to find someone to chat with. Each call has a 1-minute time limit. Share your profile to get an extra minute!
+            Press the button to find someone to chat with. Each call has a {Math.floor(initialTimeLimit / 60)}-minute time limit. Share your profile to get an extra minute!
           </p>
           <Button onClick={findPartner} variant="primary" className="px-10 py-3 text-lg">
             Find someone

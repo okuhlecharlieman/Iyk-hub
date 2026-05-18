@@ -433,8 +433,19 @@ export async function uploadToStorage(file, prefix = 'uploads') {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
 
+  // Auto-compress images before upload
+  let fileToUpload = file;
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    try {
+      const { compressImage } = await import('../imageCompression');
+      fileToUpload = await compressImage(file);
+    } catch {
+      // Fall back to original file if compression fails
+    }
+  }
+
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', fileToUpload);
   formData.append('context', resolveImageUploadContext(prefix));
 
   const token = await user.getIdToken();

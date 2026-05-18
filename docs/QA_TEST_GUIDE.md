@@ -38,6 +38,7 @@
 28. [Cron Jobs & Quote of the Day](#28-cron-jobs--quote-of-the-day-pr-68)
 29. [Profile Picture Upload](#29-profile-picture-upload-pr-68)
 30. [User Retention: Streaks & Achievements](#30-user-retention-streaks--achievements-pr-68)
+31. [Presence Tracking & Boost Features](#31-presence-tracking--boost-features-pr-1)
 
 ---
 
@@ -282,7 +283,7 @@
 | Step | Action | Expected Result |
 |------|--------|-----------------|
 | 1 | Verify game icons | RPS, Tic-Tac-Toe, Memory, Hangman game icons displayed |
-| 2 | Verify OnlineCount | Shows number of online users |
+| 2 | Verify OnlineCount | Shows number of online users (Firestore-based presence with heartbeat) |
 
 ### TC-4.7: Dashboard - Admin Link
 
@@ -417,6 +418,8 @@
 | 1 | Navigate to `/showcase` | Page loads with community posts grid |
 | 2 | Verify loading state | SkeletonGrid shown while loading |
 | 3 | Verify error state | If API fails: **"Could not load the showcase. Please try again later."** |
+| 4 | Verify Featured Creators section | If any post authors have an active boost, a "Featured Creators" section with rocket icon appears above regular posts |
+| 5 | Verify boost badges on cards | Posts by boosted creators show a tier-specific badge (Boosted/Pro Creator/Verified Creator) next to the post type tag |
 
 ### TC-6.2: Showcase - Create Post (Logged In)
 
@@ -625,6 +628,38 @@
 |------|--------|-----------------|
 | 1 | If server error occurs on boost creation | Red error box with error message |
 
+### TC-9.6: Boosts - Activation via Webhook (PR #1)
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Complete payment for a boost order | PayStack webhook fires to `/api/payments/paystack-webhook` |
+| 2 | Verify Firestore | `creatorBoostOrders/{orderId}` document updated with `paymentStatus: 'paid'` (collection name fixed from previous `creatorBoosts` bug) |
+| 3 | Verify boost lifecycle activates | Boost `activationStatus` set to `active` by lifecycle job |
+
+### TC-9.7: Boosts - Active Boost API (PR #1)
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | While logged in with an active boost, call `GET /api/creator-boosts/active` | Returns `{ active: true, boost: { plan, label, videoChatSeconds, badge, badgeColor, badgeLabel, expiresAt } }` |
+| 2 | Without an active boost | Returns `{ active: false, boost: null }` |
+| 3 | With an expired boost | Returns `{ active: false, boost: null }` |
+
+### TC-9.8: Boosts - Public Badge API (PR #1)
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Call `GET /api/creator-boosts/active/public?uid={uid}` for a boosted user | Returns `{ active: true, boost: { plan, badge, badgeLabel } }` |
+| 2 | Call for a non-boosted user | Returns `{ active: false, boost: null }` |
+| 3 | Call with missing/empty uid | Returns `{ active: false, boost: null }` |
+
+### TC-9.9: Boosts - Plan Metadata (PR #1)
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Verify Lite Boost metadata | `videoChatSeconds: 60`, badge: "boosted" (blue, FaBolt icon), label: "Boosted" |
+| 2 | Verify Pro Boost metadata | `videoChatSeconds: 180`, badge: "pro" (purple, FaStar icon), label: "Pro Creator" |
+| 3 | Verify Ultra Boost metadata | `videoChatSeconds: 300`, badge: "verified" (amber, FaCrown icon), label: "Verified Creator" |
+
 ---
 
 ## 10. Donate Page
@@ -773,8 +808,17 @@
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Start a call | Timer starts (initial limit: 60 seconds) |
+| 1 | Start a call (no active boost) | Timer starts at 60 seconds (default) |
 | 2 | Timer expires | Option to extend by 60 seconds (bonus time) |
+
+### TC-12.7: Video Chat - Extended Time via Boost (PR #1)
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Start a call with Lite Boost active | Timer starts at 60 seconds; toast: "Connected! You have 1 minute." |
+| 2 | Start a call with Pro Boost active | Timer starts at 180 seconds; toast: "Connected! You have 3 minutes." |
+| 3 | Start a call with Ultra Boost active | Timer starts at 300 seconds; toast: "Connected! You have 5 minutes." |
+| 4 | Verify idle state text | Shows "{N}-minute time limit" matching the active boost tier |
 
 ---
 
@@ -786,6 +830,7 @@
 |------|--------|-----------------|
 | 1 | Navigate to `/profile/{your-uid}` | Profile page loads with avatar, display name, bio, skills |
 | 2 | Verify edit button | Pencil icon (FaPencilAlt) visible (only on own profile) |
+| 3 | Verify boost badge (if active) | If user has active boost, tier-specific badge displayed below name (e.g., "Boosted" blue, "Pro Creator" purple, "Verified Creator" amber) |
 
 ### TC-13.2: View Other User's Profile
 
@@ -793,6 +838,7 @@
 |------|--------|-----------------|
 | 1 | Navigate to `/profile/{other-uid}` | Profile loads; no edit button visible |
 | 2 | Verify showcase posts | User's showcase posts displayed below profile info |
+| 3 | Verify boost badge (if active) | If viewed user has active boost, tier-specific badge displayed below their name |
 
 ### TC-13.3: Edit Profile
 
@@ -1207,6 +1253,8 @@
 | GET | `/api/sponsored-challenges` | No | List challenges (paginated) |
 | POST | `/api/creator-boosts/submit` | Yes (Bearer token) | Create boost order |
 | GET | `/api/creator-boosts/me` | Yes | Get user's boost orders |
+| GET | `/api/creator-boosts/active` | Yes (Bearer token) | Get user's active boost with full metadata |
+| GET | `/api/creator-boosts/active/public?uid={uid}` | No | Get public badge info for a user |
 | POST | `/api/payments/paystack-webhook` | No (signature verified) | PayStack webhook handler |
 | POST | `/api/payments/create-intent` | Yes | Create payment intent |
 | GET | `/api/list-users` | No | List users |
@@ -1288,14 +1336,27 @@
 ```json
 {
   "userId": "string",
+  "ownerUid": "string",
   "plan": "lite | pro | ultra",
   "targetType": "profile",
   "targetId": "string",
-  "status": "pending | paid | active | expired",
+  "paymentStatus": "pending | paid",
+  "activationStatus": "pending | active | expired",
   "feeCents": "number",
+  "expiresAt": "Timestamp | null",
   "createdAt": "Timestamp"
 }
 ```
+
+### `presence/{uid}` (PR #1)
+```json
+{
+  "state": "online | offline",
+  "lastSeen": "Timestamp"
+}
+```
+
+> **Note**: Presence uses Firestore with a 60-second heartbeat. Documents with `lastSeen` older than 2 minutes are considered stale and excluded from the online count.
 
 ---
 
@@ -1399,6 +1460,52 @@
 | TC-30.3 | Streak resets after missed day               | Skip a day, log in | Current streak resets to 1 |
 | TC-30.4 | Achievement badges                           | Reach 3-day streak | "3-Day Streak" badge appears on dashboard |
 | TC-30.5 | Points-based achievements                    | Accumulate 100+ total points | "Centurion" badge appears |
+
+---
+
+## 31. Presence Tracking & Boost Features (PR #1)
+
+### TC-31.1: Online Presence Counter (Firestore-based)
+
+| Step | Action | Expected Result |
+|------|--------|------------------|
+| 1 | Log in to the app | Presence document created in Firestore `presence/{uid}` with `state: "online"` |
+| 2 | Verify OnlineCount on dashboard | Counter shows >= 1 (includes current user) |
+| 3 | Open a second browser/incognito and log in with a different account | Counter increments |
+| 4 | Close the second browser tab | Counter decrements after stale threshold (~2 minutes) |
+| 5 | Log out from the app | Presence document updated to `state: "offline"`; counter decrements |
+
+### TC-31.2: Presence Heartbeat
+
+| Step | Action | Expected Result |
+|------|--------|------------------|
+| 1 | Log in and stay on page for > 60 seconds | Firestore `presence/{uid}.lastSeen` updates every 60 seconds |
+| 2 | Verify stale filtering | Users whose `lastSeen` is > 2 minutes old are not counted as online |
+
+### TC-31.3: Boost Badge Component
+
+| Step | Action | Expected Result |
+|------|--------|------------------|
+| 1 | View profile of user with Lite Boost | Blue badge with bolt icon: "Boosted" |
+| 2 | View profile of user with Pro Boost | Purple badge with star icon: "Pro Creator" |
+| 3 | View profile of user with Ultra Boost | Amber badge with crown icon: "Verified Creator" |
+| 4 | View profile of user with no active boost | No badge displayed |
+
+### TC-31.4: Showcase Featured Creators Section
+
+| Step | Action | Expected Result |
+|------|--------|------------------|
+| 1 | Navigate to `/showcase` with boosted creators' posts present | "Featured Creators" section with rocket icon appears above regular posts |
+| 2 | Verify featured post order | Posts by Ultra boost users appear before Pro, which appear before Lite |
+| 3 | Search for posts | Featured section hides during search; all matching posts shown in single grid |
+| 4 | Navigate to `/showcase` with no boosted creators | No "Featured Creators" section; all posts in regular grid |
+
+### TC-31.5: Boost Badge on Content Cards
+
+| Step | Action | Expected Result |
+|------|--------|------------------|
+| 1 | View a showcase post by a boosted creator | Tier badge (e.g., "Boosted", "Pro Creator") shown next to the post type tag |
+| 2 | View a showcase post by a non-boosted creator | No boost badge on the card |
 
 ---
 

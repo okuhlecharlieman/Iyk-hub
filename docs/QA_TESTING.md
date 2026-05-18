@@ -30,6 +30,8 @@ Validate these major areas:
 - Admin portal and content moderation
 - New Revenue Management feature
 - Payments, subscriptions, and monetization flows
+- Online presence tracking
+- Creator Boost features (badges, extended video chat, featured posts)
 
 ## 3. Authentication / User Flow
 
@@ -126,6 +128,7 @@ For each game:
 - Open your profile page
 - Confirm personal details and points are visible
 - Verify uploads, achievements, or recent activity appear correctly
+- If the user has an active boost, verify the tier-specific badge (Boosted / Pro Creator / Verified Creator) appears below the display name
 
 ### Edit profile
 - Update profile fields (display name, bio, photo if supported)
@@ -181,6 +184,11 @@ For each game:
 - Confirm checkout or payment flows open where required
 - Verify Stripe or payment intent generation returns success messages
 - Confirm pending and paid statuses behave correctly for orders
+- Verify boost activation: after payment, `creatorBoostOrders` document updates to `paymentStatus: 'paid'` and boost activates
+- Verify boost badges display on own profile and public profiles
+- Verify video chat time extends based on active boost tier (Lite: 1 min, Pro: 3 min, Ultra: 5 min)
+- Verify showcase page shows "Featured Creators" section for posts by boosted users
+- Verify boost badges appear on content cards in the showcase
 
 ### Payment history and invoices
 - Check payment history pages for correct amount, status, and order details
@@ -216,6 +224,10 @@ Run this checklist after changes or before release:
 - [ ] Payment flows complete or show correct statuses
 - [ ] Validation errors are shown for invalid input
 - [ ] No broken navigation or page errors on desktop/mobile
+- [ ] Online presence counter reflects logged-in users accurately
+- [ ] Creator boost badges display on profiles when active
+- [ ] Video chat time extends for boosted users
+- [ ] Showcase "Featured Creators" section shows boosted users' posts
 
 ## 15. Reporting Bugs
 
@@ -237,6 +249,9 @@ If automated testing is added later, use these areas:
 - game actions and score changes
 - showcase post creation and moderation
 - opportunity submission and approval
+- online presence tracking (Firestore heartbeat)
+- creator boost activation, badge display, and video chat extension
+- showcase featured creators sorting
 
 ## 17. Helpful References
 

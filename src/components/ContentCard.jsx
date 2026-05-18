@@ -36,13 +36,22 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
             <audio className="w-full" src={p.mediaUrl} controls />
           </div>
         ) : (
-          <div className="relative w-full h-48 bg-gray-100 dark:bg-gray-700">
+          <div className="relative w-full h-48 bg-gray-100 dark:bg-gray-700 overflow-hidden">
             <img
               className="w-full h-full object-cover"
               src={p.mediaUrl}
               alt={p.title}
               loading="lazy"
-              onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+              onError={(e) => {
+                const container = e.target.parentElement;
+                e.target.style.display = 'none';
+                if (!container.querySelector('.img-fallback')) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'img-fallback absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm';
+                  fallback.textContent = 'Image unavailable';
+                  container.appendChild(fallback);
+                }
+              }}
             />
           </div>
         )

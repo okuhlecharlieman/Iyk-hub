@@ -131,15 +131,22 @@ export async function GET(request) {
       }
 
       const snap = await queryRef.get();
+      const serializeTs = (val) => {
+        if (!val) return null;
+        if (typeof val === 'string') return val;
+        if (typeof val.toDate === 'function') return val.toDate().toISOString();
+        if (typeof val.toMillis === 'function') return new Date(val.toMillis()).toISOString();
+        return null;
+      };
       const opportunities = snap.docs.map((doc) => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          createdAt: data.createdAt?.toDate?.toISOString?.() || data.createdAt || null,
-          updatedAt: data.updatedAt?.toDate?.toISOString?.() || data.updatedAt || null,
-          expiresAt: data.expiresAt?.toDate?.toISOString?.() || data.expiresAt || null,
-          deletionScheduledAt: data.deletionScheduledAt?.toDate?.toISOString?.() || data.deletionScheduledAt || null,
+          createdAt: serializeTs(data.createdAt),
+          updatedAt: serializeTs(data.updatedAt),
+          expiresAt: serializeTs(data.expiresAt),
+          deletionScheduledAt: serializeTs(data.deletionScheduledAt),
         };
       });
       const externalOpportunities = includeExternal ? await fetchExternalOpportunities({ limit: limitN, search }) : [];
@@ -166,15 +173,22 @@ export async function GET(request) {
     }
 
     const approvedSnap = await queryRef.get();
+    const serializeTimestamp = (val) => {
+      if (!val) return null;
+      if (typeof val === 'string') return val;
+      if (typeof val.toDate === 'function') return val.toDate().toISOString();
+      if (typeof val.toMillis === 'function') return new Date(val.toMillis()).toISOString();
+      return null;
+    };
     const serializeOpportunity = (doc) => {
       const data = doc.data();
       return {
         id: doc.id,
         ...data,
-        createdAt: data.createdAt?.toDate?.toISOString?.() || data.createdAt || null,
-        updatedAt: data.updatedAt?.toDate?.toISOString?.() || data.updatedAt || null,
-        expiresAt: data.expiresAt?.toDate?.toISOString?.() || data.expiresAt || null,
-        deletionScheduledAt: data.deletionScheduledAt?.toDate?.toISOString?.() || data.deletionScheduledAt || null,
+        createdAt: serializeTimestamp(data.createdAt),
+        updatedAt: serializeTimestamp(data.updatedAt),
+        expiresAt: serializeTimestamp(data.expiresAt),
+        deletionScheduledAt: serializeTimestamp(data.deletionScheduledAt),
       };
     };
 
@@ -186,30 +200,34 @@ export async function GET(request) {
 
     // Include the user's own pending opportunities on the first page only.
     if (!cursor) {
-      const pendingSnap = await db
-        .collection('opportunities')
-        .where('ownerId', '==', uid)
-        .where('status', '==', 'pending')
-        .orderBy('createdAt', 'desc')
-        .get();
+      try {
+        const pendingSnap = await db
+          .collection('opportunities')
+          .where('ownerId', '==', uid)
+          .where('status', '==', 'pending')
+          .get();
 
-      const pendingOpportunities = pendingSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const pendingOpportunities = pendingSnap.docs.map(serializeOpportunity);
 
-      // Merge and de-dupe, keeping newest by createdAt.
-      const combined = [...pendingOpportunities, ...approvedOpportunities];
-      const seen = new Set();
-      opportunities = combined
-        .sort((a, b) => {
-          const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-          const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-          return bTime - aTime;
-        })
-        .filter((item) => {
-          if (seen.has(item.id)) return false;
-          seen.add(item.id);
-          return true;
-        })
-        .slice(0, limitN);
+        // Merge and de-dupe
+        const combined = [...pendingOpportunities, ...visibleApproved];
+        const seen = new Set();
+        opportunities = combined
+          .sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bTime - aTime;
+          })
+          .filter((item) => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          })
+          .slice(0, limitN);
+      } catch (pendingError) {
+        console.warn('Failed to fetch pending opportunities for user:', pendingError?.message);
+        opportunities = visibleApproved;
+      }
     }
 
     const lastDoc = approvedSnap.docs[approvedSnap.docs.length - 1];

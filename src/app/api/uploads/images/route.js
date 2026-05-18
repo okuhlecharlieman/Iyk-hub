@@ -90,6 +90,13 @@ export async function POST(request) {
       },
     });
 
+    // Make the object publicly readable so it can be displayed in the app
+    try {
+      await object.makePublic();
+    } catch (publicErr) {
+      console.warn('Could not make object public (bucket may use uniform access):', publicErr?.message);
+    }
+
     const url = getPublicGcsUrl(bucketName, objectName);
 
     return NextResponse.json({ url, bucket: bucketName, path: objectName });

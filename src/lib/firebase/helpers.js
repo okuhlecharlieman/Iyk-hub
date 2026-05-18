@@ -134,6 +134,8 @@ const REACTION_FIELDS = {
 export async function togglePostVote(postId, uid, reactionType = 'thumbsUp') {
   const postRef = doc(db, "wallPosts", postId);
   const fields = REACTION_FIELDS[reactionType] || REACTION_FIELDS.thumbsUp;
+  const currentEmail = auth.currentUser?.email || null;
+  const emailsField = `${fields.votersField}Emails`;
 
   return runTransaction(db, async (transaction) => {
     const postDoc = await transaction.get(postRef);
@@ -143,18 +145,28 @@ export async function togglePostVote(postId, uid, reactionType = 'thumbsUp') {
 
     const data = postDoc.data();
     const voters = data[fields.votersField] || [];
+    const voterEmails = data[emailsField] || [];
 
     if (voters.includes(uid)) {
+      // User is removing their vote
       const newVoters = voters.filter(voterId => voterId !== uid);
+      const newEmails = currentEmail ? voterEmails.filter(e => e !== currentEmail) : voterEmails;
       transaction.update(postRef, {
         [fields.votersField]: newVoters,
         [fields.countField]: newVoters.length,
+        [emailsField]: newEmails,
       });
     } else {
+      // Prevent double-voting from same email with different auth provider
+      if (currentEmail && voterEmails.includes(currentEmail)) {
+        throw new Error('You have already reacted with another account using the same email.');
+      }
       const newVoters = [...voters, uid];
+      const newEmails = currentEmail ? [...voterEmails, currentEmail] : voterEmails;
       transaction.update(postRef, {
         [fields.votersField]: newVoters,
         [fields.countField]: newVoters.length,
+        [emailsField]: newEmails,
       });
     }
   });

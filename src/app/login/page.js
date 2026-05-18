@@ -1,7 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, fetchSignInMethodsForEmail, linkWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { ensureUserDoc } from '../../lib/firebase/helpers';
 import { useRouter } from 'next/navigation';

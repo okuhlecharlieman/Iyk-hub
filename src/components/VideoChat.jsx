@@ -189,6 +189,7 @@ export default function VideoChat() {
 
     let roomToJoin = null;
     let myExistingRoom = null;
+    const staleThreshold = Date.now() - 90000; // 90 seconds = stale
 
     const sortedDocs = querySnapshot.docs.sort((a, b) => {
       const aTime = a.data().createdAt?.toMillis?.() || 0;
@@ -197,14 +198,24 @@ export default function VideoChat() {
     });
 
     for (const d of sortedDocs) {
-      if (d.data().userA === user.uid) {
+      const data = d.data();
+      const roomAge = data.createdAt?.toMillis?.() || 0;
+
+      // Clean up stale rooms older than 90 seconds
+      if (roomAge > 0 && roomAge < staleThreshold && data.userA !== user.uid) {
+        try { await deleteDoc(d.ref); } catch {}
+        continue;
+      }
+
+      if (data.userA === user.uid) {
         myExistingRoom = d;
-      } else {
+      } else if (!roomToJoin) {
         roomToJoin = d;
       }
     }
 
     if (myExistingRoom && roomToJoin) {
+      // Deterministic conflict resolution
       if (user.uid < roomToJoin.data().userA) {
         await deleteDoc(myExistingRoom.ref);
       } else {
@@ -275,7 +286,7 @@ export default function VideoChat() {
         await setupCall(roomRef.id, true);
       }
 
-      // Actively poll for available partners every 5 seconds while waiting
+      // Actively poll for available partners every 3 seconds while waiting
       searchRetryRef.current = setInterval(async () => {
         if (statusRef.current !== 'searching') {
           clearInterval(searchRetryRef.current);
@@ -290,16 +301,16 @@ export default function VideoChat() {
         } catch {
           // Retry silently
         }
-      }, 5000);
+      }, 3000);
 
-      // Auto-cancel search after 60 seconds if no match
+      // Auto-cancel search after 90 seconds if no match
       searchTimeoutRef.current = setTimeout(() => {
         if (statusRef.current === 'searching') {
           if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
           toast('info', 'No one available right now. Try again later!');
           stopCall();
         }
-      }, 60000);
+      }, 90000);
 
     } catch (err) {
       console.error('Error finding partner:', err);
@@ -634,14 +645,15 @@ export default function VideoChat() {
           </div>
 
           {/* Video area — PiP layout */}
-          <div ref={videoContainerRef} className={`relative w-full bg-black rounded-2xl overflow-hidden shadow-lg ${isFullscreen && isIOS ? 'fixed inset-0 z-50 rounded-none' : isFullscreen ? '' : 'aspect-video'}`}>
+          <div ref={videoContainerRef} className={`relative w-full bg-black rounded-2xl overflow-hidden shadow-lg ${isFullscreen && isIOS ? 'fixed inset-0 z-[9999] rounded-none' : isFullscreen ? '' : 'aspect-video'}`} style={isFullscreen && isIOS ? { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}>
             {/* Remote video (full size) */}
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
               webkit-playsinline=""
-              className={`w-full h-full object-cover ${isFullscreen ? 'absolute inset-0' : ''}`}
+              className={`w-full h-full object-contain ${isFullscreen ? 'absolute inset-0' : ''}`}
+              style={isFullscreen && isIOS ? { objectFit: 'contain', width: '100%', height: '100%' } : undefined}
             />
 
             {/* Partner name overlay */}

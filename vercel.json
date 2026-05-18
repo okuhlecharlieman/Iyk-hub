@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/jobs/weekly-leaderboard-reset",
-      "schedule": "0 22 * * 1*"
+      "schedule": "0 22 * * 1"
     },
     {
       "path": "/api/jobs/creator-boost-lifecycle",

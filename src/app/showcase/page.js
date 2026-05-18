@@ -93,35 +93,26 @@ export default function ShowcasePage() {
       const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
 
       if (editingPost) {
-        if (isAdmin && isEditingAnotherUsersPost) {
-          const response = await fetch('/api/admin/updatePost', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ postId: editingPost.id, updates: postData }),
-          });
+        const endpoint = (isAdmin && isEditingAnotherUsersPost)
+          ? '/api/admin/updatePost'
+          : '/api/showcase/update';
 
-          if (!response.ok) {
-            let errorMessage = 'Could not update the post as admin.';
-            const bodyText = await response.text();
-            try {
-              const result = JSON.parse(bodyText);
-              if (result?.error) errorMessage = result.error;
-            } catch {
-              if (bodyText) errorMessage = bodyText;
-            }
-            throw new Error(errorMessage);
-          }
-        } else {
-          const response = await fetch('/api/admin/updatePost', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ postId: editingPost.id, updates: postData }),
-          });
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ postId: editingPost.id, updates: postData }),
+        });
 
-          if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
-            throw new Error(result.error || 'Could not update the post.');
+        if (!response.ok) {
+          let errorMessage = 'Could not update the post.';
+          const bodyText = await response.text();
+          try {
+            const result = JSON.parse(bodyText);
+            if (result?.error) errorMessage = result.error;
+          } catch {
+            if (bodyText) errorMessage = bodyText;
           }
+          throw new Error(errorMessage);
         }
       } else {
         const response = await fetch('/api/showcase/submit', {

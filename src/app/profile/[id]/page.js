@@ -9,6 +9,7 @@ import ProfileEditor from '../../../components/ProfileEditor';
 import { FaPaintBrush, FaUserCircle, FaPencilAlt } from 'react-icons/fa';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import { useToast } from '../../../components/ui/ToastProvider';
+import BoostBadge from '../../../components/BoostBadge';
 
 function normalizeSkills(skills) {
   if (Array.isArray(skills)) {
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [boostBadge, setBoostBadge] = useState(null);
   const toast = useToast();
 
   const isOwner = currentUser && currentUser.uid === id;
@@ -66,6 +68,16 @@ export default function ProfilePage() {
 
       const userPosts = allPosts.filter((post) => post.uid === id);
       setPosts(userPosts);
+
+      try {
+        const boostRes = await fetch(`/api/creator-boosts/active/public?uid=${id}`);
+        if (boostRes.ok) {
+          const boostData = await boostRes.json();
+          if (boostData.active) setBoostBadge(boostData.boost);
+        }
+      } catch {
+        // Badge is optional, fail silently
+      }
     } catch (err) {
       console.error('Error fetching profile data:', err);
       setError('There was an error loading this profile.');
@@ -126,6 +138,11 @@ export default function ProfilePage() {
                 )}
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{profile.displayName || 'Anonymous'}</h1>
+              {boostBadge && (
+                <div className="mt-2">
+                  <BoostBadge badge={boostBadge.badge} label={boostBadge.badgeLabel} />
+                </div>
+              )}
               {profile.bio && <p className="mt-4 text-gray-700 dark:text-gray-300 max-w-prose mx-auto">{profile.bio}</p>}
 
               {profile.skills.length > 0 && (

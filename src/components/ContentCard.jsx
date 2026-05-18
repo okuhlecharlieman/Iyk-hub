@@ -2,6 +2,7 @@ import { memo } from 'react';
 import Link from 'next/link';
 import { FaThumbsUp, FaFire, FaHeart, FaPencilAlt, FaTrash } from 'react-icons/fa';
 import { Code, Music, FileText } from 'lucide-react';
+import BoostBadge from './BoostBadge';
 
 const TYPE_STYLES = {
   art: { icon: <FileText size={16} />, color: 'text-purple-500', bg: 'bg-purple-100 dark:bg-purple-900/30' },
@@ -82,6 +83,9 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
             </div>
           </Link>
           <div className="ml-auto flex items-center gap-1">
+            {p.isBoosted && p.boostBadge && (
+              <BoostBadge badge={p.boostBadge.badge} label={p.boostBadge.badgeLabel} size="sm" />
+            )}
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${color}`}>
               {icon} {p.type?.charAt(0).toUpperCase() + p.type?.slice(1)}
             </span>

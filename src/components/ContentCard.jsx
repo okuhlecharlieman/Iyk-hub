@@ -30,7 +30,7 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out flex flex-col">
       {/* Image preview at top of card */}
-      {p.mediaUrl && (
+      {p.mediaUrl && !p.mediaUrl.startsWith('data:') && (
         p.type === 'music' ? (
           <div className="px-5 pt-4">
             <audio className="w-full" src={p.mediaUrl} controls />
@@ -42,7 +42,7 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
               src={p.mediaUrl}
               alt={p.title}
               loading="lazy"
-              onError={(e) => { e.target.style.display = 'none'; }}
+              onError={(e) => { e.target.parentElement.style.display = 'none'; }}
             />
           </div>
         )

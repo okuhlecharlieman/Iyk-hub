@@ -2,17 +2,18 @@ import { NextResponse } from 'next/server';
 
 const CSP_DIRECTIVES = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.firebaseapp.com https://*.googleapis.com https://apis.google.com https://accounts.google.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.paystack.co https://*.paystack.co https://checkout.paystack.com https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com https://*.firebaseapp.com https://*.googleapis.com https://accounts.google.com",
+  "script-src-elem 'self' 'unsafe-inline' https://js.paystack.co https://*.paystack.co https://checkout.paystack.com https://apis.google.com https://www.gstatic.com https://www.googletagmanager.com https://*.firebaseapp.com https://*.googleapis.com https://accounts.google.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://*.stripe.com",
+  "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.googleapis.com https://lh3.googleusercontent.com https://*.googleusercontent.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://api.stripe.com https://firebasestorage.googleapis.com https://apis.google.com https://accounts.google.com",
-  "frame-src 'self' https://js.stripe.com https://*.firebaseapp.com https://accounts.google.com",
+  "connect-src 'self' https://*.googleapis.com https://storage.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://api.paystack.co https://*.paystack.co https://firebasestorage.googleapis.com https://apis.google.com https://accounts.google.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
+  "frame-src 'self' https://js.paystack.co https://*.paystack.co https://checkout.paystack.com https://*.firebaseapp.com https://accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  "media-src 'self' blob: https://firebasestorage.googleapis.com",
+  "media-src 'self' blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.googleapis.com",
 ].join('; ');
 
 export function middleware(request) {

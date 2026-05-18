@@ -45,7 +45,6 @@ export default function Navbar() {
     { href: '/sponsored-challenges', label: 'Challenges' },
     { href: '/leaderboard', label: 'Leaderboard' },
     { href: '/creator-boosts', label: 'Boosts' },
-    { href: '/pricing', label: 'Pricing' },
     { href: '/donate', label: 'Donate' },
   ];
 

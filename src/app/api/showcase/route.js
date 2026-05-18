@@ -68,6 +68,7 @@ export async function GET(request) {
           return {
             id: doc.id,
             ...data,
+            mediaUrl: data.mediaUrl || data.imageUrl || null,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
           };
         });

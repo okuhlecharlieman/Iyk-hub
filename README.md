@@ -27,6 +27,9 @@ No chats, no negativity — just a space for kasi youth to shine.
 - **Opportunities Board**: Browse curated jobs, gigs, and collaboration opportunities that are reviewed and approved by administrators.
 - **User profiles**: Create a profile to showcase your skills, earned points, uploaded content, and participation history.
 - **Admin portal**: Manage platform content, users, and monetization settings through a protected admin interface.
+- **Creator Boosts (Monetization)**: Offer tiered plans (Pro and Ultra) for creators to enhance their visibility and unlock exclusive features.
+    - **Pro Boost**: Includes portfolio view count analytics.
+    - **Ultra Boost**: Includes all Pro features plus full portfolio analytics (engagement stats), a custom profile accent color, a profile feature on the homepage carousel, and early access to sponsor opportunities.
 - **Revenue Management (new)**: Admin-only financial dashboard for tracking paid revenue streams, transaction history, and revenue breakdown across creator boosts, sponsored challenges, institution plans, sponsored opportunities, and placement fees.
 - **Reactive search and filters**: Search transactions by order ID, description, or type, filter revenue streams, and view performance over different time periods.
 - **Secure authentication**: Firebase Auth protects user and admin access while supporting a safe, moderated community.

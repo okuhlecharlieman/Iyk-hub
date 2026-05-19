@@ -16,8 +16,8 @@ const PLAN_DETAILS = {
     features: [
       'Profile shown higher in search for 24 hours',
       '1.2x visibility boost on your showcase posts',
-      'Blue "Boosted" badge on your profile for 24h',
-      'Your posts appear in "Featured" section',
+      'Blue \"Boosted\" badge on your profile for 24h',
+      'Your posts appear in \"Featured\" section',
     ],
     notIncluded: [
       'Extended random chat time',
@@ -34,8 +34,8 @@ const PLAN_DETAILS = {
     features: [
       'Profile shown higher in search for 72 hours',
       '1.8x visibility boost on your showcase posts',
-      'Purple "Pro Creator" badge on your profile',
-      'Your posts appear in "Featured" section',
+      'Purple \"Pro Creator\" badge on your profile',
+      'Your posts appear in \"Featured\" section',
       'Extended random chat (3 min per call)',
       'Portfolio view count analytics',
       'Priority matchmaking in random chat',
@@ -52,8 +52,8 @@ const PLAN_DETAILS = {
     features: [
       'Profile shown higher in search for 7 days',
       '2.5x visibility boost on your showcase posts',
-      'Gold "Verified Creator" badge on your profile',
-      'Your posts pinned in "Featured" section',
+      'Gold \"Verified Creator\" badge on your profile',
+      'Your posts pinned in \"Featured\" section',
       'Extended random chat (5 min per call)',
       'Full portfolio analytics with engagement stats',
       'Priority matchmaking in random chat',

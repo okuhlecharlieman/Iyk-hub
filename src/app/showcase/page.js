@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
@@ -29,8 +29,15 @@ export default function ShowcasePage() {
   useEffect(() => {
     const q = query(collection(db, 'showcase'), orderBy('createdAt', 'desc'), limit(20));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const newPosts = await Promise.all(snapshot.docs.map(async (doc) => {
+        const postData = { id: doc.id, ...doc.data() };
+        const authorDoc = await getDoc(doc(db, 'users', postData.uid));
+        if (authorDoc.exists()) {
+          postData.author = authorDoc.data();
+        }
+        return postData;
+      }));
       setPosts(newPosts);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
       setLoading(false);
@@ -56,7 +63,14 @@ export default function ShowcasePage() {
 
     try {
       const snapshot = await getDocs(q);
-      const newPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const newPosts = await Promise.all(snapshot.docs.map(async (doc) => {
+        const postData = { id: doc.id, ...doc.data() };
+        const authorDoc = await getDoc(doc(db, 'users', postData.uid));
+        if (authorDoc.exists()) {
+          postData.author = authorDoc.data();
+        }
+        return postData;
+      }));
       setPosts(prev => [...prev, ...newPosts]);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
     } catch (err) {

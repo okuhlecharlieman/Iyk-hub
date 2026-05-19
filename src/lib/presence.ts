@@ -87,7 +87,7 @@ export function startPresence(): Unsubscribe {
   };
 }
 
-export function subscribeOnlineCount(cb: (n: number) => void): Unsubscribe {
+export function subscribeOnlineCount(cb: (n: number | Map<string, any>) => void): Unsubscribe {
   if (!db) {
     cb(0);
     return () => {};
@@ -102,14 +102,16 @@ export function subscribeOnlineCount(cb: (n: number) => void): Unsubscribe {
     if (!latestSnap) return;
     const now = Date.now();
     let count = 0;
+    const onlineUsers = new Map();
     latestSnap.forEach((d) => {
       const data = d.data();
       const lastSeen = data.lastSeen?.toMillis?.() || 0;
       if (lastSeen === 0 || now - lastSeen < STALE_THRESHOLD) {
         count++;
+        onlineUsers.set(d.id, data);
       }
     });
-    cb(count);
+    cb(typeof cb === 'function' && cb.length > 0 ? onlineUsers : count);
   };
 
   const unsub = onSnapshot(

@@ -32,6 +32,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Rules for user presence
+    match /presence/{userId} {
+      // Any authenticated user can see who is online.
+      allow read: if request.auth.uid != null;
+      // A user can only update their own presence status.
+      allow write: if request.auth.uid == userId;
+    }
+
     // Rules for the 'opportunities' collection
     match /opportunities/{opportunityId} {
       // Admins can read any opportunity.

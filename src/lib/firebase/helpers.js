@@ -304,6 +304,31 @@ export function onUsersUpdate(callback, onError) {
   return unsubscribe;
 }
 
+export function subscribeOnlineCount(callback, onError) {
+    if (!db) {
+        callback(new Map());
+        return () => {};
+    }
+
+    const presenceRef = collection(db, "presence");
+    const q = query(presenceRef, where("state", "==", "online"));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const onlineUsers = new Map();
+        snapshot.forEach((doc) => {
+            onlineUsers.set(doc.id, doc.data());
+        });
+        callback(onlineUsers);
+    }, (error) => {
+        console.error("[Presence] subscribeOnlineCount read failed:", error);
+        if (onError) onError(error);
+        callback(new Map());
+    });
+
+    return unsubscribe;
+}
+
+
 export async function approveOpportunity(opportunityId) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');

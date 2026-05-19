@@ -4,11 +4,11 @@ import Link from 'next/link';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Modal from '../../../components/Modal';
 import { useAuth } from '../../../context/AuthContext';
-import { listAllUsers, onUsersUpdate } from '../../../lib/firebase/helpers';
+import { listAllUsers, onUsersUpdate, subscribeOnlineCount } from '../../../lib/firebase/helpers';
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
-import { FaSearch, FaUserShield, FaEdit, FaTrash, FaUsers, FaUserCog } from 'react-icons/fa';
+import { FaSearch, FaUserShield, FaEdit, FaTrash, FaUsers, FaUserCog, FaCircle } from 'react-icons/fa';
 import { ROLE_OPTIONS, canManageTeam, formatRoleLabel, getRoleDefinition } from '../../../lib/roles';
 
 const roleBadgeClasses = {
@@ -28,7 +28,7 @@ const RoleBadge = ({ role }) => (
   </span>
 );
 
-const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
+const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnline }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -42,7 +42,10 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
       <tr className="hidden sm:table-row border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
         <td className="px-4 py-3">
           <div className="flex items-center gap-3">
-            <img src={user.photoURL || '/logo.png'} className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700" alt={user.displayName || 'avatar'} />
+            <div className="relative">
+                <img src={user.photoURL || '/logo.png'} className="w-9 h-9 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700" alt={user.displayName || 'avatar'} />
+                {isOnline && <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white dark:ring-gray-800"></span>}
+            </div>
             <div className="min-w-0">
               <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{user.displayName || 'Unnamed'}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate font-mono">{user.uid?.slice(0, 12)}...</p>
@@ -72,7 +75,10 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
         <td colSpan={4} className="p-0">
           <div className="p-4 border-b border-gray-100 dark:border-gray-700/50">
             <div className="flex items-start gap-3">
-              <img src={user.photoURL || '/logo.png'} className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700 flex-shrink-0" alt={user.displayName || 'avatar'} />
+                <div className="relative flex-shrink-0">
+                    <img src={user.photoURL || '/logo.png'} className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-100 dark:ring-gray-700" alt={user.displayName || 'avatar'} />
+                    {isOnline && <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white dark:ring-gray-800"></span>}
+                </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="font-semibold text-sm text-gray-900 dark:text-white truncate">{user.displayName || 'Unnamed'}</p>
@@ -122,7 +128,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                 <input
                     type="text"
                     name="displayName"
-                    id="displayName"
+                    id={`edit-displayName-${user.uid}`}
                     defaultValue={user.displayName}
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
@@ -132,7 +138,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
                 <input
                     type="email"
                     name="email"
-                    id="email"
+                    id={`edit-email-${user.uid}`}
                     defaultValue={canManageClaims ? user.email : ''}
                     placeholder="name@example.com"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
@@ -143,10 +149,9 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
             </div>
             <div className="flex gap-2 justify-end">
                 <Button variant="ghost" size="sm" onClick={() => setEditOpen(false)}>Cancel</Button>
-                <Button variant="primary" size="sm" onClick={async (e) => {
-                    const container = e.target.closest('.flex-col');
-                    const newDisplayName = container.querySelector('#displayName').value;
-                    const newEmail = container.querySelector('#email').value;
+                <Button variant="primary" size="sm" onClick={async () => {
+                    const newDisplayName = document.getElementById(`edit-displayName-${user.uid}`).value;
+                    const newEmail = document.getElementById(`edit-email-${user.uid}`).value;
                     const payload = { displayName: newDisplayName };
                     if (newEmail.trim()) payload.email = newEmail.trim();
                     setEditOpen(false);
@@ -169,13 +174,14 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing }) => {
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
     if (canManageTeam(userProfile?.role) && user) {
-      let unsubscribe;
+      let unsubscribeUsers, unsubscribeOnline;
 
       (async () => {
         setLoading(true);
@@ -193,7 +199,7 @@ export default function AdminUsersPage() {
           setLoading(false);
         }
 
-        unsubscribe = onUsersUpdate((docs) => {
+        unsubscribeUsers = onUsersUpdate((docs) => {
             setUsers((prevUsers) => {
                 const newUsersMap = new Map();
                 const prevUsersMap = new Map(prevUsers.map(u => [(u.uid || u.id), u]));
@@ -212,9 +218,14 @@ export default function AdminUsersPage() {
                 return Array.from(newUsersMap.values());
             });
         }, (err) => console.error('onUsersUpdate error:', err));
+
+        unsubscribeOnline = subscribeOnlineCount(setOnlineUsers);
       })();
 
-      return () => unsubscribe && unsubscribe();
+      return () => {
+          if (unsubscribeUsers) unsubscribeUsers();
+          if (unsubscribeOnline) unsubscribeOnline();
+      }
     }
 
     setLoading(false);
@@ -234,6 +245,7 @@ export default function AdminUsersPage() {
     );
   }, [users, search]);
 
+  const onlineCount = onlineUsers.size;
   const adminCount = users.filter(u => ['business_owner', 'admin'].includes((u.role || '').toLowerCase())).length;
 
   const handleUpdateUser = async (uid, updateData) => {
@@ -299,8 +311,14 @@ export default function AdminUsersPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Users</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {users.length} total users · {adminCount} admins · {users.filter(u => canManageTeam(u.role)).length} team managers
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
+              <span>{users.length} total users</span>
+              <FaCircle className="text-gray-300 dark:text-gray-600" size={6} />
+              <span className="flex items-center gap-1.5">
+                <FaCircle className="text-green-400" size={8} /> {onlineCount} online
+              </span>
+              <FaCircle className="text-gray-300 dark:text-gray-600" size={6} />
+              <span>{adminCount} admins</span>
             </p>
           </div>
           <Link href="/admin/roles" className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
@@ -352,6 +370,7 @@ export default function AdminUsersPage() {
                       onRequestUpdate={handleUpdateUser}
                       onRequestDelete={handleDeleteUser}
                       isProcessing={processingUid === userKey}
+                      isOnline={onlineUsers.has(userKey)}
                     />
                   );
                 })

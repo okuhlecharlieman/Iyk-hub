@@ -56,6 +56,12 @@ export async function POST(request) {
     if (event.event === 'charge.success') {
       const data = event.data;
       const { reference, metadata } = data;
+      console.log('[PayStack Webhook] charge.success received', {
+        eventId: event.id || null,
+        reference,
+        amount: data.amount,
+        currency: data.currency,
+      });
       const db = admin.firestore();
 
       const existingLog = await db.collection('paymentLogs')
@@ -96,19 +102,21 @@ export async function POST(request) {
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
+      console.log('[PayStack Webhook] Writing financial ledger entries', { reference, orderType, orderId });
       await recordChargeWithFees(db, {
         orderType,
         orderId,
         grossAmountCents: data.amount,
         currency: data.currency?.toUpperCase() || 'ZAR',
         processor: 'paystack',
-        processorEventId: event.id,
+        processorEventId: event.id || reference,
         processorTransactionId: reference,
         processorFeeRate: PAYSTACK_FEE_RATE,
         processorFeeFixedCents: PAYSTACK_FEE_FIXED_CENTS,
         platformFeeRate: DEFAULT_PLATFORM_FEE_RATE,
       });
 
+      console.log('[PayStack Webhook] Ledger write complete', { reference });
       const paymentsSnap = await db.collection('payments')
         .where('paystackReference', '==', reference)
         .limit(1)

@@ -27,11 +27,11 @@ export default function ShowcasePage() {
   const toast = useToast();
 
   useEffect(() => {
-    const q = query(collection(db, 'showcase'), orderBy('createdAt', 'desc'), limit(20));
+    const q = query(collection(db, 'wallPosts'), orderBy('createdAt', 'desc'), limit(20));
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const newPosts = await Promise.all(snapshot.docs.map(async (doc) => {
-        const postData = { id: doc.id, ...doc.data() };
+      const newPosts = await Promise.all(snapshot.docs.map(async (postDoc) => {
+        const postData = { id: postDoc.id, ...postDoc.data() };
         const authorDoc = await getDoc(doc(db, 'users', postData.uid));
         if (authorDoc.exists()) {
           postData.author = authorDoc.data();
@@ -55,7 +55,7 @@ export default function ShowcasePage() {
     setLoadingMore(true);
 
     const q = query(
-      collection(db, 'showcase'),
+      collection(db, 'wallPosts'),
       orderBy('createdAt', 'desc'),
       startAfter(lastVisible),
       limit(20)
@@ -63,8 +63,8 @@ export default function ShowcasePage() {
 
     try {
       const snapshot = await getDocs(q);
-      const newPosts = await Promise.all(snapshot.docs.map(async (doc) => {
-        const postData = { id: doc.id, ...doc.data() };
+      const newPosts = await Promise.all(snapshot.docs.map(async (postDoc) => {
+        const postData = { id: postDoc.id, ...postDoc.data() };
         const authorDoc = await getDoc(doc(db, 'users', postData.uid));
         if (authorDoc.exists()) {
           postData.author = authorDoc.data();

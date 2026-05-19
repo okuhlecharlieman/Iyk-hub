@@ -32,9 +32,9 @@ export const PostCardSkeleton = () => (
 );
 
 
-export default function PostCard({ post, author, isOwner, onEdit, onDelete, onVote }) {
+export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
   const { user: currentUser } = useAuth();
-  const { type, title, description, mediaUrl, link, createdAt, votes, voters } = post;
+  const { type, title, description, mediaUrl, link, createdAt, votes, voters, authorName, authorPhoto } = post;
   const metadata = typeMetadata[type] || {};
   const voteCount = votes || 0;
   const userHasVoted = currentUser && voters?.includes(currentUser.uid);
@@ -55,13 +55,13 @@ export default function PostCard({ post, author, isOwner, onEdit, onDelete, onVo
       <div className="p-5 flex-grow flex flex-col">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            {author?.photoURL ? (
-                <img src={author.photoURL} alt={author.displayName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" />
+            {authorPhoto ? (
+                <img src={authorPhoto} alt={authorName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" />
             ) : (
                 <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-700" />
             )}
             <div>
-              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight">{author?.displayName || 'Anonymous User'}</p>
+              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight">{authorName || 'Anonymous User'}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{createdAt ? new Date(createdAt.seconds * 1000).toLocaleDateString() : 'Just now'}</p>
             </div>
           </div>

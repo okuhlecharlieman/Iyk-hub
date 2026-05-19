@@ -204,9 +204,8 @@ export default function VideoChat() {
       const data = d.data();
       const roomAge = data.createdAt?.toMillis?.() || 0;
 
-      // Clean up stale rooms older than 90 seconds
-      if (roomAge > 0 && roomAge < staleThreshold && data.userA !== user.uid) {
-        try { await deleteDoc(d.ref); } catch {}
+      // Don't try to join stale rooms. A server function should clean them up.
+      if (roomAge > 0 && roomAge < staleThreshold) {
         continue;
       }
 
@@ -218,11 +217,14 @@ export default function VideoChat() {
     }
 
     if (myExistingRoom && roomToJoin) {
-      // Deterministic conflict resolution
-      if (user.uid < roomToJoin.data().userA) {
+      // Deterministic conflict resolution: the user with the smaller UID keeps their room.
+      if (user.uid > roomToJoin.data().userA) {
+        // My UID is larger, so I should delete my room and join the other.
         await deleteDoc(myExistingRoom.ref);
+        myExistingRoom = null;
       } else {
-        await deleteDoc(roomToJoin.ref);
+        // My UID is smaller. The other user should be deleting their room.
+        // I will wait in my room for them to join. I should ignore their room.
         roomToJoin = null;
       }
     }

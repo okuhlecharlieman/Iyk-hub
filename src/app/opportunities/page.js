@@ -41,12 +41,9 @@ function OpportunitiesContent() {
   const loadOpportunities = useCallback(async ({ cursor = null, append = false } = {}) => {
     if (!user) return;
 
-    if (append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-      setError('');
-    }
+    const stateSetter = append ? setLoadingMore : setLoading;
+    stateSetter(true);
+    if (!append) setError('');
 
     try {
       const page = await listOpportunitiesPage({ limit: PAGE_SIZE, cursor });
@@ -54,14 +51,11 @@ function OpportunitiesContent() {
       setOpportunities((prev) => (append ? [...prev, ...page.opportunities] : page.opportunities));
     } catch (error) {
       console.error('Error fetching opportunities:', error);
-      setError('Unable to load opportunities. Please try again.');
-      toast('error', 'Unable to load opportunities.');
+      const errorMessage = 'Unable to load opportunities. Please try again.';
+      setError(errorMessage);
+      toast('error', errorMessage);
     } finally {
-      if (append) {
-        setLoadingMore(false);
-      } else {
-        setLoading(false);
-      }
+      stateSetter(false);
     }
   }, [user, toast]);
 
@@ -76,6 +70,8 @@ function OpportunitiesContent() {
   }, [user, loadOpportunities]);
 
   const handleFormSubmit = async (data) => {
+    setIsFormModalOpen(false);
+    
     try {
       const tags = typeof data.tags === 'string' ? data.tags.split(',').map((t) => t.trim()) : [];
       let submissionData = { ...data, tags };
@@ -89,14 +85,19 @@ function OpportunitiesContent() {
         toast('success', 'Opportunity submitted for review!');
       }
 
-      setIsFormModalOpen(false);
       setEditingOpp(null);
       setError('');
-      await loadOpportunities();
+      await loadOpportunities(); // Reload all opportunities
+      
+      // Scroll to top to see the new post
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
     } catch (error) {
       console.error('Error submitting form:', error);
-      setError(error.message || 'There was an error. Please try again.');
-      toast('error', 'Error submitting opportunity.');
+      const errorMessage = error.message || 'There was an error. Please try again.';
+      setError(errorMessage);
+      toast('error', `Error submitting opportunity: ${errorMessage}`);
+      setIsFormModalOpen(true); // Re-open modal on error
     }
   };
 
@@ -114,7 +115,7 @@ function OpportunitiesContent() {
       try {
         await deleteOpportunity(id);
         toast('success', 'Opportunity deleted.');
-        await loadOpportunities();
+        setOpportunities(prev => prev.filter(o => o.id !== id));
       } catch (error) {
         console.error('Error deleting:', error);
         toast('error', 'Failed to delete opportunity.');
@@ -126,7 +127,7 @@ function OpportunitiesContent() {
     try {
       await approveOpportunity(id);
       toast('success', 'Opportunity approved!');
-      await loadOpportunities();
+      setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status: 'live' } : o));
     } catch (e) {
       console.error(e);
       toast('error', 'Failed to approve opportunity.');
@@ -137,7 +138,7 @@ function OpportunitiesContent() {
     try {
       await rejectOpportunity(id);
       toast('success', 'Opportunity rejected.');
-      await loadOpportunities();
+       setOpportunities(prev => prev.map(o => o.id === id ? { ...o, status: 'rejected' } : o));
     } catch (e) {
       console.error(e);
       toast('error', 'Failed to reject opportunity.');
@@ -227,7 +228,7 @@ function OpportunitiesContent() {
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {error && !loading && (
           <ErrorAlert 
             message="Unable to load opportunities" 
             details={error}
@@ -238,16 +239,10 @@ function OpportunitiesContent() {
         {/* Content */}
         {loading ? (
           <SkeletonCards count={6} />
-        ) : error && filteredOpps.length === 0 ? (
-          <ErrorEmptyState 
-            title="Failed to Load Opportunities"
-            message={error}
-            onRetry={() => loadOpportunities()}
-          />
         ) : filteredOpps.length === 0 ? (
           <EmptyState 
             icon={FaBriefcase}
-            title="No opportunities yet"
+            title={searchQuery ? "No Opportunities Found" : "No Opportunities Yet"}
             message={searchQuery ? "Try adjusting your search filters." : "Be the first to share an opportunity with our community!"}
             actionLabel={searchQuery ? undefined : "+ Add Opportunity"}
             onAction={searchQuery ? undefined : () => { setEditingOpp(null); setIsFormModalOpen(true); }}

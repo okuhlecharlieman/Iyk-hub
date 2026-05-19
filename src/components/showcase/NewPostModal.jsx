@@ -15,6 +15,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
   const [type, setType] = useState('art');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +32,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
     setError('');
 
     try {
-      await createShowcasePost({
+      const newPost = await createShowcasePost({
         title,
         description,
         link,
@@ -39,7 +40,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
         uid: user.uid,
       }, media);
       
-      // Reset form and close modal
+      toast('success', 'Post created successfully!');
       setTitle('');
       setDescription('');
       setLink('');
@@ -47,11 +48,12 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
       setType('art');
       onClose();
       if (onPostCreated) {
-        onPostCreated();
+        onPostCreated(newPost);
       }
     } catch (err) {
       const errorMessage = err.message || 'An unexpected error occurred.';
       setError(`Failed to create post: ${errorMessage}`);
+      toast('error', `Failed to create post: ${errorMessage}`);
       console.error("Error creating showcase post:", err);
     } finally {
       setLoading(false);

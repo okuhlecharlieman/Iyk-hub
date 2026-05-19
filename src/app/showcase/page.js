@@ -86,53 +86,56 @@ export default function ShowcasePage() {
   };
 
   const handleSavePost = async (postData) => {
-    if (!user) { toast('warning', 'You must be logged in to save a post.'); return; }
+    if (!user) {
+      toast('warning', 'You must be logged in to save a post.');
+      return;
+    }
+
+    const isEditing = !!editingPost;
+    setLoading(true);
+    setIsEditorOpen(false);
 
     try {
       const token = await user.getIdToken();
-      const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
+      let response;
 
-      if (editingPost) {
+      if (isEditing) {
+        const isEditingAnotherUsersPost = editingPost.uid !== user.uid;
         const endpoint = (isAdmin && isEditingAnotherUsersPost)
           ? '/api/admin/updatePost'
           : '/api/showcase/update';
 
-        const response = await fetch(endpoint, {
+        response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ postId: editingPost.id, updates: postData }),
         });
-
-        if (!response.ok) {
-          let errorMessage = 'Could not update the post.';
-          const bodyText = await response.text();
-          try {
-            const result = JSON.parse(bodyText);
-            if (result?.error) errorMessage = result.error;
-          } catch {
-            if (bodyText) errorMessage = bodyText;
-          }
-          throw new Error(errorMessage);
-        }
       } else {
-        const response = await fetch('/api/showcase/submit', {
+        response = await fetch('/api/showcase/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(postData),
         });
-
-        if (!response.ok) {
-          const result = await response.json().catch(() => ({}));
-          throw new Error(result.error || 'Failed to submit showcase post.');
-        }
       }
 
-      setIsEditorOpen(false);
-      setEditingPost(null);
-      fetchPosts();
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || `Failed to ${isEditing ? 'update' : 'submit'} post.`);
+      }
+
+      toast('success', `Post ${isEditing ? 'updated' : 'created'} successfully!`);
+      await fetchPosts();
+
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+
     } catch (err) {
       console.error('Error saving post:', err);
       toast('error', `Error saving your post: ${err.message}`);
+      setLoading(false); // Ensure loading is reset on error
+    } finally {
+      setEditingPost(null);
     }
   };
 
@@ -241,8 +244,9 @@ export default function ShowcasePage() {
   const regularPosts = filteredPosts.filter((p) => !p.isBoosted);
 
   const content = (
-    loading ? <LoadingSpinner /> :
-    error ? <div className="text-red-500 text-center py-10">{error}</div> :
+    loading ? <SkeletonGrid /> :
+    error ? <ErrorAlert message={error} /> :
+    (filteredPosts.length === 0 && !searchTerm) ? <ErrorEmptyState title="No Showcase Posts Yet" message="Be the first to share your work!" /> :
     filteredPosts.length > 0 ? (
       <>
         {featuredPosts.length > 0 && !searchTerm && (
@@ -284,15 +288,13 @@ export default function ShowcasePage() {
               disabled={loadingMore}
               className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
             >
-              {loadingMore ? 'Loading...' : 'Load more'}
+              {loadingMore ? <LoadingSpinner size="sm"/> : 'Load more'}
             </button>
           </div>
         )}
       </>
     ) : (
-      <div className="text-center py-10">
-        <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
-      </div>
+        <ErrorEmptyState title="No Results Found" message="No posts matched your search criteria." />
     )
   );
 
@@ -310,13 +312,16 @@ export default function ShowcasePage() {
             </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search posts..."
-              className="w-full sm:w-72 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative w-full sm:w-72">
+                <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search posts..."
+                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+            </div>
             {user && (
               <button onClick={handleAddPost} className="flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                 <FaPlus size={20} />

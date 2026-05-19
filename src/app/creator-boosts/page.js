@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getCreatorBoostPlan } from '../../lib/monetization/creator-boosts';
 import Button from '../../components/ui/Button';
@@ -79,6 +79,13 @@ export default function CreatorBoostsPage() {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [paymentInfo, setPaymentInfo] = useState(null);
+  const paymentSectionRef = useRef(null);
+
+  useEffect(() => {
+    if (paymentInfo && paymentSectionRef.current) {
+      paymentSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [paymentInfo]);
 
   const handleBoost = async (planKey) => {
     if (!user) return;
@@ -207,41 +214,43 @@ export default function CreatorBoostsPage() {
           </div>
         )}
 
-        {message && <div className="mt-6 rounded-lg bg-green-50 dark:bg-green-900/30 p-4 text-green-800 dark:text-green-200 max-w-lg mx-auto">{message}</div>}
-        {error && <div className="mt-6 rounded-lg bg-red-50 dark:bg-red-900/30 p-4 text-red-800 dark:text-red-200 max-w-lg mx-auto">{error}</div>}
+        <div ref={paymentSectionRef}>
+          {message && <div className="mt-6 rounded-lg bg-green-50 dark:bg-green-900/30 p-4 text-green-800 dark:text-green-200 max-w-lg mx-auto">{message}</div>}
+          {error && <div className="mt-6 rounded-lg bg-red-50 dark:bg-red-900/30 p-4 text-red-800 dark:text-red-200 max-w-lg mx-auto">{error}</div>}
 
-        {paymentInfo && (
-          <div className="mt-8 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-lg max-w-lg mx-auto">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Complete Payment</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Amount: R{(paymentInfo.amountCents / 100).toFixed(2)}
-                </p>
+          {paymentInfo && (
+            <div className="mt-8 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-lg max-w-lg mx-auto">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Complete Payment</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Amount: R{(paymentInfo.amountCents / 100).toFixed(2)}
+                  </p>
+                </div>
               </div>
+
+              <PaystackCheckout
+                email={paymentInfo.email}
+                amountCents={paymentInfo.amountCents}
+                reference={paymentInfo.reference}
+                metadata={{ orderId: paymentInfo.orderId, orderType: 'creatorBoost' }}
+                onSuccess={() => {
+                  setMessage('Payment successful! Your boost is now active.');
+                  setPaymentInfo(null);
+                }}
+                onError={(err) => {
+                  setError(err.message || 'Payment failed. Please try again.');
+                }}
+              />
             </div>
+          )}
 
-            <PaystackCheckout
-              email={paymentInfo.email}
-              amountCents={paymentInfo.amountCents}
-              reference={paymentInfo.reference}
-              metadata={{ orderId: paymentInfo.orderId, orderType: 'creatorBoost' }}
-              onSuccess={() => {
-                setMessage('Payment successful! Your boost is now active.');
-                setPaymentInfo(null);
-              }}
-              onError={(err) => {
-                setError(err.message || 'Payment failed. Please try again.');
-              }}
-            />
-          </div>
-        )}
-
-        {loading && (
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <LoadingSpinner size="sm" /> <span className="text-gray-600 dark:text-gray-300">Submitting order...</span>
-          </div>
-        )}
+          {loading && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <LoadingSpinner size="sm" /> <span className="text-gray-600 dark:text-gray-300">Submitting order...</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

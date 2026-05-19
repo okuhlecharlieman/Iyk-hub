@@ -105,14 +105,14 @@ export default function UserRoomsList() {
                         <p className="font-semibold text-lg text-gray-800 dark:text-gray-100">{gameName}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">Room ID: {room.id}</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
                         <Link href={`/games/${room.id}`}>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
                                 <FaPlay />
                                 Join
                             </button>
                         </Link>
-                        <button onClick={() => leaveRoom(room.id)} className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">
+                        <button onClick={() => leaveRoom(room.id)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">
                             <FaTrash />
                             Leave
                         </button>

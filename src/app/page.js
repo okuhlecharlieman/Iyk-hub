@@ -6,6 +6,7 @@ import InstallButton from '../components/InstallButton';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush, FaRocket, FaUsers, FaTrophy, FaStar, FaCheckCircle } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 
 const FeatureCard = ({ icon, title, description, href, color = "blue" }) => {
   const colorClasses = {
@@ -66,6 +67,7 @@ const TestimonialCard = ({ quote, author, role, company }) => (
 );
 
 export default function Home() {
+  const { user } = useAuth();
   const [opps, setOpps] = useState([]);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +96,8 @@ export default function Home() {
     }
     fetchData();
   }, []);
+
+  const journeyLink = user ? '/dashboard' : '/signup';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -124,7 +128,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Link
-                href="/signup"
+                href={journeyLink}
                 className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
               >
                 Start Your Journey
@@ -321,7 +325,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/signup"
+              href={journeyLink}
               className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
             >
               Get Started Free

@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { collection, onSnapshot, query, orderBy, limit, startAfter } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
 import InstallButton from '../../components/InstallButton';
@@ -18,51 +20,45 @@ export default function ShowcasePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [nextCursor, setNextCursor] = useState(null);
+  const [lastVisible, setLastVisible] = useState(null);
   const [error, setError] = useState('');
-
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const toast = useToast();
 
-  const fetchPosts = async () => {
-    try {
-      const response = await fetch('/api/showcase?limit=20');
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
-      const data = await response.json();
+  useEffect(() => {
+    const q = query(collection(db, 'showcase'), orderBy('createdAt', 'desc'), limit(20));
 
-      if (Array.isArray(data)) {
-        setPosts(data);
-        setNextCursor(null);
-      } else {
-        setPosts(data?.posts || []);
-        setNextCursor(data?.nextCursor || null);
-      }
-    } catch (err) {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPosts(newPosts);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
+      setLoading(false);
+    }, (err) => {
       console.error(err);
       setError('Could not load the showcase. Please try again later.');
-    } finally {
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const loadMorePosts = async () => {
-    if (!nextCursor || loadingMore) return;
+    if (!lastVisible || loadingMore) return;
     setLoadingMore(true);
 
+    const q = query(
+      collection(db, 'showcase'),
+      orderBy('createdAt', 'desc'),
+      startAfter(lastVisible),
+      limit(20)
+    );
+
     try {
-      const response = await fetch(`/api/showcase?limit=20&cursor=${encodeURIComponent(nextCursor)}`);
-      if (!response.ok) throw new Error(`Failed to fetch more posts: ${response.statusText}`);
-
-      const data = await response.json();
-      const newPosts = Array.isArray(data) ? data : (data?.posts || []);
-      setNextCursor(Array.isArray(data) ? null : (data?.nextCursor || null));
-
-      setPosts((prev) => {
-        const map = new Map(prev.map((p) => [p.id, p]));
-        newPosts.forEach((p) => map.set(p.id, p));
-        return Array.from(map.values());
-      });
+      const snapshot = await getDocs(q);
+      const newPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPosts(prev => [...prev, ...newPosts]);
+      setLastVisible(snapshot.docs[snapshot.docs.length - 1]);
     } catch (err) {
       console.error(err);
       toast('error', `Failed to load more posts: ${err.message}`);
@@ -70,10 +66,6 @@ export default function ShowcasePage() {
       setLoadingMore(false);
     }
   };
-
-  useEffect(() => {
-    fetchPosts();
-  }, []);
 
   const handleAddPost = () => {
     setEditingPost(null);
@@ -124,7 +116,7 @@ export default function ShowcasePage() {
       }
 
       toast('success', `Post ${isEditing ? 'updated' : 'created'} successfully!`);
-      await fetchPosts();
+      // No need to fetchPosts, onSnapshot will handle it
 
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -133,9 +125,9 @@ export default function ShowcasePage() {
     } catch (err) {
       console.error('Error saving post:', err);
       toast('error', `Error saving your post: ${err.message}`);
-      setLoading(false); // Ensure loading is reset on error
     } finally {
       setEditingPost(null);
+      setLoading(false); // Reset loading state
     }
   };
 
@@ -183,17 +175,11 @@ export default function ShowcasePage() {
       } else {
         throw new Error('You do not have permission to delete this post.');
       }
-      fetchPosts();
+      // No need to fetchPosts, onSnapshot will handle it
     } catch (err) {
       console.error('Error deleting post:', err);
       toast('error', `Failed to delete post: ${err.message}`);
     }
-  };
-
-  const REACTION_FIELDS_MAP = {
-    thumbsUp: { votersField: 'voters', countField: 'votes' },
-    fire: { votersField: 'fireVoters', countField: 'fireCount' },
-    heart: { votersField: 'heartVoters', countField: 'heartCount' },
   };
 
   const handlePostReaction = async (postId, reactionType = 'thumbsUp') => {
@@ -201,31 +187,10 @@ export default function ShowcasePage() {
       toast('warning', 'Please log in to react to posts.');
       return;
     }
-
-    const currentPost = posts.find((p) => p.id === postId);
-    if (!currentPost) return;
-
-    const fields = REACTION_FIELDS_MAP[reactionType] || REACTION_FIELDS_MAP.thumbsUp;
-    const currentVoters = Array.isArray(currentPost[fields.votersField]) ? currentPost[fields.votersField] : [];
-    const hasVoted = currentVoters.includes(user.uid);
-
-    const newVoters = hasVoted
-      ? currentVoters.filter((uid) => uid !== user.uid)
-      : [...currentVoters, user.uid];
-
-    const updatedPost = {
-      ...currentPost,
-      [fields.votersField]: newVoters,
-      [fields.countField]: newVoters.length,
-    };
-
-    setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
-
     try {
       await togglePostVote(postId, user.uid, reactionType);
     } catch (err) {
       console.error('Failed to react to post:', err);
-      setPosts((prev) => prev.map((p) => (p.id === postId ? currentPost : p)));
       toast('error', `Unable to update reaction: ${err.message || 'Please try again.'}`);
     }
   };
@@ -281,7 +246,7 @@ export default function ShowcasePage() {
             />
           ))}
         </div>
-        {!searchTerm && nextCursor && (
+        {!searchTerm && lastVisible && (
           <div className="flex justify-center mt-10">
             <button
               onClick={loadMorePosts}
@@ -340,6 +305,6 @@ export default function ShowcasePage() {
           onClose={() => setIsEditorOpen(false)}
         />
       )}
-    </div></ErrorBoundary>
+    </ErrorBoundary>
   );
 }

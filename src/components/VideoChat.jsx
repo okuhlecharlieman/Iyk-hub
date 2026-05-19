@@ -21,7 +21,7 @@ import {
   addDoc,
 } from 'firebase/firestore';
 import Button from './ui/Button';
-import { FaSpinner, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaUserPlus, FaClock, FaUser, FaExpand, FaCompress } from 'react-icons/fa';
+import { FaSpinner, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaUserPlus, FaClock, FaUser, FaExpand, FaCompress, FaStepForward } from 'react-icons/fa';
 
 const STUN_SERVERS = {
   iceServers: [
@@ -486,6 +486,14 @@ export default function VideoChat() {
     }
   };
 
+  const handleSkip = async () => {
+    toast('info', 'Skipping to the next person...');
+    await stopCall();
+    setTimeout(() => {
+      findPartner();
+    }, 500);
+  };
+
   // Listen for partner consent to add bonus time
   useEffect(() => {
     if (canShareProfile && !bonusAdded && status === 'connected') {
@@ -710,18 +718,25 @@ export default function VideoChat() {
                 {audioEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
               </button>
               <button
-                onClick={toggleFullscreen}
-                className="p-3 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors shadow-lg"
-                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-              >
-                {isFullscreen ? <FaCompress /> : <FaExpand />}
-              </button>
-              <button
                 onClick={stopCall}
                 className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
                 title="End call"
               >
                 <FaPhoneSlash />
+              </button>
+              <button
+                onClick={handleSkip}
+                className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-lg"
+                title="Skip"
+              >
+                <FaStepForward />
+              </button>
+              <button
+                onClick={toggleFullscreen}
+                className="p-3 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors shadow-lg"
+                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              >
+                {isFullscreen ? <FaCompress /> : <FaExpand />}
               </button>
             </div>
           </div>

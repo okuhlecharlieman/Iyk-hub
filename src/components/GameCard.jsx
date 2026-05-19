@@ -107,7 +107,7 @@ export default function GameCard({ gameId }) {
             </button>
           )}
           {!isRandomChat && (
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-col sm:flex-row gap-2 mt-1">
               <input
                 type="text"
                 value={joinGameId}

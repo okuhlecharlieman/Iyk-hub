@@ -1,7 +1,7 @@
 "use client";
 // src/lib/firebase/user.js
 import { doc, getDoc, collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
-import { db } from './firebase'; // Corrected import path
+import { db } from '../firebase.js'; // Corrected import path
 
 export async function getUserDoc(uid) {
   if (!uid) return null;

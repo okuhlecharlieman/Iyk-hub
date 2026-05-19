@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase/firebase';
+import { db } from '../../lib/firebase.js';
 import PostCard from '../../components/showcase/PostCard';
 import { useAuth } from '../../context/AuthContext';
 

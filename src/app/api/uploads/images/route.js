@@ -44,7 +44,7 @@ const createObjectName = ({ context, uid, file }) => {
   const baseName = sanitizeBaseName(file.name);
   const uniqueSuffix = `${Date.now()}-${randomUUID()}`;
 
-  return `${context}/${uid}/${uniqueSuffix}-${baseName}.${extension}`;
+  return `IYK-HUB/${context}/${uid}/${uniqueSuffix}-${baseName}.${extension}`;
 };
 
 export async function POST(request) {

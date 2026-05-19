@@ -318,9 +318,9 @@ export default function VideoChat() {
     } catch (err) {
       console.error('Error finding partner:', err);
       const msg = err?.code === 'failed-precondition'
-        ? 'Video chat requires a database index. Please contact the admin.'
+        ? 'Random chat requires a database index. Please contact the admin.'
         : err?.code === 'permission-denied'
-          ? 'You do not have permission to use video chat. Please log in again.'
+          ? 'You do not have permission to use random chat. Please log in again.'
           : `Failed to connect: ${err?.message || 'Unknown error'}. Please try again.`;
       setMediaError(msg);
       setStatus('idle');

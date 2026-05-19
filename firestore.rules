@@ -110,8 +110,8 @@ service cloud.firestore {
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 150;
 
-      // Owner or admin can update; prevent changing uid
-      allow update: if (resource.data.uid == request.auth.uid || isAdmin())
+      // Any authenticated user can update (for voting/reactions); prevent changing uid
+      allow update: if request.auth.uid != null
         && request.resource.data.uid == resource.data.uid;
 
       allow delete: if resource.data.uid == request.auth.uid || isAdmin();
@@ -151,7 +151,7 @@ service cloud.firestore {
     // Rules for video chat
     match /videoRooms/{roomId} {
       allow get: if request.auth.uid != null;
-      allow list: if request.auth.uid != null && request.query.where('status', '==', 'waiting');
+      allow list: if request.auth.uid != null;
       allow create: if request.auth.uid != null;
       allow update: if request.auth.uid != null && (resource.data.userA == request.auth.uid || resource.data.userB == request.auth.uid || isAdmin());
       allow delete: if request.auth.uid != null && (resource.data.userA == request.auth.uid || isAdmin());

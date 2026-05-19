@@ -20,7 +20,7 @@ const PLAN_DETAILS = {
       'Your posts appear in "Featured" section',
     ],
     notIncluded: [
-      'Extended video chat time',
+      'Extended random chat time',
       'Portfolio analytics',
       'Priority matchmaking',
       'Verified creator badge',
@@ -36,9 +36,9 @@ const PLAN_DETAILS = {
       '1.8x visibility boost on your showcase posts',
       'Purple "Pro Creator" badge on your profile',
       'Your posts appear in "Featured" section',
-      'Extended video chat (3 min per call)',
+      'Extended random chat (3 min per call)',
       'Portfolio view count analytics',
-      'Priority matchmaking in video chat',
+      'Priority matchmaking in random chat',
     ],
     notIncluded: [
       'Verified creator badge',
@@ -54,9 +54,9 @@ const PLAN_DETAILS = {
       '2.5x visibility boost on your showcase posts',
       'Gold "Verified Creator" badge on your profile',
       'Your posts pinned in "Featured" section',
-      'Extended video chat (5 min per call)',
+      'Extended random chat (5 min per call)',
       'Full portfolio analytics with engagement stats',
-      'Priority matchmaking in video chat',
+      'Priority matchmaking in random chat',
       'Early access to sponsor opportunities',
       'Profile featured on homepage carousel',
       'Custom profile accent color',
@@ -147,7 +147,7 @@ export default function CreatorBoostsPage() {
         {/* Free tier baseline */}
         <div className="mb-8 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 inline-block px-4 py-2 rounded-full">
-            🆓 <strong>Free account:</strong> 5 showcase posts · 60s video chat · Basic profile · Weekly leaderboard
+            🆓 <strong>Free account:</strong> 5 showcase posts · 60s random chat · Basic profile · Weekly leaderboard
           </p>
         </div>
 

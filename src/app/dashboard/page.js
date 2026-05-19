@@ -64,7 +64,7 @@ export default function DashboardPage() {
   }, [user]);
 
   const quickLinks = [
-    { href: '/video', icon: <FaVideo />, label: 'Video Chat', desc: 'Connect live', color: 'bg-blue-500' },
+    { href: '/video', icon: <FaVideo />, label: 'Random Chat', desc: 'Connect live', color: 'bg-blue-500' },
     { href: '/showcase', icon: <FaPalette />, label: 'Showcase', desc: 'Share work', color: 'bg-purple-500' },
     { href: '/sponsored-challenges', icon: <FaTrophy />, label: 'Challenges', desc: 'Win prizes', color: 'bg-amber-500' },
     { href: '/creator-boosts', icon: <FaRocket />, label: 'Boosts', desc: 'Get noticed', color: 'bg-green-500' },

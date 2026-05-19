@@ -18,7 +18,7 @@ export default function VideoPage() {
                     <FaVideo className="h-6 w-6" />
                   </div>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold">Video Chat</h1>
+                <h1 className="text-4xl md:text-5xl font-bold">Random Chat</h1>
                 <p className="text-purple-100 mt-2 text-lg">Connect and chat with the community in real-time</p>
               </div>
             </div>

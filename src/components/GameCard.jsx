@@ -36,7 +36,7 @@ const GAME_DETAILS = {
     color: 'from-yellow-500 to-orange-500',
   },
   randomchat: {
-    name: 'Random Video Chat',
+    name: 'Random Chat',
     icon: <GiVideoCamera size={40} />,
     description: 'Hop into a random video chat room.',
     color: 'from-pink-500 to-purple-500',

@@ -4,52 +4,25 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
-      // Safely check if the user exists and has an 'admin' role.
       return exists(/databases/$(database)/documents/users/$(request.auth.uid))
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Rules for the 'users' collection
     match /users/{userId} {
-      // Admins can read any user document.
-      // Users can only read their own document.
       allow get: if request.auth.uid == userId || isAdmin();
-
-      // Admins can list all users.
-      // Public leaderboard reads are served via a server endpoint that returns
-      // only public profile fields (displayName, photoURL, points).
-      // Listing all users directly is admin-only.
       allow list: if isAdmin();
-
-      // Users can create their own document upon signup.
       allow create: if request.auth.uid == userId;
-
-      // Users can update their own document, but cannot change their role.
-      // Admins can update any user document, including changing the role.
       allow update: if (request.auth.uid == userId && request.resource.data.role == resource.data.role) || isAdmin();
-
-      // Only admins can delete users.
       allow delete: if isAdmin();
     }
 
-    // Rules for user presence
     match /presence/{userId} {
-      // Any authenticated user can see who is online.
       allow read: if request.auth.uid != null;
-      // A user can only update their own presence status.
       allow write: if request.auth.uid == userId;
     }
 
-    // Rules for the 'opportunities' collection
     match /opportunities/{opportunityId} {
-      // Admins can read any opportunity.
-      // Authenticated users can read approved opportunities.
-      // Users can read their own submitted opportunities.
       allow get: if isAdmin() || resource.data.status == 'approved' || resource.data.ownerId == request.auth.uid;
-
-      // Admins can list all opportunities.
-      // Authenticated users may only list approved opportunities or their
-      // own documents — this prevents exposing other users' pending items.
       allow list: if isAdmin()
         || (
           request.auth.uid != null && (
@@ -57,29 +30,13 @@ service cloud.firestore {
             request.query.where('ownerId','==', request.auth.uid)
           )
         );
-
-
-      // Authenticated users can create new opportunities.
       allow create: if request.auth.uid != null;
-
-      // Admins can update any opportunity.
-      // The owner of an opportunity can update it if it's still pending.
       allow update: if isAdmin() || (resource.data.ownerId == request.auth.uid && resource.data.status == 'pending');
-
-      // Admins or the owner can delete an opportunity.
       allow delete: if isAdmin() || resource.data.ownerId == request.auth.uid;
     }
 
-    // Rules for the 'sponsoredChallenges' collection
     match /sponsoredChallenges/{challengeId} {
-      // Admins can read any challenge.
-      // Authenticated users can read approved challenges.
-      // Users can read their own submitted challenges.
       allow get: if isAdmin() || resource.data.status == 'approved' || resource.data.creatorUid == request.auth.uid;
-
-      // Admins can list all challenges.
-      // Authenticated users may only list approved challenges or their
-      // own documents — this prevents exposing other users' pending items.
       allow list: if isAdmin()
         || (
           request.auth.uid != null && (
@@ -87,49 +44,31 @@ service cloud.firestore {
             request.query.where('creatorUid','==', request.auth.uid)
           )
         );
-
-      // Authenticated users can create new challenges.
       allow create: if request.auth.uid != null;
-
-      // Admins can update any challenge.
-      // The creator of a challenge can update it if it's still pending.
       allow update: if isAdmin() || (resource.data.creatorUid == request.auth.uid && resource.data.status == 'pending');
-
-      // Admins or the creator can delete a challenge.
       allow delete: if isAdmin() || resource.data.creatorUid == request.auth.uid;
     }
 
-    // Wall Posts
     match /wallPosts/{postId} {
       allow read: if true;
-
-      // Authenticated users can create; enforce ownership and field constraints
       allow create: if request.auth.uid != null
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 150;
-
-      // Owner or admin can update; prevent changing uid
       allow update: if (resource.data.uid == request.auth.uid || isAdmin())
         && request.resource.data.uid == resource.data.uid;
-
       allow delete: if resource.data.uid == request.auth.uid || isAdmin();
     }
 
-    // Quotes
     match /quotes/{quoteId} {
-        // Allow anyone to read
         allow read: if true;
-        // Restrict writes to admins
         allow write: if isAdmin();
     }
 
-    // Rules for the 'games' collection
     match /games/{gameId} {
       allow read: if request.auth.uid != null;
       allow create: if request.auth.uid != null;
-      // Only players/host or admin can update
       allow update: if request.auth.uid != null
         && (resource.data.hostId == request.auth.uid
             || request.auth.uid in resource.data.players
@@ -137,62 +76,51 @@ service cloud.firestore {
       allow delete: if resource.data.hostId == request.auth.uid || isAdmin();
     }
 
-    // Rules for video chat
     match /videoRooms/{roomId} {
-      allow read: if request.auth.uid != null;
+      allow get: if request.auth.uid != null;
+      allow list: if request.auth.uid != null && request.query.where('status', '==', 'waiting');
       allow create: if request.auth.uid != null;
-      allow update: if request.auth.uid != null
-        && (resource.data.createdBy == request.auth.uid
-            || request.auth.uid in resource.data.participants
-            || isAdmin());
-      allow delete: if resource.data.createdBy == request.auth.uid || isAdmin();
+      allow update: if request.auth.uid != null && (resource.data.userA == request.auth.uid || resource.data.userB == request.auth.uid || isAdmin());
+      allow delete: if request.auth.uid != null && (resource.data.userA == request.auth.uid || isAdmin());
 
       match /signals/{signalId} {
         allow read, write: if request.auth.uid != null;
       }
     }
 
-    // Financial ledger — read-only for admin, no client writes
     match /financialLedger/{entryId} {
       allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Payment logs — read-only for admin, no client writes
     match /paymentLogs/{logId} {
       allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Refunds — admin-only
     match /refunds/{refundId} {
       allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Operating spend — admin-only
     match /operatingSpend/{spendId} {
       allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Rate limits — server-managed only
     match /rateLimits/{limitId} {
       allow read, write: if false;
     }
 
-    // Health check — server-managed only
     match /_healthcheck/{docId} {
       allow read, write: if false;
     }
 
-    // Audit logs — admin read only
     match /auditLogs/{logId} {
       allow read: if isAdmin();
       allow write: if false;
     }
 
-    // Moderation queue — admin only
     match /moderationQueue/{itemId} {
       allow read: if isAdmin();
       allow write: if false;

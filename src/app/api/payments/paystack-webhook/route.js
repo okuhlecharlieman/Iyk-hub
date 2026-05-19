@@ -4,8 +4,6 @@ import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import crypto from 'crypto';
 import { recordChargeWithFees } from '../../../../lib/monetization/ledger';
 import {
-  DEFAULT_PROCESSOR_FEE_RATE,
-  DEFAULT_PROCESSOR_FEE_FIXED_CENTS,
   DEFAULT_PLATFORM_FEE_RATE,
 } from '../../../../lib/monetization/constants';
 
@@ -60,7 +58,6 @@ export async function POST(request) {
       const { reference, metadata } = data;
       const db = admin.firestore();
 
-      // Idempotency check — skip if this reference was already processed
       const existingLog = await db.collection('paymentLogs')
         .where('paystackReference', '==', reference)
         .limit(1)
@@ -104,6 +101,9 @@ export async function POST(request) {
         orderId,
         grossAmountCents: data.amount,
         currency: data.currency?.toUpperCase() || 'ZAR',
+        processor: 'paystack',
+        processorEventId: event.id,
+        processorTransactionId: reference,
         processorFeeRate: PAYSTACK_FEE_RATE,
         processorFeeFixedCents: PAYSTACK_FEE_FIXED_CENTS,
         platformFeeRate: DEFAULT_PLATFORM_FEE_RATE,
@@ -135,7 +135,7 @@ export async function POST(request) {
           await db.collection(col).doc(orderId).set({
             paymentStatus: 'paid',
             paidAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt:admin.firestore.FieldValue.serverTimestamp(),
           }, { merge: true });
         }
       }

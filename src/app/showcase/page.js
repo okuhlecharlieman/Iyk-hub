@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, startAfter } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, limit, startAfter, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
@@ -10,7 +10,7 @@ import { togglePostVote } from '../../lib/firebase/helpers';
 import { SkeletonGrid } from '../../components/loaders/SkeletonLoader';
 import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
-import { FaPlus, FaSearch, FaExclamationTriangle, FaRocket } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaRocket } from 'react-icons/fa';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useToast } from '../../components/ui/ToastProvider';
 
@@ -116,7 +116,6 @@ export default function ShowcasePage() {
       }
 
       toast('success', `Post ${isEditing ? 'updated' : 'created'} successfully!`);
-      // No need to fetchPosts, onSnapshot will handle it
 
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -127,7 +126,7 @@ export default function ShowcasePage() {
       toast('error', `Error saving your post: ${err.message}`);
     } finally {
       setEditingPost(null);
-      setLoading(false); // Reset loading state
+      setLoading(false);
     }
   };
 
@@ -175,7 +174,6 @@ export default function ShowcasePage() {
       } else {
         throw new Error('You do not have permission to delete this post.');
       }
-      // No need to fetchPosts, onSnapshot will handle it
     } catch (err) {
       console.error('Error deleting post:', err);
       toast('error', `Failed to delete post: ${err.message}`);
@@ -209,10 +207,13 @@ export default function ShowcasePage() {
   const regularPosts = filteredPosts.filter((p) => !p.isBoosted);
 
   const content = (
-    loading ? <SkeletonGrid /> :
-    error ? <ErrorAlert message={error} /> :
-    (filteredPosts.length === 0 && !searchTerm) ? <ErrorEmptyState title="No Showcase Posts Yet" message="Be the first to share your work!" /> :
-    filteredPosts.length > 0 ? (
+    loading ? (
+      <SkeletonGrid />
+    ) : error ? (
+      <ErrorAlert message={error} />
+    ) : filteredPosts.length === 0 && !searchTerm ? (
+      <ErrorEmptyState title="No Showcase Posts Yet" message="Be the first to share your work!" />
+    ) : filteredPosts.length > 0 ? (
       <>
         {featuredPosts.length > 0 && !searchTerm && (
           <div className="mb-10">
@@ -259,7 +260,7 @@ export default function ShowcasePage() {
         )}
       </>
     ) : (
-        <ErrorEmptyState title="No Results Found" message="No posts matched your search criteria." />
+      <ErrorEmptyState title="No Results Found" message="No posts matched your search criteria." />
     )
   );
 
@@ -276,35 +277,36 @@ export default function ShowcasePage() {
               <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
             </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
-                <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search posts..."
-                className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-72">
+                  <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search posts..."
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <FaSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+              </div>
+              {user && (
+                <button onClick={handleAddPost} className="flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                  <FaPlus size={20} />
+                </button>
+              )}
             </div>
-            {user && (
-              <button onClick={handleAddPost} className="flex-shrink-0 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <FaPlus size={20} />
-              </button>
-            )}
           </div>
+
+          {content}
         </div>
 
-        {content}
+        {isEditorOpen && (
+          <PostEditor
+            post={editingPost}
+            onSave={handleSavePost}
+            onClose={() => setIsEditorOpen(false)}
+          />
+        )}
       </div>
-
-      {isEditorOpen && (
-        <PostEditor
-          post={editingPost}
-          onSave={handleSavePost}
-          onClose={() => setIsEditorOpen(false)}
-        />
-      )}
     </ErrorBoundary>
   );
 }

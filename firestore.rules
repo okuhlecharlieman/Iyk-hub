@@ -151,7 +151,7 @@ service cloud.firestore {
     // Rules for video chat
     match /videoRooms/{roomId} {
       allow get: if request.auth.uid != null;
-      allow list: if request.auth.uid != null && request.query.where('status', '==', 'waiting');
+      allow list: if request.auth.uid != null;
       allow create: if request.auth.uid != null;
       allow update: if request.auth.uid != null && (resource.data.userA == request.auth.uid || resource.data.userB == request.auth.uid || isAdmin());
       allow delete: if request.auth.uid != null && (resource.data.userA == request.auth.uid || isAdmin());

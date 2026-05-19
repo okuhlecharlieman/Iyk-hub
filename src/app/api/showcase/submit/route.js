@@ -56,12 +56,23 @@ export async function POST(request) {
     const payload = await parseJsonBody(request);
     const post = validateShowcasePayload(payload);
 
+    const userRef = admin.firestore().collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    const userData = userDoc.data();
+    const authorName = userData.displayName || 'Anonymous';
+    const authorPhoto = userData.photoURL || null;
+
     const screening = screenTextContent([post.title, post.description, post.link]);
     const moderationStatus = screening.decision === 'flagged' ? 'pending_review' : 'approved';
 
     const postRef = await admin.firestore().collection('wallPosts').add({
       ...post,
       uid,
+      authorName,
+      authorPhoto,
       votes: 0,
       voters: [],
       fireVoters: [],

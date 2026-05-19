@@ -62,6 +62,15 @@ export async function recordChargeWithFees(db, {
   processorFeeFixedCents = DEFAULT_PROCESSOR_FEE_FIXED_CENTS,
   platformFeeRate = DEFAULT_PLATFORM_FEE_RATE,
 }) {
+  console.log('[PayStack Webhook] recordChargeWithFees called with:', {
+    orderType,
+    orderId,
+    grossAmountCents,
+    currency,
+    processor,
+    processorEventId,
+    processorTransactionId,
+  });
   const processorFeeCents = Math.round(grossAmountCents * processorFeeRate) + processorFeeFixedCents;
   const platformFeeCents = Math.round(grossAmountCents * platformFeeRate);
 
@@ -174,7 +183,7 @@ export async function buildFinancialSummary(db, { startDate = null, endDate = nu
   const summary = {
     grossRevenueCents: 0,
     refundsCents: 0,
-    disputesCents: .0,
+    disputesCents: 0,
     processorFeesCents: 0,
     platformFeesCents: 0,
     netRevenueCents: 0,
@@ -188,7 +197,7 @@ export async function buildFinancialSummary(db, { startDate = null, endDate = nu
 
   for (const entry of entries) {
     const amt = entry.amountCents || 0;
-    const type = entry.orderType || 'unknown';
+    const type = entry.orderType || 'donation';
 
     if (!summary.byOrderType[type]) {
       summary.byOrderType[type] = { grossCents: 0, refundsCents: 0, processorFeesCents: 0, platformFeesCents: 0, count: 0 };

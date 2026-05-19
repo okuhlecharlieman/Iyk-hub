@@ -124,17 +124,6 @@ service cloud.firestore {
         // Restrict writes to admins
         allow write: if isAdmin();
     }
-    
-    match /showcase/{postId} {
-        allow read: if true;
-        allow create: if request.auth.uid != null && request.resource.data.uid == request.auth.uid;
-        allow update: if (resource.data.uid == request.auth.uid || isAdmin()) && request.resource.data.uid == resource.data.uid;
-        allow delete: if resource.data.uid == request.auth.uid || isAdmin();
-
-        match /votes/{voteId} {
-            allow write: if request.auth.uid != null;
-        }
-    }
 
     // Rules for the 'games' collection
     match /games/{gameId} {
@@ -153,7 +142,7 @@ service cloud.firestore {
       allow get: if request.auth.uid != null;
       allow list: if request.auth.uid != null;
       allow create: if request.auth.uid != null;
-      allow update: if request.auth.uid != null && (resource.data.userA == request.auth.uid || resource.data.userB == request.auth.uid || isAdmin());
+      allow update: if request.auth.uid != null && (resource.data.status == 'waiting' || resource.data.userA == request.auth.uid || resource.data.userB == request.auth.uid || isAdmin());
       allow delete: if request.auth.uid != null && (resource.data.userA == request.auth.uid || isAdmin());
 
 

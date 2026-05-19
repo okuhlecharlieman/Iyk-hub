@@ -73,7 +73,7 @@ const PublicProfilePage = ({ params }) => {
                     </div>
                   )}
                   <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto pt-2 leading-relaxed">{doc?.bio || 'No bio yet.'}</p>
-                  {(Array.isArray(doc?.skills) && doc.skills.length > 0) && (
+                  {Array.isArray(doc?.skills) && doc.skills.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 pt-4">
                       {doc.skills.map((skill) => (
                         <span key={skill} className="px-4 py-1 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 text-purple-700 dark:text-blue-300 rounded-full text-sm font-medium">{skill}</span>
@@ -106,9 +106,10 @@ const PublicProfilePage = ({ params }) => {
               )}
             </div>
           </div>
-        </div>
+        )}
       </div>
-    );
+    </div>
+  );
 };
 
 export default PublicProfilePage;

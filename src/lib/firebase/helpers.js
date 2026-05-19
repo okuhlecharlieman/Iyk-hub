@@ -1,29 +1,36 @@
-import { auth, db, storage } from './../firebase';
+import { auth, db } from './../firebase';
 import {
   addDoc, collection, doc, getDoc, getDocs, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,
   updateDoc, where, deleteDoc, onSnapshot
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // NOTE: This file should ONLY contain client-side safe Firebase functions.
 
 // Users
-export async function ensureUserDoc(user) {
+export async function ensureUserDoc(user, profile = {}) {
   if (!user) return;
   const userRef = doc(db, 'users', user.uid);
   const snap = await getDoc(userRef);
   if (!snap.exists()) {
     await setDoc(userRef, {
-      displayName: user.displayName || 'Intwana',
+      displayName: profile.displayName || user.displayName || 'Intwana',
       email: user.email || null,
-      photoURL: user.photoURL || null,
+      photoURL: profile.photoURL || user.photoURL || null,
       points: { weekly: 0, lifetime: 0 },
       bio: '',
       skills: [],
       role: 'user', // Default role for new users
       createdAt: serverTimestamp(),
     });
+  } else if (profile.displayName || profile.photoURL) {
+    // Update existing document with profile data if provided
+    const updateData = {};
+    if (profile.displayName) updateData.displayName = profile.displayName;
+    if (profile.photoURL) updateData.photoURL = profile.photoURL;
+    if (Object.keys(updateData).length > 0) {
+      await updateDoc(userRef, updateData);
+    }
   }
 }
 
@@ -118,8 +125,18 @@ export async function updateShowcasePost(postId, data) {
     await updateDoc(postRef, { ...data, updatedAt: serverTimestamp() });
 }
 
-export async function togglePostVote(postId, uid) {
+const REACTION_FIELDS = {
+  thumbsUp: { votersField: 'voters', countField: 'votes' },
+  fire: { votersField: 'fireVoters', countField: 'fireCount' },
+  heart: { votersField: 'heartVoters', countField: 'heartCount' },
+};
+
+export async function togglePostVote(postId, uid, reactionType = 'thumbsUp') {
   const postRef = doc(db, "wallPosts", postId);
+  const fields = REACTION_FIELDS[reactionType] || REACTION_FIELDS.thumbsUp;
+  const currentEmail = auth.currentUser?.email || null;
+  const emailsField = `${fields.votersField}Emails`;
+
   return runTransaction(db, async (transaction) => {
     const postDoc = await transaction.get(postRef);
     if (!postDoc.exists()) {
@@ -127,20 +144,29 @@ export async function togglePostVote(postId, uid) {
     }
 
     const data = postDoc.data();
-    const voters = data.voters || [];
-    let newVotes = data.votes || 0;
+    const voters = data[fields.votersField] || [];
+    const voterEmails = data[emailsField] || [];
 
     if (voters.includes(uid)) {
-      // User is unvoting
+      // User is removing their vote
+      const newVoters = voters.filter(voterId => voterId !== uid);
+      const newEmails = currentEmail ? voterEmails.filter(e => e !== currentEmail) : voterEmails;
       transaction.update(postRef, {
-        voters: voters.filter(voterId => voterId !== uid),
-        votes: newVotes - 1,
+        [fields.votersField]: newVoters,
+        [fields.countField]: newVoters.length,
+        [emailsField]: newEmails,
       });
     } else {
-      // User is voting
+      // Prevent double-voting from same email with different auth provider
+      if (currentEmail && voterEmails.includes(currentEmail)) {
+        throw new Error('You have already reacted with another account using the same email.');
+      }
+      const newVoters = [...voters, uid];
+      const newEmails = currentEmail ? [...voterEmails, currentEmail] : voterEmails;
       transaction.update(postRef, {
-        voters: [...voters, uid],
-        votes: newVotes + 1,
+        [fields.votersField]: newVoters,
+        [fields.countField]: newVoters.length,
+        [emailsField]: newEmails,
       });
     }
   });
@@ -186,35 +212,55 @@ export async function deleteOpportunity(opportunityId) {
   await deleteDoc(doc(db, 'opportunities', opportunityId));
 }
 
-// Server-side function for fetching approved opportunities
 export async function getApprovedOpportunities(limitN = 50) {
-  const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  try {
+    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch {
+    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), limit(limitN));
+    const snap = await getDocs(qy);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  }
 }
 
-export async function listOpportunitiesPage({ limit = 12, cursor = null } = {}) {
+export async function listOpportunitiesPage({ limit: limitN = 12, cursor = null } = {}) {
   const user = auth.currentUser;
   if (!user) {
     throw new Error('Not authenticated');
   }
 
-  const token = await user.getIdToken();
-  const params = new URLSearchParams({ limit: String(limit) });
-  if (cursor) params.set('cursor', cursor);
+  try {
+    const token = await user.getIdToken();
+    const params = new URLSearchParams({ limit: String(limitN) });
+    if (cursor) params.set('cursor', cursor);
 
-  const res = await fetch(`/api/opportunities?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    const res = await fetch(`/api/opportunities?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json.error || 'Failed to fetch opportunities');
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || 'Failed to fetch opportunities');
+    }
+
+    return { opportunities: json.opportunities || [], nextCursor: json.nextCursor || null };
+  } catch {
+    try {
+      const qy = query(
+        collection(db, 'opportunities'),
+        where('status', '==', 'approved'),
+        limit(limitN)
+      );
+      const snap = await getDocs(qy);
+      const opportunities = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      return { opportunities, nextCursor: null };
+    } catch {
+      return { opportunities: [], nextCursor: null };
+    }
   }
-
-  return { opportunities: json.opportunities || [], nextCursor: json.nextCursor || null };
 }
 
 // Client-side real-time listener
@@ -259,13 +305,102 @@ export function onUsersUpdate(callback, onError) {
 }
 
 export async function approveOpportunity(opportunityId) {
-  const docRef = doc(db, 'opportunities', opportunityId);
-  await updateDoc(docRef, { status: 'approved', updatedAt: serverTimestamp() });
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const token = await user.getIdToken();
+  const res = await fetch('/api/admin/opportunities', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id: opportunityId, status: 'approved' }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to approve opportunity');
+  }
+
+  return json;
 }
 
 export async function rejectOpportunity(opportunityId) {
-  const docRef = doc(db, 'opportunities', opportunityId);
-  await updateDoc(docRef, { status: 'rejected', updatedAt: serverTimestamp() });
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const token = await user.getIdToken();
+  const res = await fetch('/api/admin/opportunities', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ id: opportunityId, status: 'rejected' }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to reject opportunity');
+  }
+
+  return json;
+}
+
+// Streaks & Activity
+export async function recordDailyLogin(uid) {
+  if (!uid) return null;
+
+  const streakRef = doc(db, 'users', uid);
+  const today = new Date().toISOString().slice(0, 10);
+
+  return runTransaction(db, async (transaction) => {
+    const userDoc = await transaction.get(streakRef);
+    if (!userDoc.exists()) return null;
+
+    const data = userDoc.data();
+    const streak = data.streak || { current: 0, longest: 0, lastLoginDate: null };
+
+    if (streak.lastLoginDate === today) {
+      return streak;
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    let newCurrent = 1;
+    if (streak.lastLoginDate === yesterdayStr) {
+      newCurrent = (streak.current || 0) + 1;
+    }
+
+    const newLongest = Math.max(newCurrent, streak.longest || 0);
+
+    const newStreak = {
+      current: newCurrent,
+      longest: newLongest,
+      lastLoginDate: today,
+    };
+
+    transaction.update(streakRef, { streak: newStreak });
+    return newStreak;
+  });
+}
+
+export function getAchievements(userProfile) {
+  const achievements = [];
+  const streak = userProfile?.streak || {};
+  const points = userProfile?.points || {};
+
+  if (streak.current >= 3) achievements.push({ id: 'streak3', label: '3-Day Streak', icon: '🔥', color: 'orange' });
+  if (streak.current >= 7) achievements.push({ id: 'streak7', label: 'Week Warrior', icon: '⚡', color: 'yellow' });
+  if (streak.current >= 30) achievements.push({ id: 'streak30', label: 'Monthly Master', icon: '🏆', color: 'amber' });
+  if ((streak.longest || 0) >= 14) achievements.push({ id: 'dedicated', label: 'Dedicated', icon: '💪', color: 'blue' });
+  if ((points.total || 0) >= 100) achievements.push({ id: 'centurion', label: 'Centurion', icon: '💯', color: 'purple' });
+  if ((points.total || 0) >= 500) achievements.push({ id: 'elite', label: 'Elite', icon: '👑', color: 'gold' });
+
+  return achievements;
 }
 
 // Quotes
@@ -281,9 +416,51 @@ export async function fetchLatestQuote() {
 
 
 // Storage
+const IMAGE_UPLOAD_CONTEXTS = {
+  challenges: 'sponsored-challenges',
+  opportunities: 'opportunities',
+  showcase: 'showcase',
+};
+
+const resolveImageUploadContext = (prefix = 'uploads') => {
+  const [basePrefix] = String(prefix || 'uploads').split('/');
+  return IMAGE_UPLOAD_CONTEXTS[basePrefix] || basePrefix || 'uploads';
+};
+
 export async function uploadToStorage(file, prefix = 'uploads') {
-  if(!file) return null;
-  const fileRef = ref(storage, `${prefix}/${Date.now()}-${file.name}`);
-  await uploadBytes(fileRef, file);
-  return getDownloadURL(fileRef);
+  if (!file) return null;
+
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  // Auto-compress images before upload
+  let fileToUpload = file;
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    try {
+      const { compressImage } = await import('../imageCompression');
+      fileToUpload = await compressImage(file);
+    } catch {
+      // Fall back to original file if compression fails
+    }
+  }
+
+  const formData = new FormData();
+  formData.append('file', fileToUpload);
+  formData.append('context', resolveImageUploadContext(prefix));
+
+  const token = await user.getIdToken();
+  const res = await fetch('/api/uploads/images', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error || 'Failed to upload image');
+  }
+
+  return json.url;
 }

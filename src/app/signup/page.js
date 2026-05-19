@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
+import { getFriendlyError } from '../../lib/firebaseErrors';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -73,7 +74,7 @@ export default function SignupPage() {
       toast('success', 'Verification email sent! Please check your inbox.');
       router.push('/');
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err));
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,7 @@ export default function SignupPage() {
       });
       router.push('/');
     } catch (err) {
-      setError(err.message);
+      setError(getFriendlyError(err));
     } finally {
       setLoading(false);
     }

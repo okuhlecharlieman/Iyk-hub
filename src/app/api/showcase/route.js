@@ -3,6 +3,7 @@ import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import admin from 'firebase-admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
 import { buildCacheKey, getOrSetCache } from '../../../lib/api/cache';
+import { getCreatorBoostPlan } from '../../../lib/monetization/creator-boosts';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +30,7 @@ function chunkArray(values, size) {
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'showcase:get', limit: 90, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
+
   if (process.env.NODE_ENV === 'production' && !serviceAccount) {
     return NextResponse.json({ posts: [], nextCursor: null });
   }
@@ -67,6 +69,7 @@ export async function GET(request) {
           return {
             id: doc.id,
             ...data,
+            mediaUrl: data.mediaUrl || data.imageUrl || null,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : null,
           };
         });
@@ -99,10 +102,58 @@ export async function GET(request) {
           author: authors[post.uid] || { displayName: 'Anonymous User', photoURL: null },
         }));
 
+        // Check for active boosts and mark featured posts
+        const boostedUids = new Set();
+        const boostInfo = {};
+        const uniqueUids = [...new Set(postsWithAuthors.map((p) => p.uid).filter(Boolean))];
+        if (uniqueUids.length > 0) {
+          const uidChunks = chunkArray(uniqueUids, 10);
+          await Promise.all(
+            uidChunks.map(async (chunk) => {
+              for (const uid of chunk) {
+                const boostSnap = await db
+                  .collection('creatorBoostOrders')
+                  .where('ownerUid', '==', uid)
+                  .where('activationStatus', '==', 'active')
+                  .limit(1)
+                  .get();
+                if (!boostSnap.empty) {
+                  const boostData = boostSnap.docs[0].data();
+                  const expiresAt = boostData.expiresAt?.toDate ? boostData.expiresAt.toDate() : null;
+                  if (!expiresAt || expiresAt > new Date()) {
+                    boostedUids.add(uid);
+                    const plan = getCreatorBoostPlan(boostData.plan);
+                    boostInfo[uid] = {
+                      plan: boostData.plan,
+                      badge: plan?.badge || null,
+                      badgeLabel: plan?.badgeLabel || null,
+                      visibilityMultiplier: plan?.visibilityMultiplier || 1,
+                    };
+                  }
+                }
+              }
+            })
+          );
+        }
+
+        const enrichedPosts = postsWithAuthors.map((post) => ({
+          ...post,
+          isBoosted: boostedUids.has(post.uid),
+          boostBadge: boostInfo[post.uid] || null,
+        }));
+
+        // Sort: boosted posts first (by multiplier desc), then by creation date
+        enrichedPosts.sort((a, b) => {
+          const aMultiplier = a.boostBadge?.visibilityMultiplier || 0;
+          const bMultiplier = b.boostBadge?.visibilityMultiplier || 0;
+          if (aMultiplier !== bMultiplier) return bMultiplier - aMultiplier;
+          return 0; // preserve existing createdAt order
+        });
+
         const lastDoc = postsSnapshot.docs[postsSnapshot.docs.length - 1];
         const nextCursor = postsSnapshot.docs.length === limitN ? lastDoc.id : null;
 
-        return { posts: postsWithAuthors, nextCursor };
+        return { posts: enrichedPosts, nextCursor };
       },
     });
 

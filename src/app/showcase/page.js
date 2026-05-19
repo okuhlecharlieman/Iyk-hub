@@ -1,12 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { doc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import ContentCard from '../../components/ContentCard';
 import PostEditor from '../../components/PostEditor';
+import InstallButton from '../../components/InstallButton';
 import { useAuth } from '../../context/AuthContext';
+import { togglePostVote } from '../../lib/firebase/helpers';
+import { SkeletonGrid } from '../../components/loaders/SkeletonLoader';
+import { ErrorAlert, ErrorEmptyState } from '../../components/alerts/Alerts';
+import { ErrorBoundary } from '../../components/error/ErrorBoundary';
+import { FaPlus, FaSearch, FaExclamationTriangle, FaRocket } from 'react-icons/fa';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { FaPlus } from 'react-icons/fa';
+import { useToast } from '../../components/ui/ToastProvider';
 
 export default function ShowcasePage() {
   const { user, isAdmin } = useAuth();
@@ -19,6 +23,7 @@ export default function ShowcasePage() {
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
+  const toast = useToast();
 
   const fetchPosts = async () => {
     try {
@@ -60,7 +65,7 @@ export default function ShowcasePage() {
       });
     } catch (err) {
       console.error(err);
-      alert(`Failed to load more posts: ${err.message}`);
+      toast('error', `Failed to load more posts: ${err.message}`);
     } finally {
       setLoadingMore(false);
     }
@@ -81,43 +86,45 @@ export default function ShowcasePage() {
   };
 
   const handleSavePost = async (postData) => {
-    if (!user) return alert('You must be logged in to save a post.');
+    if (!user) { toast('warning', 'You must be logged in to save a post.'); return; }
 
     try {
+      const token = await user.getIdToken();
       const isEditingAnotherUsersPost = editingPost && editingPost.uid !== user.uid;
 
       if (editingPost) {
-        if (isAdmin && isEditingAnotherUsersPost) {
-          const token = await user.getIdToken();
-          const response = await fetch('/api/admin/updatePost', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ postId: editingPost.id, updates: postData }),
-          });
+        const endpoint = (isAdmin && isEditingAnotherUsersPost)
+          ? '/api/admin/updatePost'
+          : '/api/showcase/update';
 
-          if (!response.ok) {
-            let errorMessage = 'Could not update the post as admin.';
-            const bodyText = await response.text();
-            try {
-              const result = JSON.parse(bodyText);
-              if (result?.error) errorMessage = result.error;
-            } catch {
-              if (bodyText) errorMessage = bodyText;
-            }
-            throw new Error(errorMessage);
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ postId: editingPost.id, updates: postData }),
+        });
+
+        if (!response.ok) {
+          let errorMessage = 'Could not update the post.';
+          const bodyText = await response.text();
+          try {
+            const result = JSON.parse(bodyText);
+            if (result?.error) errorMessage = result.error;
+          } catch {
+            if (bodyText) errorMessage = bodyText;
           }
-        } else {
-          const postRef = doc(db, 'wallPosts', editingPost.id);
-          await updateDoc(postRef, { ...postData, updatedAt: serverTimestamp() });
+          throw new Error(errorMessage);
         }
       } else {
-        await addDoc(collection(db, 'wallPosts'), {
-          ...postData,
-          uid: user.uid,
-          author: { displayName: user.displayName, photoURL: user.photoURL },
-          createdAt: serverTimestamp(),
-          reactions: { likes: 0, hearts: 0, laughs: 0 },
+        const response = await fetch('/api/showcase/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(postData),
         });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || 'Failed to submit showcase post.');
+        }
       }
 
       setIsEditorOpen(false);
@@ -125,7 +132,7 @@ export default function ShowcasePage() {
       fetchPosts();
     } catch (err) {
       console.error('Error saving post:', err);
-      alert(`There was an error saving your post: ${err.message}`);
+      toast('error', `Error saving your post: ${err.message}`);
     }
   };
 
@@ -176,7 +183,47 @@ export default function ShowcasePage() {
       fetchPosts();
     } catch (err) {
       console.error('Error deleting post:', err);
-      alert(`Failed to delete post: ${err.message}`);
+      toast('error', `Failed to delete post: ${err.message}`);
+    }
+  };
+
+  const REACTION_FIELDS_MAP = {
+    thumbsUp: { votersField: 'voters', countField: 'votes' },
+    fire: { votersField: 'fireVoters', countField: 'fireCount' },
+    heart: { votersField: 'heartVoters', countField: 'heartCount' },
+  };
+
+  const handlePostReaction = async (postId, reactionType = 'thumbsUp') => {
+    if (!user) {
+      toast('warning', 'Please log in to react to posts.');
+      return;
+    }
+
+    const currentPost = posts.find((p) => p.id === postId);
+    if (!currentPost) return;
+
+    const fields = REACTION_FIELDS_MAP[reactionType] || REACTION_FIELDS_MAP.thumbsUp;
+    const currentVoters = Array.isArray(currentPost[fields.votersField]) ? currentPost[fields.votersField] : [];
+    const hasVoted = currentVoters.includes(user.uid);
+
+    const newVoters = hasVoted
+      ? currentVoters.filter((uid) => uid !== user.uid)
+      : [...currentVoters, user.uid];
+
+    const updatedPost = {
+      ...currentPost,
+      [fields.votersField]: newVoters,
+      [fields.countField]: newVoters.length,
+    };
+
+    setPosts((prev) => prev.map((p) => (p.id === postId ? updatedPost : p)));
+
+    try {
+      await togglePostVote(postId, user.uid, reactionType);
+    } catch (err) {
+      console.error('Failed to react to post:', err);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? currentPost : p)));
+      toast('error', `Unable to update reaction: ${err.message || 'Please try again.'}`);
     }
   };
 
@@ -190,14 +237,77 @@ export default function ShowcasePage() {
     );
   });
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
-          <div className="flex-1">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">Community Showcase</h1>
-            <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
+  const featuredPosts = filteredPosts.filter((p) => p.isBoosted);
+  const regularPosts = filteredPosts.filter((p) => !p.isBoosted);
+
+  const content = (
+    loading ? <LoadingSpinner /> :
+    error ? <div className="text-red-500 text-center py-10">{error}</div> :
+    filteredPosts.length > 0 ? (
+      <>
+        {featuredPosts.length > 0 && !searchTerm && (
+          <div className="mb-10">
+            <div className="flex items-center gap-2 mb-4">
+              <FaRocket className="text-purple-500" />
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">Featured Creators</h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredPosts.map(p => (
+                <ContentCard
+                  key={p.id}
+                  p={p}
+                  react={handlePostReaction}
+                  onEdit={() => handleEditPost(p)}
+                  onDelete={() => handleDeletePost(p.id, p.uid)}
+                  canManage={isAdmin || (user && user.uid === p.uid)}
+                />
+              ))}
+            </div>
           </div>
+        )}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {(searchTerm ? filteredPosts : regularPosts).map(p => (
+            <ContentCard
+              key={p.id}
+              p={p}
+              react={handlePostReaction}
+              onEdit={() => handleEditPost(p)}
+              onDelete={() => handleDeletePost(p.id, p.uid)}
+              canManage={isAdmin || (user && user.uid === p.uid)}
+            />
+          ))}
+        </div>
+        {!searchTerm && nextCursor && (
+          <div className="flex justify-center mt-10">
+            <button
+              onClick={loadMorePosts}
+              disabled={loadingMore}
+              className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
+            >
+              {loadingMore ? 'Loading...' : 'Load more'}
+            </button>
+          </div>
+        )}
+      </>
+    ) : (
+      <div className="text-center py-10">
+        <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
+      </div>
+    )
+  );
+
+  return (
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12 md:px-8 md:py-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6">
+            <div className="flex-1">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
+                <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Community Showcase</h1>
+                <InstallButton />
+              </div>
+              <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">Creations from our talented community members.</p>
+            </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
             <input
@@ -215,39 +325,7 @@ export default function ShowcasePage() {
           </div>
         </div>
 
-        {loading ? <LoadingSpinner /> :
-          error ? <div className="text-red-500 text-center py-10">{error}</div> :
-          filteredPosts.length > 0 ? (
-            <>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {filteredPosts.map(p => (
-                  <ContentCard
-                    key={p.id}
-                    p={p}
-                    onEdit={() => handleEditPost(p)}
-                    onDelete={() => handleDeletePost(p.id, p.uid)}
-                    canManage={isAdmin || (user && user.uid === p.uid)}
-                  />
-                ))}
-              </div>
-              {!searchTerm && nextCursor && (
-                <div className="flex justify-center mt-10">
-                  <button
-                    onClick={loadMorePosts}
-                    disabled={loadingMore}
-                    className="px-5 py-2.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60"
-                  >
-                    {loadingMore ? 'Loading...' : 'Load more'}
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-10">
-              <p className="text-gray-500 dark:text-gray-400">No posts match your search.</p>
-            </div>
-          )
-        }
+        {content}
       </div>
 
       {isEditorOpen && (
@@ -257,6 +335,6 @@ export default function ShowcasePage() {
           onClose={() => setIsEditorOpen(false)}
         />
       )}
-    </div>
+    </div></ErrorBoundary>
   );
 }

@@ -4,6 +4,7 @@ import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ensureUserDoc } from '../lib/firebase/helpers';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { hasAdminDashboardAccess } from '../lib/roles';
 
 const AuthContext = createContext({ 
   user: null, 
@@ -24,36 +25,36 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
       if (currentUser) {
-        await ensureUserDoc(currentUser);
+        await ensureUserDoc(currentUser, { displayName: currentUser.displayName, photoURL: currentUser.photoURL });
 
         const userRef = doc(db, 'users', currentUser.uid);
         unsubProfile = onSnapshot(userRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
-            const adminStatus = data.role === 'admin';
+            const adminStatus = hasAdminDashboardAccess(data.role);
             setUserProfile({ id: snap.id, ...data });
-            setIsAdmin(adminStatus); // Set the isAdmin state
-            
-            // Optional: Force-refresh the ID token if role changes are reflected in custom claims
+            setIsAdmin(adminStatus);
             currentUser.getIdToken(true).catch(console.warn);
           } else {
             setUserProfile(null);
             setIsAdmin(false);
           }
+          setUser(currentUser);
+          setLoading(false);
         }, (err) => {
           console.error('Error listening to user profile:', err);
           setUserProfile(null);
           setIsAdmin(false);
+          setUser(currentUser);
+          setLoading(false);
         });
-
-        setUser(currentUser);
       } else {
         setUser(null);
         setUserProfile(null);
         setIsAdmin(false);
         if (unsubProfile) unsubProfile();
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {

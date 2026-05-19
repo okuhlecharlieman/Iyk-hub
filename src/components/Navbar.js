@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import ThemeSwitcher from './ThemeSwitcher';
+import InstallButton from './InstallButton';
 import { FaBars, FaTimes, FaUserCircle, FaShieldAlt } from 'react-icons/fa';
 import { Menu, Transition } from '@headlessui/react';
 
@@ -38,10 +39,13 @@ export default function Navbar() {
   const navLinks = [
     ...(user ? [{ href: '/dashboard', label: 'Dashboard' }] : []),
     { href: '/games', label: 'Games' },
+    ...(user ? [{ href: '/video', label: 'Video Chat' }] : []),
     { href: '/showcase', label: 'Showcase' },
     { href: '/opportunities', label: 'Opportunities' },
+    { href: '/sponsored-challenges', label: 'Challenges' },
     { href: '/leaderboard', label: 'Leaderboard' },
     { href: '/creator-boosts', label: 'Boosts' },
+    { href: '/donate', label: 'Donate' },
   ];
 
   return (
@@ -60,6 +64,7 @@ export default function Navbar() {
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            <InstallButton />
             <ThemeSwitcher />
             <div className="hidden md:flex items-center">
                 {!loading && user ? (
@@ -141,6 +146,9 @@ export default function Navbar() {
           <div className="px-2 pt-2 pb-6 space-y-1 sm:px-3">
             {navLinks.map(link => <MobileNavLink key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)}>{link.label}</MobileNavLink>)}
                         {isAdmin && <MobileNavLink href="/admin" onClick={() => setIsMenuOpen(false)}>Admin</MobileNavLink>}
+            <div className="px-2 py-3">
+              <InstallButton />
+            </div>
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-3">
               {!loading && user ? (
                 <div className="px-2">

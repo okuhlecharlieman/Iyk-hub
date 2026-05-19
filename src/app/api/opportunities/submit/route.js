@@ -7,7 +7,7 @@ import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/mo
 
 const validateOpportunityPayload = (payload) => {
   ensurePlainObject(payload);
-  validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags']);
+  validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags', 'expiresAt', 'mediaUrl']);
 
   if (typeof payload.title !== 'string' || payload.title.trim().length === 0) {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'title', message: 'title is required.' }]);
@@ -21,6 +21,15 @@ const validateOpportunityPayload = (payload) => {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'description', message: 'description is required.' }]);
   }
 
+  let expiresAt = null;
+  if (payload.expiresAt) {
+    const parsedExpiresAt = new Date(payload.expiresAt);
+    if (isNaN(parsedExpiresAt.getTime()) || parsedExpiresAt <= new Date()) {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'expiresAt', message: 'Expiry date must be a valid future date.' }]);
+    }
+    expiresAt = parsedExpiresAt.toISOString();
+  }
+
   const tags = Array.isArray(payload.tags) ? payload.tags.filter((tag) => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean) : [];
 
   return {
@@ -29,6 +38,8 @@ const validateOpportunityPayload = (payload) => {
     link: typeof payload.link === 'string' ? payload.link.trim() : '',
     description: payload.description.trim(),
     tags,
+    expiresAt,
+    mediaUrl: typeof payload.mediaUrl === 'string' ? payload.mediaUrl.trim() : '',
   };
 };
 
@@ -45,14 +56,20 @@ export async function POST(request) {
     const screening = screenTextContent([opportunity.title, opportunity.org, opportunity.description, ...opportunity.tags]);
     const moderationStatus = screening.decision === 'flagged' ? 'pending_review' : 'approved';
 
-    const docRef = await admin.firestore().collection('opportunities').add({
+    const docData = {
       ...opportunity,
       ownerId: uid,
       status: 'pending',
       moderationStatus,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+
+    if (opportunity.expiresAt) {
+      docData.expiresAt = admin.firestore.Timestamp.fromDate(new Date(opportunity.expiresAt));
+    }
+
+    const docRef = await admin.firestore().collection('opportunities').add(docData);
 
     await enqueueModerationItem({
       contentType: 'opportunity',

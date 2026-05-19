@@ -6,6 +6,8 @@ import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExt
 const allowedPostFields = ['title', 'description', 'link', 'mediaUrl', 'type'];
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
 
+const normalizePostType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
+
 const validateUpdatePostPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['postId', 'updates']);
@@ -48,10 +50,11 @@ const validateUpdatePostPayload = (payload) => {
   }
 
   if (payload.updates.type !== undefined) {
-    if (typeof payload.updates.type !== 'string' || !allowedTypes.has(payload.updates.type)) {
+    const type = normalizePostType(payload.updates.type);
+    if (typeof type !== 'string' || !allowedTypes.has(type)) {
       throw new RequestValidationError('Invalid request payload.', [{ path: 'updates.type', message: 'type must be one of art, code, game, design, music, other.' }]);
     }
-    updates.type = payload.updates.type;
+    updates.type = type;
   }
 
   if (Object.keys(updates).length === 0) {

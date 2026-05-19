@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { authenticate, initializeFirebaseAdmin, listAllUsers } from '../../../../lib/firebase/admin';
+import { initializeFirebaseAdmin, authenticateWithRoles, listAllUsers } from '../../../../lib/firebase/admin';
+import { TEAM_MANAGEMENT_ROLES, VALID_ROLE_KEYS } from '../../../../lib/roles';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
-import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+import { enforceRateLimit, enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 
 const validateUidPayload = (payload) => {
@@ -77,10 +78,11 @@ const validateUpdatePayload = (payload) => {
   }
 
   if (payload.role !== undefined) {
-    if (!['admin', 'user'].includes(payload.role)) {
-      throw new RequestValidationError('Invalid request payload.', [{ path: 'role', message: 'role must be admin or user.' }]);
+    const normalizedRole = typeof payload.role === 'string' ? payload.role.trim().toLowerCase() : '';
+    if (!VALID_ROLE_KEYS.includes(normalizedRole)) {
+      throw new RequestValidationError('Invalid request payload.', [{ path: 'role', message: `role must be one of: ${VALID_ROLE_KEYS.join(', ')}.` }]);
     }
-    updateData.role = payload.role;
+    updateData.role = normalizedRole;
   }
 
   if (payload.bio !== undefined) {
@@ -105,7 +107,7 @@ export async function GET(req) {
   if (rateLimitResponse) return rateLimitResponse;
 
   try {
-    await authenticate(req);
+    await authenticateWithRoles(req, TEAM_MANAGEMENT_ROLES);
     const users = await listAllUsers();
     return NextResponse.json({ success: true, users });
   } catch (error) {
@@ -118,11 +120,12 @@ export async function GET(req) {
 }
 
 export async function PUT(req) {
-  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
+  const rateLimitResponse = await enforceDistributedRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
+
   try {
     await initializeFirebaseAdmin();
-    const actor = await authenticate(req);
+    const actor = await authenticateWithRoles(req, TEAM_MANAGEMENT_ROLES);
 
     const payload = await parseJsonBody(req);
     const { uid, updateData } = validateUpdatePayload(payload);
@@ -134,7 +137,7 @@ export async function PUT(req) {
         authUpdateData[field] = updateData[field];
       }
     });
-    
+
     const adminDb = admin.firestore();
     const userDocRef = adminDb.collection('users').doc(uid);
     const existingUserDoc = await userDocRef.get();
@@ -182,8 +185,6 @@ export async function PUT(req) {
         await admin.auth().setCustomUserClaims(uid, { role: updateData.role });
       } else {
         // User does not exist in Auth (e.g. legacy Firestore-only record).
-        // We still update the Firestore role so the app can treat this user appropriately.
-        // Note: such users cannot sign in until an Auth record exists.
         console.warn(`User ${uid} has no Firebase Auth account and could not be created; role stored in Firestore only.`);
       }
     }
@@ -212,11 +213,12 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
-  const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
+  const rateLimitResponse = await enforceDistributedRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
+
   try {
     await initializeFirebaseAdmin();
-    const actor = await authenticate(req);
+    const actor = await authenticateWithRoles(req, TEAM_MANAGEMENT_ROLES);
 
     const payload = await parseJsonBody(req);
     const { uid } = validateUidPayload(payload);

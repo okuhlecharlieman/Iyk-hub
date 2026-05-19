@@ -140,11 +140,23 @@ export async function POST(request) {
           };
         const col = collectionMap[orderType];
         if (col) {
-          await db.collection(col).doc(orderId).set({
+          const updateData = {
             paymentStatus: 'paid',
             paidAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedAt:admin.firestore.FieldValue.serverTimestamp(),
-          }, { merge: true });
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          };
+
+          if (orderType === 'creatorBoost') {
+            const orderDoc = await db.collection(col).doc(orderId).get();
+            if (orderDoc.exists) {
+              const durationHours = orderDoc.data().durationHours || 24;
+              updateData.activationStatus = 'active';
+              updateData.activatedAt = admin.firestore.FieldValue.serverTimestamp();
+              updateData.expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+            }
+          }
+
+          await db.collection(col).doc(orderId).set(updateData, { merge: true });
         }
       }
     }

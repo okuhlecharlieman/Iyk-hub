@@ -31,7 +31,8 @@ export default function DonatePage() {
     setShowPayment(true);
   };
 
-  const reference = `donate-${user?.uid || 'anon'}-${Date.now()}`;
+  const donationId = `donate-${user?.uid || 'anon'}-${Date.now()}`;
+  const reference = donationId;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12 md:px-8 md:py-16">
@@ -91,7 +92,7 @@ export default function DonatePage() {
               email={user?.email}
               amountCents={amountCents}
               reference={reference}
-              metadata={{ orderType: 'donation', donorUid: user?.uid }}
+              metadata={{ orderType: 'donation', orderId: donationId, donorUid: user?.uid }}
               onSuccess={() => {
                 setMessage('Thank you for your generous donation!');
                 setShowPayment(false);

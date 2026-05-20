@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FaGithub, FaBookOpen, FaUsers, FaCode, FaLinkedin, FaInstagram, FaTiktok, FaGlobe } from 'react-icons/fa';
+import { FaGithub, FaBookOpen, FaUsers, FaCode, FaLinkedin, FaInstagram, FaTiktok, FaGlobe, FaFacebook } from 'react-icons/fa';
 import InstallButton from './InstallButton';
 
 const productLinks = [
@@ -24,6 +24,8 @@ const socialLinks = [
   { label: 'Instagram', href: 'https://www.instagram.com/intwanayasekasi26', icon: FaInstagram },
   { label: 'TikTok', href: 'https://www.tiktok.com/@intwana.yase.kasi7', icon: FaTiktok },
   { label: 'Website', href: 'https://intwana.rf.gd/', icon: FaGlobe },
+  { label: 'Facebook', href: 'https://web.facebook.com/Intwana1', icon: FaFacebook },
+  { label: 'Odysee', href: 'https://odysee.com/@intwanayasekasi:2', icon: FaGlobe },
 ];
 
 export default function Footer() {

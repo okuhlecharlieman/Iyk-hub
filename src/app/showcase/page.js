@@ -1,11 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
 import NewPostModal from '../../components/showcase/NewPostModal';
 import { useAuth } from '../../context/AuthContext';
-import { db } from '../../lib/firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { FaPalette } from 'react-icons/fa';
 
 const ShowcasePage = () => {
@@ -15,34 +13,28 @@ const ShowcasePage = () => {
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const fetchPosts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/showcase?limit=50');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      setPosts(data.posts || []);
+    } catch (err) {
+      console.error('Showcase fetch error:', err);
+      setError('Unable to load the showcase. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     setLoading(true);
     setError('');
-
-    const q = query(
-      collection(db, 'showcase'),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const livePosts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setPosts(livePosts);
-      setLoading(false);
-    }, (err) => {
-      console.error('Showcase listener error:', err);
-      setError('Unable to load the showcase. Please try again later.');
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    fetchPosts();
+  }, [fetchPosts]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-12 md:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -85,7 +77,7 @@ const ShowcasePage = () => {
       )}
       </div>
 
-      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={() => { setIsModalOpen(false); }} />
+      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={() => { setIsModalOpen(false); fetchPosts(); }} />
       </div>
     </div>
   );

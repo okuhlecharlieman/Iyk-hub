@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { createShowcasePost } from '../../lib/firebase/helpers';
 import Modal from '../Modal';
-import LoadingSpinner from '../LoadingSpinner';
 import Button from '../ui/Button';
+import FileUploadField from '../ui/FileUploadField';
 import { useToast } from '../ui/ToastProvider';
 
 export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
@@ -60,75 +60,62 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
     }
   };
 
+  const inputClass = "w-full text-gray-800 dark:text-white bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition duration-200";
+
   return (
     <Modal open={isOpen} onClose={onClose} title="Share Your Work">
       <form onSubmit={handleSubmit} className="space-y-4">
         
         <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type of Work</label>
-            <select 
-                value={type} 
-                onChange={e => setType(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
-            >
-                <option value="art">Art</option>
-                <option value="code">Code</option>
-                <option value="music">Music</option>
-            </select>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Type of Work</label>
+          <select 
+            value={type} 
+            onChange={e => setType(e.target.value)}
+            className={inputClass}
+          >
+            <option value="art">Art</option>
+            <option value="code">Code</option>
+            <option value="music">Music</option>
+          </select>
         </div>
 
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
-          <input
-            type="text"
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
-            placeholder="My Awesome Project"
-          />
-        </div>
+        <input
+          className={inputClass}
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
-          <textarea
-            id="description"
-            rows="3"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
-            placeholder="A short description of what makes it special."
-          />
-        </div>
+        <textarea
+          rows={3}
+          className={inputClass}
+          placeholder="Short description of what makes it special."
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
 
-        <div>
-          <label htmlFor="link" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Link (Optional)</label>
-          <input
-            type="url"
-            id="link"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
-            placeholder="https://github.com/my-project"
-          />
-        </div>
+        <input
+          type="url"
+          className={inputClass}
+          placeholder="Link (https://...)"
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+        />
 
-        <div>
-          <label htmlFor="media" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Media (Optional)</label>
-          <input
-            type="file"
-            id="media"
-            onChange={(e) => setMedia(e.target.files[0])}
-            className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-100 dark:file:bg-blue-900/50 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-200/70 dark:hover:file:bg-blue-900 transition"
-          />
-           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upload an image for art, or an audio file for music.</p>
-        </div>
+        <FileUploadField
+          label="Image / Media (optional)"
+          accept="image/*,audio/*"
+          value={media}
+          onChange={setMedia}
+        />
 
         {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}
         
-        <div className="flex justify-end pt-4 space-x-2">
+        <div className="flex justify-end space-x-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={loading} variant="primary">{loading ? <LoadingSpinner size="sm" /> : 'Post'}</Button>
+          <Button type="submit" disabled={loading} variant="primary">{loading ? 'Posting...' : 'Post'}</Button>
         </div> 
       </form>
     </Modal>

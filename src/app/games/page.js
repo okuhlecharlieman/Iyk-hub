@@ -19,7 +19,7 @@ export default function GamesPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-12 md:px-8 md:py-16">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">

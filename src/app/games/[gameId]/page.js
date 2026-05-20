@@ -104,7 +104,7 @@ export default function GamePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-12 md:px-8 md:py-16">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 px-4 py-6 sm:py-8 md:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
             <Link href="/games" className="flex items-center text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 font-medium">

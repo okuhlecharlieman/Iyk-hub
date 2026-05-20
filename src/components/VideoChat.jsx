@@ -80,6 +80,7 @@ export default function VideoChat() {
   const roomRefRef = useRef(null);
   const listenersRef = useRef([]);
   const statusRef = useRef(status);
+  const videoEnabledRef = useRef(videoEnabled);
   const timerRef = useRef(null);
   const timeLeftRef = useRef(timeLeft);
   const autoRematchRef = useRef(false);
@@ -91,6 +92,10 @@ export default function VideoChat() {
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  useEffect(() => {
+    videoEnabledRef.current = videoEnabled;
+  }, [videoEnabled]);
 
   useEffect(() => {
     timeLeftRef.current = timeLeft;
@@ -362,12 +367,12 @@ export default function VideoChat() {
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && statusRef.current !== 'idle') {
-        if (localStreamRef.current) {
-          localStreamRef.current.getTracks().forEach(t => {
-            t.enabled = false;
-            t.stop();
-          });
+      if (statusRef.current === 'idle' || !localStreamRef.current) return;
+      if (document.visibilityState === 'hidden') {
+        localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = false; });
+      } else if (document.visibilityState === 'visible') {
+        if (videoEnabledRef.current) {
+          localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = true; });
         }
       }
     };

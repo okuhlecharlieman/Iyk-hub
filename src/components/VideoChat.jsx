@@ -130,12 +130,20 @@ export default function VideoChat() {
     listenersRef.current = [];
 
     if (pcRef.current) {
+      try {
+        pcRef.current.getSenders().forEach(sender => {
+          try { pcRef.current.removeTrack(sender); } catch {}
+        });
+      } catch {}
       pcRef.current.close();
       pcRef.current = null;
     }
 
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current.getTracks().forEach(t => {
+        t.enabled = false;
+        t.stop();
+      });
       localStreamRef.current = null;
     }
 
@@ -344,7 +352,32 @@ export default function VideoChat() {
   }, [timeLeft, status, stopCall, findPartner]);
 
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => {
+          t.enabled = false;
+          t.stop();
+        });
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && statusRef.current !== 'idle') {
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(t => {
+            t.enabled = false;
+            t.stop();
+          });
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearTimer();
       if (statusRef.current !== 'idle') {
         cleanup(false);
@@ -447,7 +480,11 @@ export default function VideoChat() {
               await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             }
           } catch (err) {
-            console.error('WebRTC signaling error:', err);
+            if (err?.message?.includes('location information') || err?.name === 'InvalidStateError') {
+              // Ignore benign WebRTC state errors (e.g. adding ICE candidate before remote description)
+            } else {
+              console.error('WebRTC signaling error:', err);
+            }
           }
         }
       }
@@ -517,10 +554,12 @@ export default function VideoChat() {
 
   const toggleAudio = () => {
     if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setAudioEnabled(audioTrack.enabled);
+      const audioTracks = localStreamRef.current.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      if (audioTracks.length > 0) {
+        setAudioEnabled(audioTracks[0].enabled);
       }
     }
   };

@@ -41,6 +41,7 @@ export async function GET(request) {
       boost: {
         id: doc.id,
         plan: data.plan,
+        tier: data.plan?.toUpperCase() || null,
         label: plan?.label || data.plan,
         visibilityMultiplier: plan?.visibilityMultiplier || data.visibilityMultiplier || 1,
         videoChatSeconds: plan?.videoChatSeconds || 60,

@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../firebase/admin';
+import { getCreatorBoostPlan } from '../monetization/creator-boosts';
 
 const toMillis = (value) => {
   if (!value) return null;
@@ -32,6 +33,7 @@ export async function runCreatorBoostLifecycleJob() {
   let opCount = 0;
   let activated = 0;
   let expired = 0;
+  const userBoostUpdates = [];
 
   const commitIfNeeded = async () => {
     if (opCount >= 400) {
@@ -53,6 +55,27 @@ export async function runCreatorBoostLifecycleJob() {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 
+    if (data.ownerUid) {
+      const plan = getCreatorBoostPlan(data.plan);
+      if (plan) {
+        userBoostUpdates.push({
+          uid: data.ownerUid,
+          action: 'activate',
+          boostData: {
+            orderId: doc.id,
+            plan: data.plan,
+            tier: data.plan?.toUpperCase() || null,
+            badge: plan.badge,
+            badgeLabel: plan.badgeLabel,
+            badgeColor: plan.badgeColor,
+            visibilityMultiplier: plan.visibilityMultiplier,
+            videoChatSeconds: plan.videoChatSeconds,
+            expiresAt,
+          },
+        });
+      }
+    }
+
     activated += 1;
     opCount += 1;
     await commitIfNeeded();
@@ -70,6 +93,13 @@ export async function runCreatorBoostLifecycleJob() {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 
+    if (data.ownerUid) {
+      userBoostUpdates.push({
+        uid: data.ownerUid,
+        action: 'expire',
+      });
+    }
+
     expired += 1;
     opCount += 1;
     await commitIfNeeded();
@@ -77,6 +107,24 @@ export async function runCreatorBoostLifecycleJob() {
 
   if (opCount > 0) {
     await batch.commit();
+  }
+
+  for (const update of userBoostUpdates) {
+    try {
+      if (update.action === 'activate') {
+        await db.collection('users').doc(update.uid).set({
+          activeBoost: update.boostData,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } else if (update.action === 'expire') {
+        await db.collection('users').doc(update.uid).set({
+          activeBoost: admin.firestore.FieldValue.delete(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    } catch (err) {
+      console.error(`Failed to update user ${update.uid} boost status:`, err);
+    }
   }
 
   await db.collection('systemJobs').doc('creatorBoostLifecycle').set({

@@ -11,7 +11,7 @@ export async function GET() {
     const usersRef = db.collection('users');
     // This query is not optimal and will be slow on large datasets
     // A better approach would be to have a separate collection for featured users
-    const snapshot = await usersRef.where('activeBoost.tier', '==', 'ULTRA').get();
+    const snapshot = await usersRef.where('activeBoost.tier', '==', 'ULTRA').limit(20).get();
 
     if (snapshot.empty) {
       return NextResponse.json({ featuredUsers: [] });

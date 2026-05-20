@@ -12,7 +12,7 @@ export default function VideoPage() {
         <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
           <div className="max-w-6xl mx-auto">
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-              <div className="px-4 sm:px-6 lg:px-8 py-8">
+              <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="bg-white/10 backdrop-blur-sm rounded-full p-3">
                     <FaVideo className="h-6 w-6" />

@@ -124,6 +124,39 @@ export default function CreatorBoostsPage() {
     }
   };
 
+  const verifyAndActivateBoost = async (orderId) => {
+    const maxAttempts = 6;
+    const delayMs = 2000;
+
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/creator-boosts/verify-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ orderId }),
+        });
+        const json = await res.json();
+
+        if (json.status === 'active') {
+          setMessage(`Boost activated! Expires at ${new Date(json.expiresAt).toLocaleString()}.`);
+          setPaymentInfo(null);
+          return;
+        }
+      } catch {}
+
+      if (i < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    }
+
+    setMessage('Payment received! Your boost will activate shortly.');
+    setPaymentInfo(null);
+  };
+
   const planItems = buildPlanList();
 
   return (
@@ -235,8 +268,8 @@ export default function CreatorBoostsPage() {
                 reference={paymentInfo.reference}
                 metadata={{ orderId: paymentInfo.orderId, orderType: 'creatorBoost' }}
                 onSuccess={() => {
-                  setMessage('Payment successful! Your boost is now active.');
-                  setPaymentInfo(null);
+                  setMessage('Payment successful! Activating your boost...');
+                  verifyAndActivateBoost(paymentInfo.orderId);
                 }}
                 onError={(err) => {
                   setError(err.message || 'Payment failed. Please try again.');

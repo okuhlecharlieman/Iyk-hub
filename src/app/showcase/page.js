@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
+import NewPostModal from '../../components/showcase/NewPostModal';
 import { useAuth } from '../../context/AuthContext';
 
 const ShowcasePage = () => {
@@ -9,6 +10,8 @@ const ShowcasePage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -41,6 +44,24 @@ const ShowcasePage = () => {
     };
   }, []);
 
+  // reload when a new post is created
+  useEffect(() => {
+    let mounted = true;
+    if (refreshKey === 0) return; // initial load handled above
+    const reload = async () => {
+      try {
+        const response = await fetch('/api/showcase?limit=50');
+        const data = await response.json();
+        if (!mounted) return;
+        setPosts(data.posts || []);
+      } catch (err) {
+        console.error('Failed to reload showcase', err);
+      }
+    };
+    reload();
+    return () => { mounted = false; };
+  }, [refreshKey]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -50,12 +71,15 @@ const ShowcasePage = () => {
         </p>
       </div>
 
-      {error ? (
+      <div className="relative">
+        <button onClick={() => setIsModalOpen(true)} aria-label="New post" className="absolute right-0 -top-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg focus:outline-none">+
+        </button>
+        {error ? (
         <div className="rounded-3xl border border-red-200 bg-red-50 dark:border-red-700/50 dark:bg-red-900/40 p-6 text-red-700 dark:text-red-200">
           <p className="font-semibold">Unable to load the showcase.</p>
           <p>{error}</p>
         </div>
-      ) : loading ? (
+        ) : loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {Array.from({ length: 6 }).map((_, index) => <PostCardSkeleton key={index} />)}
         </div>
@@ -74,6 +98,9 @@ const ShowcasePage = () => {
           ))}
         </div>
       )}
+      </div>
+
+      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={() => { setIsModalOpen(false); setRefreshKey(k => k + 1); }} />
     </div>
   );
 };

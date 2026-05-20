@@ -44,7 +44,7 @@ const PublicProfilePage = ({ params }) => {
   } : {};
 
   return (
-    <div style={dynamicStyles} className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
+    <div style={dynamicStyles} className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         {loading ? (
           <SkeletonProfile />

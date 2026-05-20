@@ -70,7 +70,7 @@ export default function ManageUserSponsoredChallenges() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-10">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8">
         <div className="max-w-6xl mx-auto space-y-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>

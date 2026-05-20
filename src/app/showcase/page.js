@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
 import NewPostModal from '../../components/showcase/NewPostModal';
 import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { FaPalette } from 'react-icons/fa';
 
 const ShowcasePage = () => {
   const { user } = useAuth();
@@ -11,68 +14,50 @@ const ShowcasePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    let mounted = true;
+    setLoading(true);
+    setError('');
 
-    const loadPosts = async () => {
-      setLoading(true);
-      setError('');
+    const q = query(
+      collection(db, 'showcase'),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
 
-      try {
-        const response = await fetch('/api/showcase?limit=50');
-        if (!response.ok) {
-          throw new Error('Unable to load the showcase.');
-        }
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const livePosts = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPosts(livePosts);
+      setLoading(false);
+    }, (err) => {
+      console.error('Showcase listener error:', err);
+      setError('Unable to load the showcase. Please try again later.');
+      setLoading(false);
+    });
 
-        const data = await response.json();
-        if (!mounted) return;
-
-        setPosts(data.posts || []);
-      } catch (err) {
-        if (!mounted) return;
-        setError(err?.message || 'Unable to load the showcase. Please try again later.');
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadPosts();
-    return () => {
-      mounted = false;
-    };
+    return () => unsubscribe();
   }, []);
 
-  // reload when a new post is created
-  useEffect(() => {
-    let mounted = true;
-    if (refreshKey === 0) return; // initial load handled above
-    const reload = async () => {
-      try {
-        const response = await fetch('/api/showcase?limit=50');
-        const data = await response.json();
-        if (!mounted) return;
-        setPosts(data.posts || []);
-      } catch (err) {
-        console.error('Failed to reload showcase', err);
-      }
-    };
-    reload();
-    return () => { mounted = false; };
-  }, [refreshKey]);
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-3">Showcase</h1>
-        <p className="text-gray-600 dark:text-gray-300 max-w-2xl">
-          Discover creative work from the community and celebrate the best student projects, art, music, and code.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-12 md:px-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-full p-3 text-white shadow-lg">
+              <FaPalette className="h-8 w-8" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4">Community Showcase</h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Creations from our talented community members.
+          </p>
+        </div>
 
       <div className="relative">
-        <button onClick={() => setIsModalOpen(true)} aria-label="New post" className="absolute right-0 -top-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg focus:outline-none">+
+        <button onClick={() => setIsModalOpen(true)} aria-label="New post" className="absolute right-0 -top-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg focus:outline-none z-10">+
         </button>
         {error ? (
         <div className="rounded-3xl border border-red-200 bg-red-50 dark:border-red-700/50 dark:bg-red-900/40 p-6 text-red-700 dark:text-red-200">
@@ -100,7 +85,8 @@ const ShowcasePage = () => {
       )}
       </div>
 
-      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={() => { setIsModalOpen(false); setRefreshKey(k => k + 1); }} />
+      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={() => { setIsModalOpen(false); }} />
+      </div>
     </div>
   );
 };

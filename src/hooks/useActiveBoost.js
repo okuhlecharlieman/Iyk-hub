@@ -22,13 +22,15 @@ export function useActiveBoost() {
         const res = await fetch('/api/creator-boosts/active', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error('Failed to fetch boost');
+        if (!res.ok) {
+          if (!cancelled) setBoost(null);
+          return;
+        }
         const data = await res.json();
         if (!cancelled) {
           setBoost(data.active ? data.boost : null);
         }
-      } catch (err) {
-        console.error('Error fetching active boost:', err);
+      } catch {
         if (!cancelled) setBoost(null);
       } finally {
         if (!cancelled) setLoading(false);

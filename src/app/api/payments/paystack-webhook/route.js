@@ -6,6 +6,7 @@ import { recordChargeWithFees } from '../../../../lib/monetization/ledger';
 import {
   DEFAULT_PLATFORM_FEE_RATE,
 } from '../../../../lib/monetization/constants';
+import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
 
 const PAYSTACK_FEE_RATE = 0.015;
 const PAYSTACK_FEE_FIXED_CENTS = 100;
@@ -149,10 +150,30 @@ export async function POST(request) {
           if (orderType === 'creatorBoost') {
             const orderDoc = await db.collection(col).doc(orderId).get();
             if (orderDoc.exists) {
-              const durationHours = orderDoc.data().durationHours || 24;
+              const orderData = orderDoc.data();
+              const durationHours = orderData.durationHours || 24;
+              const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
               updateData.activationStatus = 'active';
               updateData.activatedAt = admin.firestore.FieldValue.serverTimestamp();
-              updateData.expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+              updateData.expiresAt = expiresAt;
+
+              const plan = getCreatorBoostPlan(orderData.plan);
+              if (plan && orderData.ownerUid) {
+                await db.collection('users').doc(orderData.ownerUid).set({
+                  activeBoost: {
+                    orderId,
+                    plan: orderData.plan,
+                    tier: orderData.plan?.toUpperCase() || null,
+                    badge: plan.badge,
+                    badgeLabel: plan.badgeLabel,
+                    badgeColor: plan.badgeColor,
+                    visibilityMultiplier: plan.visibilityMultiplier,
+                    videoChatSeconds: plan.videoChatSeconds,
+                    expiresAt,
+                  },
+                  updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                }, { merge: true });
+              }
             }
           }
 

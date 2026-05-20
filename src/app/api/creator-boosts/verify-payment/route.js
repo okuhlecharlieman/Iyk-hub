@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
 
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'creator-boosts:verify', limit: 20, windowMs: 60 * 1000 });
@@ -51,6 +52,24 @@ export async function POST(request) {
         expiresAt,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
+
+      const plan = getCreatorBoostPlan(order.plan);
+      if (plan) {
+        await db.collection('users').doc(uid).set({
+          activeBoost: {
+            orderId: orderId.trim(),
+            plan: order.plan,
+            tier: order.plan?.toUpperCase() || null,
+            badge: plan.badge,
+            badgeLabel: plan.badgeLabel,
+            badgeColor: plan.badgeColor,
+            visibilityMultiplier: plan.visibilityMultiplier,
+            videoChatSeconds: plan.videoChatSeconds,
+            expiresAt,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
 
       return NextResponse.json({
         success: true,

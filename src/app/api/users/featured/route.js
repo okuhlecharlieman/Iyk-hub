@@ -36,7 +36,7 @@ export async function GET() {
           const userDoc = await db.collection('users').doc(uid).get();
           if (userDoc.exists) {
             const data = userDoc.data();
-            featuredUsers.push({ uid, displayName: data.displayName, photoURL: data.photoURL, bio: data.bio });
+            featuredUsers.push({ uid, displayName: data.displayName, photoURL: data.photoURL, bio: data.bio, boostBadge: data.activeBoost ? { badge: data.activeBoost.badge, badgeLabel: data.activeBoost.badgeLabel } : null });
           }
         } catch {}
       }
@@ -57,7 +57,8 @@ export async function GET() {
               uid: doc.id,
               displayName: data.displayName,
               photoURL: data.photoURL,
-              bio: data.bio
+              bio: data.bio,
+              boostBadge: data.activeBoost ? { badge: data.activeBoost.badge, badgeLabel: data.activeBoost.badgeLabel } : null
           });
         }
     });

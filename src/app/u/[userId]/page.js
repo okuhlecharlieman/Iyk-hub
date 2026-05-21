@@ -1,13 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getUserDoc, listUserShowcasePosts } from '../../../lib/firebase/helpers';
+import { useAuth } from '../../../context/AuthContext';
 import { SkeletonProfile } from '../../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../../components/alerts/Alerts';
-import { FaUser, FaEye, FaShareAlt, FaCheck } from 'react-icons/fa';
+import { FaUser, FaEye, FaShareAlt, FaCheck, FaBan } from 'react-icons/fa';
 import BoostBadge from '../../../components/BoostBadge';
+import { useToast } from '../../../components/ui/ToastProvider';
 
 const PublicProfilePage = ({ params }) => {
   const { userId } = params;
+  const { user: currentUser } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [doc, setDoc] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -15,6 +19,9 @@ const PublicProfilePage = ({ params }) => {
   const [boostBadge, setBoostBadge] = useState(null);
   const [viewCount, setViewCount] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const isOwnProfile = currentUser && currentUser.uid === userId;
   const accentColor = doc?.accentColor || null;
 
   useEffect(() => {
@@ -84,7 +91,7 @@ const PublicProfilePage = ({ params }) => {
   const badge = boostBadge || doc?.activeBoost;
 
   return (
-    <div style={dynamicStyles} className="min-h-screen pt-24 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+    <div style={dynamicStyles} className="min-h-screen pt-20 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         {loading ? (
           <SkeletonProfile />
@@ -104,14 +111,10 @@ const PublicProfilePage = ({ params }) => {
               </div>
               <div className="mt-6 w-full">
                 <div className="space-y-4">
-                  <div className='flex justify-center items-center gap-4'>
+                  <div className='flex justify-center items-center gap-2'>
                     <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600" style={{ color: 'var(--accent-color)' }}>{doc?.displayName || 'Anonymous'}</h2>
+                    {badge && <BoostBadge badge={badge.badge} label={badge.badgeLabel} />}
                   </div>
-                  {badge && (
-                    <div className="mt-2">
-                      <BoostBadge badge={badge.badge} label={badge.badgeLabel} />
-                    </div>
-                  )}
 
                   {/* View count & share */}
                   <div className="flex justify-center items-center gap-4 mt-2">
@@ -127,6 +130,43 @@ const PublicProfilePage = ({ params }) => {
                       {copied ? <><FaCheck /> Copied!</> : <><FaShareAlt /> Share Profile</>}
                     </button>
                   </div>
+
+                  {currentUser && !isOwnProfile && (
+                    <button
+                      onClick={async () => {
+                        if (blockLoading) return;
+                        setBlockLoading(true);
+                        try {
+                          const token = await currentUser.getIdToken();
+                          if (isBlocked) {
+                            await fetch(`/api/users/block?targetUid=${userId}`, {
+                              method: 'DELETE',
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            setIsBlocked(false);
+                            toast('success', 'User unblocked');
+                          } else {
+                            await fetch('/api/users/block', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                              body: JSON.stringify({ targetUid: userId }),
+                            });
+                            setIsBlocked(true);
+                            toast('success', 'User blocked');
+                          }
+                        } catch {
+                          toast('error', 'Failed to update block status');
+                        } finally {
+                          setBlockLoading(false);
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 text-sm transition-colors ${
+                        isBlocked ? 'text-red-500 hover:text-red-700' : 'text-gray-400 hover:text-red-500'
+                      }`}
+                    >
+                      <FaBan /> {isBlocked ? 'Unblock User' : 'Block User'}
+                    </button>
+                  )}
 
                   <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto pt-2 leading-relaxed">{doc?.bio || 'No bio yet.'}</p>
                   {Array.isArray(doc?.skills) && doc.skills.length > 0 && (

@@ -9,7 +9,7 @@ export default function VideoPage() {
   return (
     <ProtectedRoute>
       <ErrorBoundary>
-        <div className="min-h-screen pt-24 bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div className="min-h-screen pt-20 bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
           <div className="max-w-6xl mx-auto">
             <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
               <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-8">

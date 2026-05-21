@@ -17,19 +17,20 @@ export async function POST(request, { params }) {
     const today = new Date().toISOString().split('T')[0]; // Get date in YYYY-MM-DD format
 
     // Use a transaction to ensure atomic updates
+    let newViewCount = 0;
     await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists) {
-        // If user doc doesn't exist, we can't proceed
         return;
       }
 
-      // Increment total view count
+      const currentViews = userDoc.data().profileViewCount || 0;
+      newViewCount = currentViews + 1;
+
       transaction.update(userRef, { 
         profileViewCount: admin.firestore.FieldValue.increment(1)
       });
 
-      // Handle daily view count
       const dailyViewsRef = userRef.collection('dailyViews').doc(today);
       const dailyViewsDoc = await transaction.get(dailyViewsRef);
 
@@ -40,7 +41,7 @@ export async function POST(request, { params }) {
       }
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, views: newViewCount });
 
   } catch (error) {
     console.error('Error incrementing profile view count:', error);

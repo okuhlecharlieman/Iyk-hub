@@ -6,7 +6,7 @@ import { db } from '../../../lib/firebase';
 import { useAuth } from '../../../context/AuthContext';
 import ContentCard from '../../../components/ContentCard';
 import ProfileEditor from '../../../components/ProfileEditor';
-import { FaPaintBrush, FaUserCircle, FaPencilAlt } from 'react-icons/fa';
+import { FaPaintBrush, FaUserCircle, FaPencilAlt, FaBan } from 'react-icons/fa';
 import LoadingSpinner from '../../../components/LoadingSpinner';
 import { useToast } from '../../../components/ui/ToastProvider';
 import BoostBadge from '../../../components/BoostBadge';
@@ -48,6 +48,8 @@ export default function ProfilePage() {
   const toast = useToast();
 
   const isOwner = currentUser && currentUser.uid === id;
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   const fetchProfileData = useCallback(async () => {
     try {
@@ -125,7 +127,7 @@ export default function ProfilePage() {
   if (!profile) return <div className="text-center py-20">User not found.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen pt-24 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 mb-12">
           <div className="flex justify-between items-start">
@@ -155,13 +157,50 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            {isOwner && (
+            {isOwner ? (
               <button
                 onClick={() => setIsEditorOpen(true)}
                 className="flex-shrink-0 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-2 rounded-full"
                 aria-label="Edit Profile"
               >
                 <FaPencilAlt size={20} />
+              </button>
+            ) : currentUser && (
+              <button
+                onClick={async () => {
+                  if (blockLoading) return;
+                  setBlockLoading(true);
+                  try {
+                    const token = await currentUser.getIdToken();
+                    if (isBlocked) {
+                      await fetch(`/api/users/block?targetUid=${id}`, {
+                        method: 'DELETE',
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      setIsBlocked(false);
+                      toast('success', 'User unblocked');
+                    } else {
+                      await fetch('/api/users/block', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ targetUid: id }),
+                      });
+                      setIsBlocked(true);
+                      toast('success', 'User blocked');
+                    }
+                  } catch {
+                    toast('error', 'Failed to update block status');
+                  } finally {
+                    setBlockLoading(false);
+                  }
+                }}
+                className={`flex-shrink-0 p-2 rounded-full transition-colors ${
+                  isBlocked ? 'text-red-500 hover:text-red-700' : 'text-gray-400 hover:text-red-500'
+                }`}
+                aria-label={isBlocked ? 'Unblock User' : 'Block User'}
+                title={isBlocked ? 'Unblock User' : 'Block User'}
+              >
+                <FaBan size={18} />
               </button>
             )}
           </div>

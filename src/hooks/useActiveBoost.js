@@ -30,7 +30,8 @@ export function useActiveBoost() {
         if (!cancelled) {
           setBoost(data.active ? data.boost : null);
         }
-      } catch {
+      } catch (err) {
+        // Suppress console noise for expected auth/network errors
         if (!cancelled) setBoost(null);
       } finally {
         if (!cancelled) setLoading(false);

@@ -4,6 +4,8 @@ import { FaCode, FaMusic, FaPaintBrush, FaThumbsUp, FaFire, FaHeart, FaEdit, FaT
 import { FiExternalLink } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { togglePostVote } from '../../lib/firebase/helpers';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 const typeMetadata = {
   code: { icon: <FaCode />, color: 'text-blue-400' },
@@ -55,22 +57,33 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
   const [busyReaction, setBusyReaction] = useState(null);
   const userId = currentUser?.uid;
 
+  // Real-time listener for reaction updates
   useEffect(() => {
-    setReactionState({
-      thumbsUp: {
-        count: Array.isArray(voters) ? voters.length : votes || 0,
-        voters: voters || [],
-      },
-      fire: {
-        count: Array.isArray(fireVoters) ? fireVoters.length : fireCount || 0,
-        voters: fireVoters || [],
-      },
-      heart: {
-        count: Array.isArray(heartVoters) ? heartVoters.length : heartCount || 0,
-        voters: heartVoters || [],
-      },
+    if (!post.id) return;
+    const postRef = doc(db, 'wallPosts', post.id);
+    const unsubscribe = onSnapshot(postRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const d = snapshot.data();
+      setReactionState({
+        thumbsUp: {
+          count: Array.isArray(d.voters) ? d.voters.length : d.votes || 0,
+          voters: d.voters || [],
+        },
+        fire: {
+          count: Array.isArray(d.fireVoters) ? d.fireVoters.length : d.fireCount || 0,
+          voters: d.fireVoters || [],
+        },
+        heart: {
+          count: Array.isArray(d.heartVoters) ? d.heartVoters.length : d.heartCount || 0,
+          voters: d.heartVoters || [],
+        },
+      });
+    }, (err) => {
+      // Fallback to prop-based state on listener error
+      console.error('PostCard snapshot error:', err);
     });
-  }, [votes, voters, fireCount, fireVoters, heartCount, heartVoters]);
+    return () => unsubscribe();
+  }, [post.id]);
 
   const handleReaction = async (reactionType) => {
     if (!userId || busyReaction) return;

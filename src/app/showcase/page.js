@@ -54,7 +54,12 @@ const ShowcasePage = () => {
         </div>
 
       <div className="relative">
-        <button onClick={() => setIsModalOpen(true)} aria-label="New post" className="absolute right-0 -top-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 shadow-lg focus:outline-none z-10">+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          aria-label="New post"
+          className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full w-14 h-14 shadow-xl hover:shadow-2xl focus:outline-none z-50 flex items-center justify-center text-2xl font-bold transition-all duration-300 hover:scale-110"
+        >
+          +
         </button>
         {error ? (
         <div className="rounded-3xl border border-red-200 bg-red-50 dark:border-red-700/50 dark:bg-red-900/40 p-6 text-red-700 dark:text-red-200">
@@ -130,7 +135,13 @@ const ShowcasePage = () => {
       )}
       </div>
 
-      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={() => { setIsModalOpen(false); fetchPosts(); }} />
+      <NewPostModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onPostCreated={(newPost) => {
+        setIsModalOpen(false);
+        if (newPost) {
+          setPosts(prev => [newPost, ...prev]);
+        }
+        setTimeout(() => fetchPosts(), 2000);
+      }} />
       </div>
     </div>
   );

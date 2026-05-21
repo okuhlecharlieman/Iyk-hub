@@ -32,7 +32,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
     setError('');
 
     try {
-      const newPost = await createShowcasePost({
+      const result = await createShowcasePost({
         title,
         description,
         link,
@@ -40,6 +40,29 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
       }, media);
       
       toast('success', 'Post created successfully!');
+
+      const optimisticPost = {
+        id: result.id,
+        title,
+        description,
+        link,
+        type,
+        mediaUrl: result.mediaUrl || null,
+        uid: user.uid,
+        authorName: user.displayName || 'Anonymous User',
+        authorPhoto: user.photoURL || null,
+        author: { displayName: user.displayName || 'Anonymous User', photoURL: user.photoURL || null },
+        votes: 0,
+        voters: [],
+        fireVoters: [],
+        fireCount: 0,
+        heartVoters: [],
+        heartCount: 0,
+        createdAt: new Date().toISOString(),
+        isBoosted: false,
+        boostBadge: null,
+      };
+
       setTitle('');
       setDescription('');
       setLink('');
@@ -47,7 +70,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
       setType('art');
       onClose();
       if (onPostCreated) {
-        onPostCreated(newPost);
+        onPostCreated(optimisticPost);
       }
     } catch (err) {
       const errorMessage = err.message || 'An unexpected error occurred.';
@@ -117,9 +140,10 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
 
         <FileUploadField
           label="Image / Media (optional)"
-          accept="image/*,audio/*"
+          accept="image/*,audio/*,video/*"
           value={media}
           onChange={setMedia}
+          maxSizeMB={50}
         />
 
         {error && <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>}

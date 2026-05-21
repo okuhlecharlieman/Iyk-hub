@@ -117,7 +117,7 @@ export async function createShowcasePost(data, mediaFile) {
     throw new Error(json.error || 'Failed to submit showcase post');
   }
 
-  return json.id;
+  return { id: json.id, mediaUrl: mediaUrl || null };
 }
 
 export async function listUserShowcasePosts(uid, limitN = 50) {

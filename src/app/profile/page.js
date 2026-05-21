@@ -130,7 +130,7 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <ErrorBoundary>
-        <div style={dynamicStyles} className="min-h-screen pt-24 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+        <div style={dynamicStyles} className="min-h-screen pt-20 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
             {loading ? (
               <SkeletonProfile />
@@ -181,15 +181,11 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                       <div className='flex justify-center items-center gap-4'>
+                       <div className='flex justify-center items-center gap-2'>
                         <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600" style={{ color: 'var(--accent-color)' }}>{doc?.displayName || 'Anonymous'}</h2>
+                        {activeBoost && <BoostBadge badge={activeBoost.badge} label={activeBoost.badgeLabel} />}
                         <button onClick={() => setIsEditing(true)} className="p-2 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"><FaEdit /></button>
                        </div>
-                      {activeBoost && (
-                        <div className="mt-2">
-                          <BoostBadge badge={activeBoost.badge} label={activeBoost.badgeLabel} />
-                        </div>
-                      )}
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email}</p>
                       {(activeBoost?.tier === 'PRO' || activeBoost?.tier === 'ULTRA') && (
                         <div className="mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">

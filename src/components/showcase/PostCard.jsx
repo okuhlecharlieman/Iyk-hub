@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { FaCode, FaMusic, FaPaintBrush, FaThumbsUp, FaFire, FaHeart, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaCode, FaMusic, FaPaintBrush, FaGamepad, FaPencilRuler, FaEllipsisH, FaThumbsUp, FaFire, FaHeart, FaEdit, FaTrash, FaPlay } from 'react-icons/fa';
 import { FiExternalLink } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { togglePostVote } from '../../lib/firebase/helpers';
@@ -12,7 +12,18 @@ const typeMetadata = {
   code: { icon: <FaCode />, color: 'text-blue-400' },
   music: { icon: <FaMusic />, color: 'text-emerald-400' },
   art: { icon: <FaPaintBrush />, color: 'text-violet-400' },
+  game: { icon: <FaGamepad />, color: 'text-orange-400' },
+  design: { icon: <FaPencilRuler />, color: 'text-pink-400' },
+  other: { icon: <FaEllipsisH />, color: 'text-gray-400' },
 };
+
+function getMediaType(url) {
+  if (!url) return null;
+  const lower = url.toLowerCase().split('?')[0];
+  if (/\.(mp4|webm|mov|avi|mkv)$/.test(lower) || lower.includes('video')) return 'video';
+  if (/\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower) || lower.includes('audio')) return 'audio';
+  return 'image';
+}
 
 export const PostCardSkeleton = () => (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
@@ -122,16 +133,25 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
 
   return (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col h-full backdrop-blur-sm">
-      {mediaUrl && (
-        <div className="relative w-full aspect-video overflow-hidden group">
-          {type === 'art' && <img src={mediaUrl} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />}
-          {type === 'music' && (
-            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                 <audio controls src={mediaUrl} className="w-full">Your browser does not support audio.</audio>
-            </div>
-          )}
-        </div>
-      )}
+      {mediaUrl && (() => {
+        const mType = getMediaType(mediaUrl);
+        return (
+          <div className="relative w-full aspect-video overflow-hidden group">
+            {mType === 'video' ? (
+              <video controls src={mediaUrl} className="w-full h-full object-cover" preload="metadata">
+                Your browser does not support video.
+              </video>
+            ) : mType === 'audio' ? (
+              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center gap-3 px-4">
+                <FaPlay className="text-3xl text-white/60" />
+                <audio controls src={mediaUrl} className="w-full max-w-xs">Your browser does not support audio.</audio>
+              </div>
+            ) : (
+              <img src={mediaUrl} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            )}
+          </div>
+        );
+      })()}
 
       <div className="p-5 flex-grow flex flex-col">
         <div className="flex items-start justify-between mb-4">

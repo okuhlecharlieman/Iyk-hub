@@ -37,7 +37,6 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
         description,
         link,
         type,
-        uid: user.uid,
       }, media);
       
       toast('success', 'Post created successfully!');
@@ -67,34 +66,46 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         
         <div>
-          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Type of Work</label>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Type of Work <span className="text-red-500">*</span></label>
           <select 
             value={type} 
             onChange={e => setType(e.target.value)}
             className={inputClass}
+            required
           >
             <option value="art">Art</option>
             <option value="code">Code</option>
             <option value="music">Music</option>
+            <option value="game">Game</option>
+            <option value="design">Design</option>
+            <option value="other">Other</option>
           </select>
         </div>
 
-        <input
-          className={inputClass}
-          placeholder="Title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Title <span className="text-red-500">*</span></label>
+          <input
+            className={inputClass}
+            placeholder="Title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            maxLength={150}
+          />
+        </div>
 
-        <textarea
-          rows={3}
-          className={inputClass}
-          placeholder="Short description of what makes it special."
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Description <span className="text-red-500">*</span></label>
+          <textarea
+            rows={3}
+            className={inputClass}
+            placeholder="Short description of what makes it special."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            maxLength={2000}
+          />
+        </div>
 
         <input
           type="url"

@@ -6,6 +6,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
+import BoostBadge from '../components/BoostBadge';
 
 const HomePage = () => {
     const [featuredUsers, setFeaturedUsers] = useState([]);
@@ -21,7 +22,7 @@ const HomePage = () => {
     }, []);
 
     return (
-        <div className="min-h-screen pt-24 bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen pt-20 bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
                 <div className="text-center">
                     <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white sm:text-5xl md:text-6xl">
@@ -48,7 +49,10 @@ const HomePage = () => {
                                 <SwiperSlide key={user.uid}>
                                     <Link href={`/u/${user.uid}`} className="block bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 text-center hover:scale-105 transition-transform duration-300">
                                         <img src={user.photoURL || '/logo.png'} alt={user.displayName} className="w-24 h-24 rounded-full mx-auto mb-4" onError={(e)=>{ e.target.src='/logo.png'; }} />
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">{user.displayName}</h3>
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center justify-center gap-1">
+                                            {user.displayName}
+                                            {user.boostBadge && <BoostBadge badge={user.boostBadge.badge} label={user.boostBadge.badgeLabel} inline />}
+                                        </h3>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">{user.bio}</p>
                                     </Link>
                                 </SwiperSlide>

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { togglePostVote } from '../../lib/firebase/helpers';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import BoostBadge from '../BoostBadge';
 
 const typeMetadata = {
   code: { icon: <FaCode />, color: 'text-blue-400' },
@@ -134,17 +135,20 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
 
       <div className="p-5 flex-grow flex flex-col">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
+          <Link href={`/u/${post.uid}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             {profilePhoto ? (
                 <img src={profilePhoto} alt={displayName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" />
             ) : (
                 <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-700" />
             )}
             <div>
-              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight">{displayName}</p>
+              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight flex items-center gap-1.5">
+                {displayName}
+                {post.boostBadge && <BoostBadge badge={post.boostBadge.badge} label={post.boostBadge.badgeLabel} inline />}
+              </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{createdAtDate ? createdAtDate.toLocaleDateString() : 'Just now'}</p>
             </div>
-          </div>
+          </Link>
           <div className={`text-xl p-3 bg-gray-100 dark:bg-gray-900/60 rounded-lg ${metadata.color}`}>
             {metadata.icon || null}
           </div>

@@ -644,6 +644,23 @@ export default function VideoChat() {
       {mediaError && (
         <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-300 text-center">
           <p className="font-medium">{mediaError}</p>
+          {mediaError.includes('denied') && (
+            <div className="mt-3 text-sm space-y-2">
+              <p className="text-gray-600 dark:text-gray-400">To re-enable camera/microphone access:</p>
+              <ol className="text-left max-w-sm mx-auto text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
+                <li>Click the lock/camera icon in the address bar</li>
+                <li>Find Camera and Microphone permissions</li>
+                <li>Change both from &quot;Block&quot; to &quot;Allow&quot;</li>
+                <li>Refresh the page</li>
+              </ol>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
+          )}
         </div>
       )}
 

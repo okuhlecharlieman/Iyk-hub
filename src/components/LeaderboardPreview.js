@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { listTopUsers } from '../lib/firebase/helpers';
 import Link from 'next/link';
 import { FaTrophy } from 'react-icons/fa';
+import BoostBadge from './BoostBadge';
 
 export default function LeaderboardPreview({ weekly = true }) {
   const [top, setTop] = useState([]);
@@ -47,11 +48,14 @@ export default function LeaderboardPreview({ weekly = true }) {
           {top.length === 0 && <li className="text-gray-500 dark:text-gray-400 text-center py-4">No data yet. Be the first!</li>}
           {top.map((u, i) => (
             <li key={u.id} className="flex items-center justify-between p-3 rounded-lg transition-colors bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700">
-              <div className="flex items-center gap-3">
+              <Link href={`/u/${u.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <span className="font-bold text-gray-500 dark:text-gray-400 w-6 text-center">{i + 1}</span>
                 <img src={u.photoURL || '/logo.png'} className="h-9 w-9 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" alt="avatar" />
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{u.displayName || 'Player'}</span>
-              </div>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                  {u.displayName || 'Player'}
+                  {u.activeBoost && <BoostBadge badge={u.activeBoost.badge} label={u.activeBoost.badgeLabel} inline />}
+                </span>
+              </Link>
               <div className="text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800/50 py-1 px-3 rounded-full">
                 {weekly ? u?.points?.weekly || 0 : u?.points?.lifetime || 0} pts
               </div>

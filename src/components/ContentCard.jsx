@@ -61,7 +61,7 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
       <div className="p-5 flex-1 flex flex-col">
         {/* Author info */}
         <div className="flex items-center gap-3 mb-3">
-          <Link href={`/profile/${p.uid}`} className="flex items-center gap-2 group">
+          <Link href={`/u/${p.uid}`} className="flex items-center gap-2 group">
             {p.author?.photoURL ? (
               <img
                 src={p.author.photoURL}
@@ -74,8 +74,9 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
               </div>
             )}
             <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                 {p.author?.displayName || 'Anonymous'}
+                {p.isBoosted && p.boostBadge && <BoostBadge badge={p.boostBadge.badge} label={p.boostBadge.badgeLabel} inline />}
               </p>
               {createdDate && (
                 <p className="text-xs text-gray-400 dark:text-gray-500">{createdDate}</p>
@@ -83,9 +84,6 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
             </div>
           </Link>
           <div className="ml-auto flex items-center gap-1">
-            {p.isBoosted && p.boostBadge && (
-              <BoostBadge badge={p.boostBadge.badge} label={p.boostBadge.badgeLabel} size="sm" />
-            )}
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${color}`}>
               {icon} {p.type?.charAt(0).toUpperCase() + p.type?.slice(1)}
             </span>

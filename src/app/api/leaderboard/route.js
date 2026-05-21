@@ -52,6 +52,11 @@ export async function GET(request) {
         displayName: d.displayName || null,
         photoURL: d.photoURL || null,
         points: d.points || { weekly: 0, lifetime: 0 },
+        activeBoost: d.activeBoost ? {
+          badge: d.activeBoost.badge || null,
+          badgeLabel: d.activeBoost.badgeLabel || null,
+          tier: d.activeBoost.tier || null,
+        } : null,
       };
     });
 

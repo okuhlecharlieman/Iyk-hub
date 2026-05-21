@@ -1,5 +1,7 @@
 'use client';
+import Link from 'next/link';
 import { FaTrophy } from 'react-icons/fa';
+import BoostBadge from './BoostBadge';
 
 const PodiumPlace = ({ user, rank, filter }) => {
   const getPodiumClass = () => {
@@ -23,8 +25,13 @@ const PodiumPlace = ({ user, rank, filter }) => {
   return (
     <div className={`flex flex-col items-center justify-end p-4 rounded-t-xl w-1/3 shadow-lg ${getPodiumClass()}`}>
       <FaTrophy className={`text-4xl mb-2 ${getTrophyColor()}`} />
-      <img src={user.photoURL || '/logo.png'} className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-xl" alt="avatar" />
-      <p className="font-bold text-white dark:text-gray-100 mt-2 text-center truncate w-full">{user.displayName || 'Anonymous'}</p>
+      <Link href={`/u/${user.id}`} className="flex flex-col items-center hover:opacity-80 transition-opacity">
+        <img src={user.photoURL || '/logo.png'} className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-xl" alt="avatar" />
+        <p className="font-bold text-white dark:text-gray-100 mt-2 text-center truncate w-full flex items-center justify-center gap-1">
+          {user.displayName || 'Anonymous'}
+          {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} inline />}
+        </p>
+      </Link>
       <p className="font-extrabold text-2xl text-white dark:text-gray-100">{filter === 'weekly' ? (user.points?.weekly ?? 0) : (user.points?.lifetime ?? user.points ?? 0)}</p>
     </div>
   );

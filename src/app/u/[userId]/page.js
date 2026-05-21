@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { getUserDoc, listUserShowcasePosts } from '../../../lib/firebase/helpers';
 import { SkeletonProfile } from '../../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../../components/alerts/Alerts';
-import { FaUser } from 'react-icons/fa';
+import { FaUser, FaEye, FaShareAlt, FaCheck } from 'react-icons/fa';
 import BoostBadge from '../../../components/BoostBadge';
 
 const PublicProfilePage = ({ params }) => {
@@ -12,6 +12,9 @@ const PublicProfilePage = ({ params }) => {
   const [doc, setDoc] = useState(null);
   const [posts, setPosts] = useState([]);
   const [error, setError] = useState(null);
+  const [boostBadge, setBoostBadge] = useState(null);
+  const [viewCount, setViewCount] = useState(null);
+  const [copied, setCopied] = useState(false);
   const accentColor = doc?.accentColor || null;
 
   useEffect(() => {
@@ -25,8 +28,24 @@ const PublicProfilePage = ({ params }) => {
         ]);
         setDoc(userDoc);
         setPosts(userPosts);
-        // Call the API to increment the view count
-        fetch(`/api/users/${userId}/views`, { method: 'POST' });
+
+        // Increment view count and get the count
+        try {
+          const viewRes = await fetch(`/api/users/${userId}/views`, { method: 'POST' });
+          if (viewRes.ok) {
+            const viewData = await viewRes.json();
+            setViewCount(viewData.views ?? null);
+          }
+        } catch {}
+
+        // Fetch boost badge from API
+        try {
+          const boostRes = await fetch(`/api/creator-boosts/active/public?uid=${userId}`);
+          if (boostRes.ok) {
+            const boostData = await boostRes.json();
+            if (boostData.active) setBoostBadge(boostData.boost);
+          }
+        } catch {}
       } catch (err) {
         console.error("Error loading public profile:", err);
         setError("Could not load profile. The user may not exist.");
@@ -43,8 +62,29 @@ const PublicProfilePage = ({ params }) => {
     '--accent-color': accentColor,
   } : {};
 
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/u/${userId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const badge = boostBadge || doc?.activeBoost;
+
   return (
-    <div style={dynamicStyles} className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+    <div style={dynamicStyles} className="min-h-screen pt-24 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         {loading ? (
           <SkeletonProfile />
@@ -67,11 +107,27 @@ const PublicProfilePage = ({ params }) => {
                   <div className='flex justify-center items-center gap-4'>
                     <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600" style={{ color: 'var(--accent-color)' }}>{doc?.displayName || 'Anonymous'}</h2>
                   </div>
-                  {doc?.activeBoost && (
+                  {badge && (
                     <div className="mt-2">
-                      <BoostBadge badge={doc.activeBoost.badge} label={doc.activeBoost.badgeLabel} />
+                      <BoostBadge badge={badge.badge} label={badge.badgeLabel} />
                     </div>
                   )}
+
+                  {/* View count & share */}
+                  <div className="flex justify-center items-center gap-4 mt-2">
+                    {viewCount !== null && (
+                      <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                        <FaEye className="text-purple-500" /> {viewCount} view{viewCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <button
+                      onClick={handleShareProfile}
+                      className="flex items-center gap-1.5 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
+                    >
+                      {copied ? <><FaCheck /> Copied!</> : <><FaShareAlt /> Share Profile</>}
+                    </button>
+                  </div>
+
                   <p className="text-gray-600 dark:text-gray-300 max-w-md mx-auto pt-2 leading-relaxed">{doc?.bio || 'No bio yet.'}</p>
                   {Array.isArray(doc?.skills) && doc.skills.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-2 pt-4">

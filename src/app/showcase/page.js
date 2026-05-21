@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
 import NewPostModal from '../../components/showcase/NewPostModal';
 import { useAuth } from '../../context/AuthContext';
-import { FaPalette } from 'react-icons/fa';
+import { FaPalette, FaBolt, FaCrown } from 'react-icons/fa';
 
 const ShowcasePage = () => {
   const { user } = useAuth();
@@ -33,8 +33,13 @@ const ShowcasePage = () => {
     fetchPosts();
   }, [fetchPosts]);
 
+  const featuredPosts = useMemo(() => posts.filter(p => p.isBoosted), [posts]);
+  const regularPosts = useMemo(() => posts.filter(p => !p.isBoosted), [posts]);
+  const pinnedPosts = useMemo(() => featuredPosts.filter(p => p.boostBadge?.plan === 'ultra'), [featuredPosts]);
+  const otherFeatured = useMemo(() => featuredPosts.filter(p => p.boostBadge?.plan !== 'ultra'), [featuredPosts]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
+    <div className="min-h-screen pt-24 bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -69,11 +74,59 @@ const ShowcasePage = () => {
           </a>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {posts.map(post => (
-            <PostCard key={post.id} post={post} isOwner={user && user.uid === post.uid} />
-          ))}
-        </div>
+        <>
+          {/* Featured / Pinned Section */}
+          {featuredPosts.length > 0 && (
+            <div className="mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1.5">
+                  <FaBolt className="text-xs" />
+                  Featured
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Boosted creators&apos; posts</p>
+              </div>
+
+              {/* Pinned Ultra posts */}
+              {pinnedPosts.length > 0 && (
+                <div className="mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {pinnedPosts.map(post => (
+                      <div key={post.id} className="relative">
+                        <div className="absolute -top-2 -right-2 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <FaCrown className="text-[10px]" /> Pinned
+                        </div>
+                        <PostCard post={post} isOwner={user && user.uid === post.uid} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Other featured posts */}
+              {otherFeatured.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {otherFeatured.map(post => (
+                    <PostCard key={post.id} post={post} isOwner={user && user.uid === post.uid} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Regular posts */}
+          {regularPosts.length > 0 && (
+            <>
+              {featuredPosts.length > 0 && (
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">All Posts</h3>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {regularPosts.map(post => (
+                  <PostCard key={post.id} post={post} isOwner={user && user.uid === post.uid} />
+                ))}
+              </div>
+            </>
+          )}
+        </>
       )}
       </div>
 

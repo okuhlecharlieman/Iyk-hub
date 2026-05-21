@@ -71,6 +71,13 @@ export default function VideoChat() {
   const [bonusAdded, setBonusAdded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Update timeLeft when boost loads (only while idle, before a call starts)
+  useEffect(() => {
+    if (status === 'idle') {
+      setTimeLeft(initialTimeLimit);
+    }
+  }, [initialTimeLimit, status]);
+
   const localVideoRef = useRef(null);
   const pipVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);

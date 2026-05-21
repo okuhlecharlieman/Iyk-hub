@@ -15,13 +15,23 @@ export async function GET(request) {
     const db = admin.firestore();
 
     // Check if user has an active Ultra boost
-    const boostSnap = await db
-      .collection('creatorBoostOrders')
-      .where('ownerUid', '==', uid)
-      .where('activationStatus', '==', 'active')
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
+    let boostSnap;
+    try {
+      boostSnap = await db
+        .collection('creatorBoostOrders')
+        .where('ownerUid', '==', uid)
+        .where('activationStatus', '==', 'active')
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+    } catch (queryErr) {
+      boostSnap = await db
+        .collection('creatorBoostOrders')
+        .where('ownerUid', '==', uid)
+        .where('activationStatus', '==', 'active')
+        .limit(5)
+        .get();
+    }
 
     if (boostSnap.empty) {
       return NextResponse.json({ opportunities: [], eligible: false });
@@ -41,12 +51,21 @@ export async function GET(request) {
     }
 
     // Fetch pending/upcoming sponsored challenges (not yet public)
-    const pendingSnap = await db
-      .collection('sponsoredChallenges')
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'desc')
-      .limit(10)
-      .get();
+    let pendingSnap;
+    try {
+      pendingSnap = await db
+        .collection('sponsoredChallenges')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .limit(10)
+        .get();
+    } catch (queryErr) {
+      pendingSnap = await db
+        .collection('sponsoredChallenges')
+        .where('status', '==', 'pending')
+        .limit(10)
+        .get();
+    }
 
     const opportunities = pendingSnap.docs.map(doc => {
       const data = doc.data();

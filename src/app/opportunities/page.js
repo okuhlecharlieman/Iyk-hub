@@ -185,7 +185,7 @@ function OpportunitiesContent() {
   }, [activeTab, opportunities, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
+    <div className="min-h-screen pt-24 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-12">

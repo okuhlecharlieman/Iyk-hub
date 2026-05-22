@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/jobs/weekly-leaderboard-reset",
-      "schedule": "0 22 * * 1"
+      "schedule": "0 0 * * 1"
     },
     {
       "path": "/api/jobs/creator-boost-lifecycle",
-     "schedule": "0 22 * * *"
+     "schedule": "0 0 * * *"
     },
     {
       "path": "/api/jobs/ttl-cleanup",
-      "schedule": "0 22 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/jobs/daily-quote",

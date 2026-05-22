@@ -1,4 +1,4 @@
-push'use client';
+'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '../../../components/ProtectedRoute';

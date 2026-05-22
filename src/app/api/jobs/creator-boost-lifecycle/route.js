@@ -13,7 +13,7 @@ export async function GET(request) {
 
     await logAdminAction({
       request,
-      actor: { uid: 'system:cron', email: null },
+      actor: { uid: 'system:cron', email: 'System (Cron Job)' },
       action: 'creator.boost.lifecycle.run',
       targetType: 'creatorBoostOrders',
       targetId: null,
@@ -26,7 +26,7 @@ export async function GET(request) {
 
     await logAdminAction({
       request,
-      actor: { uid: 'system:cron', email: null },
+      actor: { uid: 'system:cron', email: 'System (Cron Job)' },
       action: 'creator.boost.lifecycle.run',
       targetType: 'creatorBoostOrders',
       targetId: null,

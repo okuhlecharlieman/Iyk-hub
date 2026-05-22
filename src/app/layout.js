@@ -27,8 +27,9 @@ export const metadata = {
     'kasi',
   ],
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || 'https://intwanahub.netlify.app'
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://iyk-hub.vercel.app'
   ),
+
   openGraph: {
     title: 'Intwana Hub — Play, Create & Grow',
     description:

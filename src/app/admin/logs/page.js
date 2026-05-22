@@ -25,6 +25,14 @@ const LogCard = ({ log }) => {
             <p><strong>User ID:</strong> {log.userId || 'N/A'}</p>
           </div>
         );
+      case 'ttlCleanupLogs':
+        return (
+          <div>
+            <p><strong>Document ID:</strong> {log.documentId}</p>
+            <p><strong>Collection:</strong> {log.collectionName}</p>
+            <p><strong>Deleted At:</strong> {log.deletedAt?.toDate().toLocaleString()}</p>
+          </div>
+        );
       default:
         return <p>Unsupported log type</p>;
     }
@@ -55,7 +63,7 @@ export default function LogsPage() {
     async function fetchLogs() {
       setLoading(true);
       const allLogs = [];
-      const logCollections = ['adminAuditLogs', 'securityLogs', 'dataAccessLogs'];
+      const logCollections = ['adminAuditLogs', 'securityLogs', 'dataAccessLogs', 'ttlCleanupLogs'];
 
       for (const logCollection of logCollections) {
         try {
@@ -121,6 +129,7 @@ export default function LogsPage() {
             <option value="adminAuditLogs">Admin Audit</option>
             <option value="securityLogs">Security</option>
             <option value="dataAccessLogs">Data Access</option>
+            <option value="ttlCleanupLogs">TTL Cleanup</option>
           </select>
         </div>
       </div>

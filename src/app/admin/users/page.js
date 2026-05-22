@@ -1,4 +1,4 @@
-'use client';
+push'use client';
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '../../../components/ProtectedRoute';
@@ -36,7 +36,9 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
   const role = (user.role || 'user').toLowerCase();
   const roleDefinition = getRoleDefinition(role);
   const canManageClaims = user.authExists || Boolean(user.email);
-  const creationDate = user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A';
+  const creationDate = user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString() : (user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A');
+  const lastSeen = user.streak?.lastLoginDate ? new Date(user.streak.lastLoginDate).toLocaleDateString() : 'N/A';
+
 
   return (
     <>
@@ -56,6 +58,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
         </td>
         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{canManageClaims ? user.email : '—'}</td>
         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{creationDate}</td>
+        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{lastSeen}</td>
         <td className="px-4 py-3">
           <RoleBadge role={role} />
           {!canManageClaims && (
@@ -75,7 +78,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
 
       {/* Mobile card */}
       <tr className="sm:hidden">
-        <td colSpan={5} className="p-0">
+        <td colSpan={6} className="p-0">
           <div className="p-4 border-b border-gray-100 dark:border-gray-700/50">
             <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
@@ -89,6 +92,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{canManageClaims ? user.email : 'No email'}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Joined: {creationDate}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last Seen: {lastSeen}</p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <Button size="sm" variant="primary" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>Role</Button>
                   <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} disabled={isProcessing}><FaEdit /></Button>
@@ -353,6 +357,7 @@ export default function AdminUsersPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created At</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Seen</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
@@ -360,7 +365,7 @@ export default function AdminUsersPage() {
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center">
+                  <td colSpan={6} className="px-4 py-12 text-center">
                     <FaUsers className="mx-auto text-3xl text-gray-300 dark:text-gray-600 mb-2" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">{search ? 'No users match your search.' : 'No users found.'}</p>
                   </td>

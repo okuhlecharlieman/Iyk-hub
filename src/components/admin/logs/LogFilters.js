@@ -23,6 +23,9 @@ const LogFilters = ({ filter, setFilter, searchTerm, setSearchTerm }) => {
         <option value="opportunity">Opportunities</option>
         <option value="boost">Creator Boosts</option>
         <option value="showcase">Showcase</option>
+        <option value="admin">Admin</option>
+        <option value="security">Security</option>
+        <option value="data.access">Data Access</option>
         <option value="system.ttl.cleanup">TTL Cleanup</option>
       </select>
     </div>

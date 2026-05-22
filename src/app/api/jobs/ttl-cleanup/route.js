@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '../../../../lib/firebase-admin';
+import { db } from '../../../../lib/firebase/admin';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 
@@ -35,7 +35,21 @@ export async function GET(request) {
   const results = {};
 
   try {
-    // ... (batchDelete logic remains the same) ...
+    // 1. Clean expired rate limits (older than 24 hours)
+    const rateLimitsQuery = db.collection('rateLimits').where('timestamp', '<', twentyFourHoursAgo);
+    await batchDelete(rateLimitsQuery, results, 'rateLimits');
+
+    // 2. Clean resolved moderation items (older than 30 days)
+    const moderationQuery = db.collection('moderationQueue').where('resolved', '==', true).where('resolvedAt', '<', thirtyDaysAgo);
+    await batchDelete(moderationQuery, results, 'moderationQueue');
+
+    // 3. Clean old daily quotes (older than 24 hours)
+    const quotesQuery = db.collection('dailyQuotes').where('createdAt', '<', twentyFourHoursAgo);
+    await batchDelete(quotesQuery, results, 'dailyQuotes');
+
+    // 4. Clean stale video chat rooms (not updated in 24 hours)
+    const videoRoomsQuery = db.collection('videoChatRooms').where('updatedAt', '<', twentyFourHoursAgo);
+    await batchDelete(videoRoomsQuery, results, 'videoChatRooms');
 
     // 5. Clean health check pings (temporary document)
     const healthcheckRef = db.collection('_healthcheck').doc('ping');
@@ -46,14 +60,16 @@ export async function GET(request) {
     }
 
     // Log the cleanup action
-    await logAdminAction({
-        request,
-        actor: { uid: 'system:cron', email: 'System (Cron Job)' },
-        action: 'system.ttl.cleanup',
-        targetType: 'system',
-        targetId: 'ttl-cleanup',
-        metadata: results,
-    });
+    if (Object.keys(results).length > 0) {
+        await logAdminAction({
+            request,
+            actor: { uid: 'system:cron', email: 'System (Cron Job)' },
+            action: 'system.ttl.cleanup',
+            targetType: 'system',
+            targetId: 'ttl-cleanup',
+            metadata: results,
+        });
+    }
 
     return NextResponse.json({
       success: true,

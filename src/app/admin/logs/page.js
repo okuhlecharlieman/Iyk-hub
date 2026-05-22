@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../../lib/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { FaSearch } from 'react-icons/fa';
 
 const LogCard = ({ log }) => {
   const renderContent = () => {
@@ -47,6 +48,8 @@ const LogCard = ({ log }) => {
 export default function LogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
 
   useEffect(() => {
     async function fetchLogs() {
@@ -62,8 +65,8 @@ export default function LogsPage() {
             allLogs.push({ id: doc.id, collection: logCollection, ...doc.data() });
           });
         } catch (error) {
-          if (error.code === 'permission-denied') {
-            console.warn(`Permission denied for ${logCollection}. Skipping.`);
+          if (error.code === 'permission-denied' || error.code === 'unimplemented') {
+            console.warn(`Could not fetch ${logCollection}. It might not exist yet.`);
           } else {
             console.error(`Error fetching ${logCollection}:`, error);
           }
@@ -84,14 +87,49 @@ export default function LogsPage() {
     fetchLogs();
   }, []);
 
+  const filteredLogs = logs.filter(log => {
+    const typeMatch = filterType === 'all' || log.collection === filterType;
+    const searchTermLower = searchTerm.toLowerCase();
+    const searchableContent = JSON.stringify(log).toLowerCase();
+    const searchMatch = searchTerm ? searchableContent.includes(searchTermLower) : true;
+    return typeMatch && searchMatch;
+  });
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">System Logs</h1>
+
+      <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+        <div className="relative w-full md:w-1/2">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search logs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        </div>
+
+        <div className="relative w-full md:w-1/4">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="w-full p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          >
+            <option value="all">All Logs</option>
+            <option value="adminAuditLogs">Admin Audit</option>
+            <option value="securityLogs">Security</option>
+            <option value="dataAccessLogs">Data Access</option>
+          </select>
+        </div>
+      </div>
+
       {loading ? (
         <p>Loading logs...</p>
       ) : (
         <div className="space-y-4">
-          {logs.map((log) => (
+          {filteredLogs.map((log) => (
             <LogCard key={log.id} log={log} />
           ))}
         </div>

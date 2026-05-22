@@ -1,6 +1,6 @@
 
-import { getAllOpportunities } from './lib/firebase/helpers';
-import { getAllShowcaseItems } from './lib/firebase/showcase';
+import { getAllOpportunities } from '../lib/firebase/helpers';
+import { getAllShowcaseItems } from '../lib/firebase/showcase';
 
 const URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://iyk-hub.vercel.app';
 

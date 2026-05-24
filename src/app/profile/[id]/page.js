@@ -1,8 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../lib/firebase';
 import { useAuth } from '../../../context/AuthContext';
 import ContentCard from '../../../components/ContentCard';
 import ProfileEditor from '../../../components/ProfileEditor';
@@ -53,23 +51,14 @@ export default function ProfilePage() {
 
   const fetchProfileData = useCallback(async () => {
     try {
-      const userDocRef = doc(db, 'users', id);
-      const userDocSnap = await getDoc(userDocRef);
+      // Use public API to fetch profile (works for all users, no auth needed)
+      const profileRes = await fetch(`/api/users/public?uid=${id}`);
+      if (!profileRes.ok) throw new Error('User not found');
+      const profileData = await profileRes.json();
 
-      if (userDocSnap.exists()) {
-        const data = userDocSnap.data();
-        setProfile({ id: userDocSnap.id, ...data, skills: normalizeSkills(data.skills) });
-      } else {
-        throw new Error('User not found');
-      }
-
-      const res = await fetch('/api/showcase');
-      if (!res.ok) throw new Error(`API call failed: ${res.statusText}`);
-      const showcasePayload = await res.json();
-      const allPosts = extractPostsPayload(showcasePayload);
-
-      const userPosts = allPosts.filter((post) => post.uid === id);
-      setPosts(userPosts);
+      const userData = profileData.user;
+      setProfile({ ...userData, skills: normalizeSkills(userData.skills) });
+      setPosts(profileData.posts || []);
 
       try {
         const boostRes = await fetch(`/api/creator-boosts/active/public?uid=${id}`);
@@ -144,6 +133,19 @@ export default function ProfilePage() {
                 {boostBadge && <BoostBadge badge={boostBadge.badge} label={boostBadge.badgeLabel} />}
               </h1>
               {profile.bio && <p className="mt-4 text-gray-700 dark:text-gray-300 max-w-prose mx-auto">{profile.bio}</p>}
+
+              {/* Points */}
+              <div className="flex justify-center items-center gap-6 mt-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{profile?.points?.lifetime ?? profile?.points ?? 0}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Lifetime Points</p>
+                </div>
+                <div className="w-px h-10 bg-gray-300 dark:bg-gray-600"></div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{profile?.points?.weekly ?? 0}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Weekly Points</p>
+                </div>
+              </div>
 
               {profile.skills.length > 0 && (
                 <div className="mt-4 flex flex-wrap justify-center gap-2">

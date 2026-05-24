@@ -93,11 +93,24 @@ export default function DonatePage() {
               amountCents={amountCents}
               reference={reference}
               metadata={{ orderType: 'donation', orderId: donationId, donorUid: user?.uid }}
-              onSuccess={() => {
+              onSuccess={async () => {
                 setMessage('Thank you for your generous donation!');
                 setShowPayment(false);
                 setSelectedAmount(null);
                 setCustomAmount('');
+                try {
+                  const token = await user.getIdToken();
+                  await fetch('/api/payments/verify-donation', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ reference }),
+                  });
+                } catch (verifyErr) {
+                  console.error('Donation verify fallback error:', verifyErr);
+                }
               }}
               onError={(err) => {
                 setError(err?.message || 'Payment failed. Please try again.');

@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
 import { FaTrophy, FaCheck, FaTimes } from 'react-icons/fa';
 import { useToast } from '../ui/ToastProvider';
+import { useAuth } from '../../context/AuthContext';
 
 export default function SponsoredChallengesCard() {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const toast = useToast();
 
   useEffect(() => {
-    fetchChallenges();
-  }, []);
+    if (user) fetchChallenges();
+  }, [user]);
 
   const fetchChallenges = async () => {
     try {
-      const response = await fetch('/api/admin/sponsored-challenges');
+      const token = user ? await user.getIdToken() : null;
+      const response = await fetch('/api/admin/sponsored-challenges', {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (response.ok) {
         const data = await response.json();
         setChallenges(data.challenges || []);
@@ -27,8 +32,10 @@ export default function SponsoredChallengesCard() {
 
   const approveChallenge = async (id) => {
     try {
+      const token = user ? await user.getIdToken() : null;
       const response = await fetch(`/api/admin/sponsored-challenges/${id}/approve`, {
         method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
       if (response.ok) {
         fetchChallenges(); // Refresh list

@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getUserDoc, listUserShowcasePosts } from '../../../lib/firebase/helpers';
 import { useAuth } from '../../../context/AuthContext';
 import { SkeletonProfile } from '../../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../../components/alerts/Alerts';
@@ -29,25 +28,16 @@ const PublicProfilePage = ({ params }) => {
       setLoading(true);
       setError(null);
       try {
-        let userDoc = null;
-        let userPosts = [];
-        try {
-          [userDoc, userPosts] = await Promise.all([
-            getUserDoc(userId),
-            listUserShowcasePosts(userId),
-          ]);
-        } catch {
-          // Firestore rules may block non-authenticated reads; try individually
-          try { userDoc = await getUserDoc(userId); } catch {}
-          try { userPosts = await listUserShowcasePosts(userId); } catch {}
-        }
-        if (!userDoc) {
+        // Use public API to fetch profile (works for all users, no auth needed)
+        const profileRes = await fetch(`/api/users/public?uid=${userId}`);
+        if (!profileRes.ok) {
           setError("Could not load profile. The user may not exist.");
           setLoading(false);
           return;
         }
-        setDoc(userDoc);
-        setPosts(userPosts);
+        const profileData = await profileRes.json();
+        setDoc(profileData.user);
+        setPosts(profileData.posts || []);
 
         // Increment view count and get the count
         try {

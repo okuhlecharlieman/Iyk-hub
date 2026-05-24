@@ -1,5 +1,5 @@
 'use client';
-import { FaRocket, FaPalette, FaVideo, FaTrophy, FaBriefcase, FaGamepad, FaUsers, FaStar, FaBolt } from 'react-icons/fa';
+import { FaRocket, FaPalette, FaVideo, FaTrophy, FaBriefcase, FaGamepad, FaUsers, FaStar, FaBolt, FaCode, FaMusic, FaPencilRuler, FaEllipsisH, FaPaintBrush, FaCrown } from 'react-icons/fa';
 import Link from 'next/link';
 
 const features = [
@@ -42,9 +42,18 @@ const features = [
 ];
 
 const boostTiers = [
-  { name: 'Lite', price: 'R29/mo', perks: ['Boost badge next to name', 'Extended video chat (3 min)', 'Portfolio view count', 'Featured in showcase'] },
-  { name: 'Pro', price: 'R59/mo', perks: ['Everything in Lite', 'Video chat (5 min)', 'Profile analytics chart', 'Priority in leaderboard display'] },
-  { name: 'Ultra', price: 'R99/mo', perks: ['Everything in Pro', 'Video chat (10 min)', 'Custom profile accent color', 'Homepage carousel feature', 'Early access to sponsors', 'Pinned showcase posts'] },
+  { name: 'Lite', price: 'R20', duration: '24 hours', perks: ['Blue "Boosted" badge next to name', '1.2x visibility on showcase posts', 'Posts appear in "Featured" section'] },
+  { name: 'Pro', price: 'R70', duration: '72 hours', perks: ['Purple "Pro Creator" badge', '1.8x visibility on showcase posts', 'Extended random chat (3 min)', 'Portfolio view count analytics', 'Priority matchmaking in random chat'] },
+  { name: 'Ultra', price: 'R150', duration: '7 days', perks: ['Gold "Verified Creator" badge', '2.5x visibility on showcase posts', 'Extended random chat (5 min)', 'Full portfolio analytics with engagement stats', 'Custom profile accent color', 'Featured on homepage carousel', 'Early access to sponsor opportunities', 'Posts pinned in "Featured" section'] },
+];
+
+const showcaseIcons = [
+  { icon: <FaPaintBrush className="text-xl" />, label: 'Art', description: 'Illustrations, paintings, digital art, 3D renders', color: 'text-violet-400' },
+  { icon: <FaCode className="text-xl" />, label: 'Code', description: 'Web apps, mobile apps, scripts, open source projects', color: 'text-blue-400' },
+  { icon: <FaGamepad className="text-xl" />, label: 'Game', description: 'Game development, game design, interactive experiences', color: 'text-orange-400' },
+  { icon: <FaPencilRuler className="text-xl" />, label: 'Design', description: 'UI/UX, graphic design, branding, logos', color: 'text-pink-400' },
+  { icon: <FaMusic className="text-xl" />, label: 'Music', description: 'Beats, songs, soundtracks, audio production', color: 'text-emerald-400' },
+  { icon: <FaEllipsisH className="text-xl" />, label: 'Other', description: 'Photography, writing, crafts, anything creative', color: 'text-gray-400' },
 ];
 
 export default function AboutPage() {
@@ -98,6 +107,26 @@ export default function AboutPage() {
         </div>
       </div>
 
+      {/* Showcase Post Types */}
+      <div className="max-w-5xl mx-auto px-4 pb-16">
+        <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
+          <FaPalette className="inline-block text-purple-500 mr-2" />
+          Showcase Post Types
+        </h2>
+        <p className="text-center text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
+          When you share your work on the Showcase, choose the type that best fits your creation. Each type has its own icon.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {showcaseIcons.map((item) => (
+            <div key={item.label} className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow">
+              <div className={`mx-auto mb-2 ${item.color}`}>{item.icon}</div>
+              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1">{item.label}</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Boost Tiers */}
       <div className="max-w-5xl mx-auto px-4 pb-16">
         <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-4">
@@ -111,7 +140,8 @@ export default function AboutPage() {
           {boostTiers.map((tier) => (
             <div key={tier.name} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 flex flex-col">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{tier.name}</h3>
-              <p className="text-3xl font-extrabold text-purple-600 dark:text-purple-400 mb-4">{tier.price}</p>
+              <p className="text-3xl font-extrabold text-purple-600 dark:text-purple-400">{tier.price}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">for {tier.duration}</p>
               <ul className="space-y-2 flex-1">
                 {tier.perks.map((perk) => (
                   <li key={perk} className="flex items-start gap-2 text-gray-600 dark:text-gray-300 text-sm">

@@ -201,7 +201,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {(activeBoost?.tier === 'PRO' || activeBoost?.tier === 'ULTRA') && (
+                      {activeBoost && (
                         <div className="mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
                           <FaEye />
                           <span>{doc?.profileViewCount || 0} profile views</span>
@@ -246,9 +246,9 @@ export default function ProfilePage() {
 
               <hr className="my-8 border-gray-200 dark:border-gray-600" />
 
-              {activeBoost?.tier === 'ULTRA' && (
+              {activeBoost && (
                 <div className="mt-8">
-                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 mb-6" style={{ color: 'var(--accent-color)' }}><FaChartLine className="inline-block mr-2"/>Profile Analytics</h3>
+                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 mb-6" style={{ color: 'var(--accent-color)' }}><FaChartLine className="inline-block mr-2"/>Portfolio Analytics</h3>
                   <div style={{ width: '100%', height: 300 }}>
                     <ResponsiveContainer>
                       <LineChart data={analytics} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -257,7 +257,7 @@ export default function ProfilePage() {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="count" stroke={accentColor || '#8884d8'} strokeWidth={2} />
+                        <Line type="monotone" dataKey="count" stroke={accentColor || '#8884d8'} strokeWidth={2} name="Views" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

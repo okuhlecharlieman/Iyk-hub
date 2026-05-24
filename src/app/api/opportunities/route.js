@@ -8,7 +8,10 @@ export const runtime = 'nodejs';
 const MAX_LIMIT = 30;
 const EXTERNAL_OPPORTUNITIES_API_URL =
   process.env.SMART_JOB_PORTAL_OPPORTUNITIES_API_URL ||
-  'https://multi-tenant-smart-job-application.vercel.app/api/opportunities';
+  'https://multi-tenant-smart-job-application-portal.vercel.app/api/opportunities';
+const EXTERNAL_JOBS_API_URL =
+  process.env.SMART_JOB_PORTAL_JOBS_API_URL ||
+  'https://multi-tenant-smart-job-application-portal.vercel.app/api/jobs/public';
 const EXTERNAL_OPPORTUNITIES_SOURCE_LABEL = 'Smart Job Portal';
 
 const toMillis = (value) => {
@@ -62,6 +65,48 @@ const normalizeExternalOpportunity = (opportunity) => {
   };
 };
 
+const normalizeExternalJob = (job) => {
+  if (!job || typeof job !== 'object' || !job.id) return null;
+
+  const title = typeof job.title === 'string' ? job.title.trim() : '';
+  const org = typeof job.company === 'string' ? job.company.trim() : (typeof job.companyName === 'string' ? job.companyName.trim() : '');
+  const description = typeof job.description === 'string' ? job.description.trim() : '';
+
+  if (!title || !description) return null;
+
+  const tags = Array.isArray(job.tags)
+    ? job.tags.filter((tag) => typeof tag === 'string').map((tag) => tag.trim()).filter(Boolean)
+    : [job.department, job.location, job.type, ...(job.skills || [])].filter(Boolean);
+
+  return {
+    id: `smart-job-portal:job:${job.id}`,
+    externalId: job.id,
+    externalSource: 'smart-job-portal',
+    sourceLabel: EXTERNAL_OPPORTUNITIES_SOURCE_LABEL,
+    readOnly: true,
+    tenantId: job.tenantId || 'platform',
+    title,
+    org: org || 'Company',
+    company: org || 'Company',
+    contactName: '',
+    contactEmail: '',
+    description,
+    value: null,
+    status: 'approved',
+    tags,
+    link: job.applyUrl || '',
+    department: job.department || null,
+    location: job.location || null,
+    type: job.type || null,
+    salary: job.salary || null,
+    skills: job.skills || [],
+    requirements: job.requirements || [],
+    source: 'job',
+    createdAt: job.createdAt || null,
+    updatedAt: job.updatedAt || null,
+  };
+};
+
 const fetchExternalOpportunities = async ({ limit, search = '' } = {}) => {
   const url = new URL(EXTERNAL_OPPORTUNITIES_API_URL);
   url.searchParams.set('status', 'approved');
@@ -88,6 +133,37 @@ const fetchExternalOpportunities = async ({ limit, search = '' } = {}) => {
     return items.map(normalizeExternalOpportunity).filter(Boolean);
   } catch (error) {
     console.warn('External opportunities fetch failed:', error?.message || error);
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const fetchExternalJobs = async ({ limit, search = '' } = {}) => {
+  const url = new URL(EXTERNAL_JOBS_API_URL);
+  url.searchParams.set('limit', String(Math.min(Math.max(limit || 12, 1), 100)));
+  if (search) url.searchParams.set('search', search);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const res = await fetch(url.toString(), {
+      headers: { Accept: 'application/json' },
+      next: { revalidate: 300 },
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      console.warn(`External jobs fetch failed with status ${res.status}`);
+      return [];
+    }
+
+    const data = await res.json();
+    const jobs = Array.isArray(data?.jobs) ? data.jobs : [];
+    return jobs.map(normalizeExternalJob).filter(Boolean);
+  } catch (error) {
+    console.warn('External jobs fetch failed:', error?.message || error);
     return [];
   } finally {
     clearTimeout(timeout);
@@ -149,11 +225,16 @@ export async function GET(request) {
           deletionScheduledAt: serializeTs(data.deletionScheduledAt),
         };
       });
-      const externalOpportunities = includeExternal ? await fetchExternalOpportunities({ limit: limitN, search }) : [];
+      const [externalOpportunities, externalJobs] = includeExternal
+        ? await Promise.all([fetchExternalOpportunities({ limit: limitN, search }), fetchExternalJobs({ limit: limitN, search })])
+        : [[], []];
       const lastDoc = snap.docs[snap.docs.length - 1];
       const nextCursor = snap.docs.length === limitN ? lastDoc.id : null;
 
-      return NextResponse.json({ opportunities: sortOpportunitiesByCreatedAt([...opportunities, ...externalOpportunities]), nextCursor });
+      const seenExtIds = new Set(externalOpportunities.map((o) => o.externalId));
+      const dedupedJobs = externalJobs.filter((j) => !seenExtIds.has(j.externalId));
+
+      return NextResponse.json({ opportunities: sortOpportunitiesByCreatedAt([...opportunities, ...externalOpportunities, ...dedupedJobs]), nextCursor });
     }
 
     // Only load approved opportunities in the main paged query.
@@ -233,8 +314,12 @@ export async function GET(request) {
     const lastDoc = approvedSnap.docs[approvedSnap.docs.length - 1];
     const nextCursor = approvedSnap.docs.length === limitN ? lastDoc.id : null;
 
-    const externalOpportunities = includeExternal ? await fetchExternalOpportunities({ limit: limitN, search }) : [];
-    const mergedOpportunities = sortOpportunitiesByCreatedAt([...opportunities, ...externalOpportunities]);
+    const [externalOpportunities, externalJobs] = includeExternal
+      ? await Promise.all([fetchExternalOpportunities({ limit: limitN, search }), fetchExternalJobs({ limit: limitN, search })])
+      : [[], []];
+    const seenExtIds = new Set(externalOpportunities.map((o) => o.externalId));
+    const dedupedJobs = externalJobs.filter((j) => !seenExtIds.has(j.externalId));
+    const mergedOpportunities = sortOpportunitiesByCreatedAt([...opportunities, ...externalOpportunities, ...dedupedJobs]);
 
     return NextResponse.json({ opportunities: mergedOpportunities, nextCursor });
   } catch (error) {

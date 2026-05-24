@@ -8,10 +8,10 @@ export const runtime = 'nodejs';
 const MAX_LIMIT = 30;
 const EXTERNAL_OPPORTUNITIES_API_URL =
   process.env.SMART_JOB_PORTAL_OPPORTUNITIES_API_URL ||
-  'https://multi-tenant-smart-job-application-portal.vercel.app/api/opportunities';
+  'https://multi-tenant-smart-job-application.vercel.app/api/opportunities';
 const EXTERNAL_JOBS_API_URL =
   process.env.SMART_JOB_PORTAL_JOBS_API_URL ||
-  'https://multi-tenant-smart-job-application-portal.vercel.app/api/jobs/public';
+  'https://multi-tenant-smart-job-application.vercel.app/api/jobs/public';
 const EXTERNAL_OPPORTUNITIES_SOURCE_LABEL = 'Smart Job Portal';
 
 const toMillis = (value) => {

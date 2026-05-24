@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import Link from 'next/link';
 import { FaThumbsUp, FaFire, FaHeart, FaPencilAlt, FaTrash } from 'react-icons/fa';
-import { Code, Music, FileText } from 'lucide-react';
+import { Code, Music, FileText, Gamepad2, Palette } from 'lucide-react';
 import BoostBadge from './BoostBadge';
 
 const TYPE_STYLES = {
@@ -9,8 +9,8 @@ const TYPE_STYLES = {
   music: { icon: <Music size={16} />, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900/30' },
   code: { icon: <Code size={16} />, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' },
   poem: { icon: <FileText size={16} />, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30' },
-  game: { icon: <Code size={16} />, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' },
-  design: { icon: <FileText size={16} />, color: 'text-pink-500', bg: 'bg-pink-100 dark:bg-pink-900/30' },
+  game: { icon: <Gamepad2 size={16} />, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30' },
+  design: { icon: <Palette size={16} />, color: 'text-pink-500', bg: 'bg-pink-100 dark:bg-pink-900/30' },
   other: { icon: <FileText size={16} />, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-900/30' },
 };
 
@@ -31,12 +31,25 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 ease-in-out flex flex-col">
       {/* Image preview at top of card */}
-      {p.mediaUrl && !p.mediaUrl.startsWith('data:') && (
-        p.type === 'music' ? (
-          <div className="px-5 pt-4">
-            <audio className="w-full" src={p.mediaUrl} controls />
-          </div>
-        ) : (
+      {p.mediaUrl && !p.mediaUrl.startsWith('data:') && (() => {
+        const lower = p.mediaUrl.toLowerCase().split('?')[0];
+        const isVideo = /\.(mp4|webm|mov|avi|mkv)$/.test(lower) || lower.includes('video');
+        const isAudio = /\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower) || lower.includes('audio') || p.type === 'music';
+        if (isAudio) {
+          return (
+            <div className="px-5 pt-4">
+              <audio className="w-full" src={p.mediaUrl} controls />
+            </div>
+          );
+        }
+        if (isVideo) {
+          return (
+            <div className="relative w-full h-48 bg-gray-900 overflow-hidden">
+              <video className="w-full h-full object-cover" src={p.mediaUrl} controls preload="metadata" />
+            </div>
+          );
+        }
+        return (
           <div className="relative w-full h-48 bg-gray-100 dark:bg-gray-700 overflow-hidden">
             <img
               className="w-full h-full object-cover"
@@ -55,13 +68,13 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
               }}
             />
           </div>
-        )
-      )}
+        );
+      })()}
 
       <div className="p-5 flex-1 flex flex-col">
         {/* Author info */}
         <div className="flex items-center gap-3 mb-3">
-          <Link href={`/profile/${p.uid}`} className="flex items-center gap-2 group">
+          <Link href={`/u/${p.uid}`} className="flex items-center gap-2 group">
             {p.author?.photoURL ? (
               <img
                 src={p.author.photoURL}
@@ -74,8 +87,9 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
               </div>
             )}
             <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
                 {p.author?.displayName || 'Anonymous'}
+                {p.isBoosted && p.boostBadge && <BoostBadge badge={p.boostBadge.badge} label={p.boostBadge.badgeLabel} inline />}
               </p>
               {createdDate && (
                 <p className="text-xs text-gray-400 dark:text-gray-500">{createdDate}</p>
@@ -83,9 +97,6 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
             </div>
           </Link>
           <div className="ml-auto flex items-center gap-1">
-            {p.isBoosted && p.boostBadge && (
-              <BoostBadge badge={p.boostBadge.badge} label={p.boostBadge.badgeLabel} size="sm" />
-            )}
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${bg} ${color}`}>
               {icon} {p.type?.charAt(0).toUpperCase() + p.type?.slice(1)}
             </span>

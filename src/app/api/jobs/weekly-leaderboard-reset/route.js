@@ -26,7 +26,7 @@ export async function GET(request) {
     console.log('[Cron: Leaderboard] Writing to system audit log...');
     await logAdminAction({
       request,
-      actor: { uid: 'system:cron', email: null },
+      actor: { uid: 'system:cron', email: 'System (Cron Job)' },
       action: 'leaderboard.weekly.reset',
       targetType: 'users',
       targetId: null,
@@ -42,7 +42,7 @@ export async function GET(request) {
       // Attempt to log the failure to your DB audit log
       await logAdminAction({
         request,
-        actor: { uid: 'system:cron', email: null },
+        actor: { uid: 'system:cron', email: 'System (Cron Job)' },
         action: 'leaderboard.weekly.reset',
         targetType: 'users',
         targetId: null,

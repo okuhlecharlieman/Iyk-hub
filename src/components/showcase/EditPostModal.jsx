@@ -1,69 +1,95 @@
 import { useState, useEffect } from 'react';
 import Modal from '../Modal';
-import LoadingSpinner from '../LoadingSpinner';
 import Button from '../ui/Button';
-import { useToast } from '../ui/ToastProvider';
 
-export default function EditPostModal({ post, isOpen, onClose, onUpdate }) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const toast = useToast();
+const POST_TYPES = ['art', 'code', 'game', 'design', 'music', 'other'];
+
+export default function EditPostModal({ isOpen, open, post, onClose, onSave }) {
+  const [title, setTitle] = useState(post?.title || '');
+  const [description, setDescription] = useState(post?.description || '');
+  const [link, setLink] = useState(post?.link || '');
+  const [type, setType] = useState(post?.type || 'art');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (post) {
       setTitle(post.title || '');
       setDescription(post.description || '');
+      setLink(post.link || '');
+      setType(post.type || 'art');
+      setError('');
     }
   }, [post]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (!title.trim()) {
+      setError('Title is required.');
+      return;
+    }
+    setSaving(true);
+    setError('');
     try {
-      await onUpdate(post.id, { title, description });
-      onClose();
-    } catch (error) {
-      console.error("Error updating post:", error);
-      toast('error', 'Failed to update post. Please try again.');
+      await onSave(post.id, { title: title.trim(), description: description.trim(), link: link.trim(), type });
+    } catch (err) {
+      setError(err.message || 'Failed to save.');
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
   };
 
-  if (!post) return null;
-
   return (
-    <Modal open={isOpen} onClose={onClose} title="Edit Post">
+    <Modal open={isOpen || open} onClose={onClose} title="Edit Post">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <p className="text-red-500 text-sm">{error}</p>}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Title
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type *</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+          >
+            {POST_TYPES.map(t => (
+              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
           <input
             type="text"
-            id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            maxLength={150}
           />
         </div>
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Description
-          </label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
           <textarea
-            id="description"
-            rows="4"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white/80 dark:bg-gray-700/80 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition"
-          ></textarea>
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+            rows={3}
+            maxLength={2000}
+          />
         </div>
-        <div className="flex justify-end pt-4 space-x-2">
-           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={isLoading} variant="primary">{isLoading ? <LoadingSpinner size="sm" /> : 'Update Post'}</Button>
-        </div> 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link</label>
+          <input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" type="submit" disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </form>
     </Modal>
   );

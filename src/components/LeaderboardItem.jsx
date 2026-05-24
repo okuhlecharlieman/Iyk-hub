@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { FaCrown } from 'react-icons/fa';
+import BoostBadge from './BoostBadge';
 
 export default function LeaderboardItem({ user, rank, filter }) {
   const getRankIndicator = () => {
@@ -19,11 +21,16 @@ export default function LeaderboardItem({ user, rank, filter }) {
     <li className={cardStyle}>
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0 w-8 text-center">{getRankIndicator()}</div>
-        <img src={user.photoURL || '/logo.png'} className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-gray-200 dark:border-gray-600" alt="avatar" />
-        <div>
-          <span className="font-semibold text-gray-800 dark:text-white text-base md:text-lg">{user.displayName || 'Anonymous User'}</span>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{user.title || 'Community Member'}</p>
-        </div>
+        <Link href={`/u/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <img src={user.photoURL || '/logo.png'} className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-gray-200 dark:border-gray-600" alt="avatar" />
+          <div>
+            <span className="font-semibold text-gray-800 dark:text-white text-base md:text-lg flex items-center gap-1.5">
+              {user.displayName || 'Anonymous User'}
+              {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} iconOnly />}
+            </span>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{user.title || 'Community Member'}</p>
+          </div>
+        </Link>
       </div>
       <div className="text-right">
         <span className="font-bold text-xl md:text-2xl text-blue-600 dark:text-blue-400">{filter === 'weekly' ? (user.points?.weekly ?? 0) : (user.points?.lifetime ?? user.points ?? 0)}</span>

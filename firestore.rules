@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -193,6 +194,24 @@ service cloud.firestore {
 
     // Moderation queue — admin only
     match /moderationQueue/{itemId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    
+    // Admin audit logs — admin read only
+    match /adminAuditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Security logs — admin read only
+    match /securityLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Data access logs — admin read only
+    match /dataAccessLogs/{logId} {
       allow read: if isAdmin();
       allow write: if false;
     }

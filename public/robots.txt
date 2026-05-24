@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Disallow admin pages
+Disallow: /admin
+Disallow: /admin/*
+
+# Disallow user-specific pages
+Disallow: /profile
+Disallow: /settings
+
+# Add sitemap location
+Sitemap: https://iyk-hub.vercel.app/sitemap.xml

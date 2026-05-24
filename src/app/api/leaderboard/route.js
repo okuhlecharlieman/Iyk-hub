@@ -44,6 +44,7 @@ export async function GET(request) {
     }
 
     const snap = await queryRef.get();
+    const { getCreatorBoostPlan } = await import('../../../lib/monetization/creator-boosts');
 
     const users = snap.docs.map((doc) => {
       const d = doc.data();
@@ -52,8 +53,50 @@ export async function GET(request) {
         displayName: d.displayName || null,
         photoURL: d.photoURL || null,
         points: d.points || { weekly: 0, lifetime: 0 },
+        activeBoost: d.activeBoost ? {
+          badge: d.activeBoost.badge || null,
+          badgeLabel: d.activeBoost.badgeLabel || null,
+          tier: d.activeBoost.tier || null,
+        } : null,
       };
     });
+
+    // Fetch active boosts for users that don't have activeBoost cached on doc
+    const uidsWithoutBoost = users.filter(u => !u.activeBoost).map(u => u.id);
+    if (uidsWithoutBoost.length > 0) {
+      const now = new Date();
+      const boostMap = {};
+      // Query in chunks of 10 for Firestore 'in' limit
+      for (let i = 0; i < uidsWithoutBoost.length; i += 10) {
+        const chunk = uidsWithoutBoost.slice(i, i + 10);
+        try {
+          const boostSnap = await firestore
+            .collection('creatorBoostOrders')
+            .where('ownerUid', 'in', chunk)
+            .where('activationStatus', '==', 'active')
+            .get();
+          boostSnap.forEach((bDoc) => {
+            const bData = bDoc.data();
+            const expiresAt = bData.expiresAt?.toDate ? bData.expiresAt.toDate() : null;
+            if (!expiresAt || expiresAt > now) {
+              const plan = getCreatorBoostPlan(bData.plan);
+              if (plan && !boostMap[bData.ownerUid]) {
+                boostMap[bData.ownerUid] = {
+                  badge: plan.badge || null,
+                  badgeLabel: plan.badgeLabel || null,
+                  tier: bData.plan?.toUpperCase() || null,
+                };
+              }
+            }
+          });
+        } catch {}
+      }
+      users.forEach(u => {
+        if (!u.activeBoost && boostMap[u.id]) {
+          u.activeBoost = boostMap[u.id];
+        }
+      });
+    }
 
     const lastDoc = snap.docs[snap.docs.length - 1];
     const nextCursor = snap.docs.length === limitN ? lastDoc.id : null;

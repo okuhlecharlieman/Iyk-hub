@@ -18,13 +18,15 @@ import OpportunityForm from '../../components/OpportunityForm';
 import Modal from '../../components/Modal';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
-import { FaBriefcase } from 'react-icons/fa';
+import { useActiveBoost } from '../../hooks/useActiveBoost';
+import { FaBriefcase, FaBolt, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
 
 const TABS = { ALL: 'All', PENDING: 'Pending' };
 const PAGE_SIZE = 12;
 
 function OpportunitiesContent() {
   const { user, userProfile } = useAuth();
+  const { boost: activeBoost } = useActiveBoost();
   const [opportunities, setOpportunities] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,8 +36,10 @@ function OpportunitiesContent() {
   const [editingOpp, setEditingOpp] = useState(null);
   const [activeTab, setActiveTab] = useState(TABS.ALL);
   const [searchQuery, setSearchQuery] = useState('');
+  const [earlyAccessOpps, setEarlyAccessOpps] = useState([]);
 
   const isAdmin = useMemo(() => userProfile?.role?.toLowerCase() === 'admin', [userProfile]);
+  const isUltra = activeBoost?.tier === 'ULTRA';
   const toast = useToast();
 
   const loadOpportunities = useCallback(async ({ cursor = null, append = false } = {}) => {
@@ -68,6 +72,25 @@ function OpportunitiesContent() {
       setNextCursor(null);
     }
   }, [user, loadOpportunities]);
+
+  useEffect(() => {
+    if (!user || !isUltra) {
+      setEarlyAccessOpps([]);
+      return;
+    }
+    const fetchEarlyAccess = async () => {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/opportunities/early-access', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.eligible) setEarlyAccessOpps(data.opportunities || []);
+      } catch {}
+    };
+    fetchEarlyAccess();
+  }, [user, isUltra]);
 
   const handleFormSubmit = async (data) => {
     setIsFormModalOpen(false);
@@ -162,7 +185,7 @@ function OpportunitiesContent() {
   }, [activeTab, opportunities, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-12 md:px-8">
+    <div className="min-h-screen pt-20 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="mb-12">
@@ -178,7 +201,7 @@ function OpportunitiesContent() {
             <Button 
               onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }} 
               variant="primary" 
-              className="w-full md:w-auto mt-6 md:mt-0 px-6"
+              className="hidden md:inline-flex w-auto mt-0 px-6"
             >
               + Add Opportunity
             </Button>
@@ -236,6 +259,33 @@ function OpportunitiesContent() {
           />
         )}
 
+        {/* Early Access Section - Ultra Boost Only */}
+        {isUltra && earlyAccessOpps.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1.5">
+                <FaBolt className="text-xs" />
+                Early Access
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Sponsored challenges visible to Ultra creators before public launch</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {earlyAccessOpps.map((opp) => (
+                <div key={opp.id} className="relative bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="absolute top-3 right-3 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">Preview</div>
+                  <h3 className="font-bold text-lg text-gray-900 dark:text-white pr-16">{opp.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">{opp.description}</p>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    {opp.sponsorName && <span className="flex items-center gap-1"><FaTrophy className="text-amber-500" />{opp.sponsorName}</span>}
+                    {opp.deadline && <span className="flex items-center gap-1"><FaCalendarAlt />{new Date(opp.deadline).toLocaleDateString()}</span>}
+                  </div>
+                  {opp.prizeDescription && <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">{opp.prizeDescription}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         {loading ? (
           <SkeletonCards count={6} />
@@ -290,6 +340,15 @@ function OpportunitiesContent() {
           submitButtonText={editingOpp ? 'Update' : 'Submit for Review'}
         />
       </Modal>
+
+      {/* FAB for mobile */}
+      <button
+        onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }}
+        aria-label="Add opportunity"
+        className="fixed bottom-6 right-6 md:hidden bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full w-14 h-14 shadow-xl hover:shadow-2xl focus:outline-none z-50 flex items-center justify-center text-2xl font-bold transition-all duration-300 hover:scale-110"
+      >
+        +
+      </button>
     </div>
   );
 }

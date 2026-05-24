@@ -1,15 +1,29 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { FaCode, FaMusic, FaPaintBrush, FaThumbsUp, FaFire, FaHeart, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaCode, FaMusic, FaPaintBrush, FaGamepad, FaPencilRuler, FaEllipsisH, FaThumbsUp, FaFire, FaHeart, FaEdit, FaTrash, FaPlay } from 'react-icons/fa';
 import { FiExternalLink } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { togglePostVote } from '../../lib/firebase/helpers';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
+import BoostBadge from '../BoostBadge';
 
 const typeMetadata = {
   code: { icon: <FaCode />, color: 'text-blue-400' },
   music: { icon: <FaMusic />, color: 'text-emerald-400' },
   art: { icon: <FaPaintBrush />, color: 'text-violet-400' },
+  game: { icon: <FaGamepad />, color: 'text-orange-400' },
+  design: { icon: <FaPencilRuler />, color: 'text-pink-400' },
+  other: { icon: <FaEllipsisH />, color: 'text-gray-400' },
 };
+
+function getMediaType(url) {
+  if (!url) return null;
+  const lower = url.toLowerCase().split('?')[0];
+  if (/\.(mp4|webm|mov|avi|mkv)$/.test(lower) || lower.includes('video')) return 'video';
+  if (/\.(mp3|wav|ogg|aac|flac|m4a)$/.test(lower) || lower.includes('audio')) return 'audio';
+  return 'image';
+}
 
 export const PostCardSkeleton = () => (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
@@ -34,7 +48,7 @@ export const PostCardSkeleton = () => (
 );
 
 
-export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
+export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onVote }) {
   const { user: currentUser } = useAuth();
   const { type, title, description, mediaUrl, link, createdAt, votes, voters, fireCount, fireVoters, heartCount, heartVoters, authorName, authorPhoto, author } = post;
   const metadata = typeMetadata[type] || {};
@@ -55,22 +69,33 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
   const [busyReaction, setBusyReaction] = useState(null);
   const userId = currentUser?.uid;
 
+  // Real-time listener for reaction updates
   useEffect(() => {
-    setReactionState({
-      thumbsUp: {
-        count: Array.isArray(voters) ? voters.length : votes || 0,
-        voters: voters || [],
-      },
-      fire: {
-        count: Array.isArray(fireVoters) ? fireVoters.length : fireCount || 0,
-        voters: fireVoters || [],
-      },
-      heart: {
-        count: Array.isArray(heartVoters) ? heartVoters.length : heartCount || 0,
-        voters: heartVoters || [],
-      },
+    if (!post.id) return;
+    const postRef = doc(db, 'wallPosts', post.id);
+    const unsubscribe = onSnapshot(postRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const d = snapshot.data();
+      setReactionState({
+        thumbsUp: {
+          count: Array.isArray(d.voters) ? d.voters.length : d.votes || 0,
+          voters: d.voters || [],
+        },
+        fire: {
+          count: Array.isArray(d.fireVoters) ? d.fireVoters.length : d.fireCount || 0,
+          voters: d.fireVoters || [],
+        },
+        heart: {
+          count: Array.isArray(d.heartVoters) ? d.heartVoters.length : d.heartCount || 0,
+          voters: d.heartVoters || [],
+        },
+      });
+    }, (err) => {
+      // Fallback to prop-based state on listener error
+      console.error('PostCard snapshot error:', err);
     });
-  }, [votes, voters, fireCount, fireVoters, heartCount, heartVoters]);
+    return () => unsubscribe();
+  }, [post.id]);
 
   const handleReaction = async (reactionType) => {
     if (!userId || busyReaction) return;
@@ -108,30 +133,42 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
 
   return (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col h-full backdrop-blur-sm">
-      {mediaUrl && (
-        <div className="relative w-full aspect-video overflow-hidden group">
-          {type === 'art' && <img src={mediaUrl} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />}
-          {type === 'music' && (
-            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                 <audio controls src={mediaUrl} className="w-full">Your browser does not support audio.</audio>
-            </div>
-          )}
-        </div>
-      )}
+      {mediaUrl && (() => {
+        const mType = getMediaType(mediaUrl);
+        return (
+          <div className="relative w-full aspect-video overflow-hidden group">
+            {mType === 'video' ? (
+              <video controls src={mediaUrl} className="w-full h-full object-cover" preload="metadata">
+                Your browser does not support video.
+              </video>
+            ) : mType === 'audio' ? (
+              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center gap-3 px-4">
+                <FaPlay className="text-3xl text-white/60" />
+                <audio controls src={mediaUrl} className="w-full max-w-xs">Your browser does not support audio.</audio>
+              </div>
+            ) : (
+              <img src={mediaUrl} alt={title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            )}
+          </div>
+        );
+      })()}
 
       <div className="p-5 flex-grow flex flex-col">
         <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
+          <Link href={`/u/${post.uid}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             {profilePhoto ? (
                 <img src={profilePhoto} alt={displayName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" />
             ) : (
                 <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-700" />
             )}
             <div>
-              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight">{displayName}</p>
+              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight flex items-center gap-1.5">
+                {displayName}
+                {post.boostBadge && <BoostBadge badge={post.boostBadge.badge} label={post.boostBadge.badgeLabel} inline />}
+              </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">{createdAtDate ? createdAtDate.toLocaleDateString() : 'Just now'}</p>
             </div>
-          </div>
+          </Link>
           <div className={`text-xl p-3 bg-gray-100 dark:bg-gray-900/60 rounded-lg ${metadata.color}`}>
             {metadata.icon || null}
           </div>
@@ -175,10 +212,10 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
               <span className="font-semibold text-sm">{reactionState.heart.count}</span>
             </button>
           </div>
-          {isOwner && (
+          {(isOwner || isAdmin) && (
             <div className="flex items-center gap-1">
-              <button onClick={onEdit} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-blue-500 dark:hover:bg-gray-700/50 transition-colors"><FaEdit /></button>
-              <button onClick={onDelete} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-red-500 dark:hover:bg-gray-700/50 transition-colors"><FaTrash /></button>
+              <button onClick={() => onEdit && onEdit(post)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-blue-500 dark:hover:bg-gray-700/50 transition-colors"><FaEdit /></button>
+              <button onClick={() => onDelete && onDelete(post.id)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-red-500 dark:hover:bg-gray-700/50 transition-colors"><FaTrash /></button>
             </div>
           )}
         </div>

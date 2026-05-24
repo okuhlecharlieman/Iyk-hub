@@ -3,15 +3,21 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
 import NewPostModal from '../../components/showcase/NewPostModal';
+import EditPostModal from '../../components/showcase/EditPostModal';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/ToastProvider';
 import { FaPalette, FaBolt, FaCrown } from 'react-icons/fa';
 
 const ShowcasePage = () => {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  const toast = useToast();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+
+  const isAdmin = useMemo(() => userProfile?.role?.toLowerCase() === 'admin', [userProfile]);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -33,10 +39,69 @@ const ShowcasePage = () => {
     fetchPosts();
   }, [fetchPosts]);
 
+  const handleEdit = (post) => {
+    setEditingPost(post);
+  };
+
+  const handleDelete = async (postId) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/showcase/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ postId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete');
+      }
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      toast('success', 'Post deleted successfully.');
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast('error', err.message || 'Failed to delete post.');
+    }
+  };
+
+  const handleEditSave = async (postId, updates) => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/showcase/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ postId, updates }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update');
+      }
+      setEditingPost(null);
+      toast('success', 'Post updated successfully.');
+      await fetchPosts();
+    } catch (err) {
+      console.error('Update error:', err);
+      toast('error', err.message || 'Failed to update post.');
+    }
+  };
+
   const featuredPosts = useMemo(() => posts.filter(p => p.isBoosted), [posts]);
   const regularPosts = useMemo(() => posts.filter(p => !p.isBoosted), [posts]);
   const pinnedPosts = useMemo(() => featuredPosts.filter(p => p.boostBadge?.plan === 'ultra'), [featuredPosts]);
   const otherFeatured = useMemo(() => featuredPosts.filter(p => p.boostBadge?.plan !== 'ultra'), [featuredPosts]);
+
+  const renderPostCard = (post) => (
+    <PostCard
+      key={post.id}
+      post={post}
+      isOwner={user && user.uid === post.uid}
+      isAdmin={isAdmin}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+    />
+  );
 
   return (
     <div className="min-h-screen pt-20 bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 px-4 py-6 sm:py-8 md:px-8">
@@ -100,7 +165,7 @@ const ShowcasePage = () => {
                         <div className="absolute -top-2 -right-2 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                           <FaCrown className="text-[10px]" /> Pinned
                         </div>
-                        <PostCard post={post} isOwner={user && user.uid === post.uid} />
+                        {renderPostCard(post)}
                       </div>
                     ))}
                   </div>
@@ -110,9 +175,7 @@ const ShowcasePage = () => {
               {/* Other featured posts */}
               {otherFeatured.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {otherFeatured.map(post => (
-                    <PostCard key={post.id} post={post} isOwner={user && user.uid === post.uid} />
-                  ))}
+                  {otherFeatured.map(post => renderPostCard(post))}
                 </div>
               )}
             </div>
@@ -125,9 +188,7 @@ const ShowcasePage = () => {
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">All Posts</h3>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {regularPosts.map(post => (
-                  <PostCard key={post.id} post={post} isOwner={user && user.uid === post.uid} />
-                ))}
+                {regularPosts.map(post => renderPostCard(post))}
               </div>
             </>
           )}
@@ -142,6 +203,15 @@ const ShowcasePage = () => {
         }
         setTimeout(() => fetchPosts(), 2000);
       }} />
+
+      {editingPost && (
+        <EditPostModal
+          isOpen={!!editingPost}
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSave={handleEditSave}
+        />
+      )}
       </div>
     </div>
   );

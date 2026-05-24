@@ -29,10 +29,23 @@ const PublicProfilePage = ({ params }) => {
       setLoading(true);
       setError(null);
       try {
-        const [userDoc, userPosts] = await Promise.all([
-          getUserDoc(userId),
-          listUserShowcasePosts(userId),
-        ]);
+        let userDoc = null;
+        let userPosts = [];
+        try {
+          [userDoc, userPosts] = await Promise.all([
+            getUserDoc(userId),
+            listUserShowcasePosts(userId),
+          ]);
+        } catch {
+          // Firestore rules may block non-authenticated reads; try individually
+          try { userDoc = await getUserDoc(userId); } catch {}
+          try { userPosts = await listUserShowcasePosts(userId); } catch {}
+        }
+        if (!userDoc) {
+          setError("Could not load profile. The user may not exist.");
+          setLoading(false);
+          return;
+        }
         setDoc(userDoc);
         setPosts(userPosts);
 

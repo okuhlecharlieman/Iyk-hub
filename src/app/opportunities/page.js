@@ -201,7 +201,7 @@ function OpportunitiesContent() {
             <Button 
               onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }} 
               variant="primary" 
-              className="w-full md:w-auto mt-6 md:mt-0 px-6"
+              className="hidden md:inline-flex w-auto mt-0 px-6"
             >
               + Add Opportunity
             </Button>
@@ -340,6 +340,15 @@ function OpportunitiesContent() {
           submitButtonText={editingOpp ? 'Update' : 'Submit for Review'}
         />
       </Modal>
+
+      {/* FAB for mobile */}
+      <button
+        onClick={() => { setEditingOpp(null); setIsFormModalOpen(true); }}
+        aria-label="Add opportunity"
+        className="fixed bottom-6 right-6 md:hidden bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full w-14 h-14 shadow-xl hover:shadow-2xl focus:outline-none z-50 flex items-center justify-center text-2xl font-bold transition-all duration-300 hover:scale-110"
+      >
+        +
+      </button>
     </div>
   );
 }

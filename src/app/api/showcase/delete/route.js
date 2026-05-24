@@ -37,7 +37,11 @@ export async function POST(request) {
 
     const postData = postDoc.data();
 
-    if (postData.uid !== uid) {
+    // Allow post owner or admin to delete
+    const userDoc = await db.collection('users').doc(uid).get();
+    const isAdmin = userDoc.exists && userDoc.data()?.role === 'admin';
+
+    if (postData.uid !== uid && !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized to delete this post' }, { status: 403 });
     }
 

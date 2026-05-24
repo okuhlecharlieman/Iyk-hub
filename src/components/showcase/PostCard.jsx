@@ -48,7 +48,7 @@ export const PostCardSkeleton = () => (
 );
 
 
-export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
+export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onVote }) {
   const { user: currentUser } = useAuth();
   const { type, title, description, mediaUrl, link, createdAt, votes, voters, fireCount, fireVoters, heartCount, heartVoters, authorName, authorPhoto, author } = post;
   const metadata = typeMetadata[type] || {};
@@ -212,10 +212,10 @@ export default function PostCard({ post, isOwner, onEdit, onDelete, onVote }) {
               <span className="font-semibold text-sm">{reactionState.heart.count}</span>
             </button>
           </div>
-          {isOwner && (
+          {(isOwner || isAdmin) && (
             <div className="flex items-center gap-1">
-              <button onClick={onEdit} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-blue-500 dark:hover:bg-gray-700/50 transition-colors"><FaEdit /></button>
-              <button onClick={onDelete} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-red-500 dark:hover:bg-gray-700/50 transition-colors"><FaTrash /></button>
+              <button onClick={() => onEdit && onEdit(post)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-blue-500 dark:hover:bg-gray-700/50 transition-colors"><FaEdit /></button>
+              <button onClick={() => onDelete && onDelete(post.id)} className="p-2 rounded-full text-gray-500 hover:bg-gray-200/50 hover:text-red-500 dark:hover:bg-gray-700/50 transition-colors"><FaTrash /></button>
             </div>
           )}
         </div>

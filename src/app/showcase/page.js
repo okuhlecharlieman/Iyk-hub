@@ -78,9 +78,12 @@ const ShowcasePage = () => {
         const data = await res.json();
         throw new Error(data.error || 'Failed to update');
       }
+      // Optimistically update the post in state
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, ...updates } : p));
       setEditingPost(null);
       toast('success', 'Post updated successfully.');
-      await fetchPosts();
+      // Background refresh to sync with server
+      setTimeout(() => fetchPosts(), 1500);
     } catch (err) {
       console.error('Update error:', err);
       toast('error', err.message || 'Failed to update post.');

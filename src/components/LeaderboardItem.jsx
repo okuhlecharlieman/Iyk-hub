@@ -26,7 +26,7 @@ export default function LeaderboardItem({ user, rank, filter }) {
           <div>
             <span className="font-semibold text-gray-800 dark:text-white text-base md:text-lg flex items-center gap-1.5">
               {user.displayName || 'Anonymous User'}
-              {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} inline />}
+              {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} iconOnly />}
             </span>
             <p className="text-sm text-gray-500 dark:text-gray-400">{user.title || 'Community Member'}</p>
           </div>

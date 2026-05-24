@@ -40,14 +40,20 @@ export default function ProfilePage() {
     setLoading(true);
     setError(null);
     try {
-      const [userDoc, userPosts, dailyViews] = await Promise.all([
+      const [userDoc, userPosts] = await Promise.all([
         getUserDoc(user.uid),
         listUserShowcasePosts(user.uid),
-        getDailyViews(user.uid),
       ]);
       setDoc(userDoc);
       setPosts(userPosts);
-      setAnalytics(dailyViews);
+
+      // Fetch daily views separately to avoid breaking profile load
+      try {
+        const dailyViews = await getDailyViews(user.uid);
+        setAnalytics(dailyViews);
+      } catch {
+        setAnalytics([]);
+      }
       setForm({
         displayName: userDoc?.displayName || user?.displayName || '',
         bio: userDoc?.bio || '',

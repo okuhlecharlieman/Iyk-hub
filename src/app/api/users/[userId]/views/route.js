@@ -16,10 +16,14 @@ export async function POST(request, { params }) {
     const userRef = db.collection('users').doc(userId);
     const today = new Date().toISOString().split('T')[0]; // Get date in YYYY-MM-DD format
 
-    // Use a transaction to ensure atomic updates
+    // All reads must come before all writes in a Firestore transaction.
+    const dailyViewsRef = userRef.collection('dailyViews').doc(today);
     let newViewCount = 0;
+
     await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
+      const dailyViewsDoc = await transaction.get(dailyViewsRef);
+
       if (!userDoc.exists) {
         return;
       }
@@ -30,9 +34,6 @@ export async function POST(request, { params }) {
       transaction.update(userRef, { 
         profileViewCount: admin.firestore.FieldValue.increment(1)
       });
-
-      const dailyViewsRef = userRef.collection('dailyViews').doc(today);
-      const dailyViewsDoc = await transaction.get(dailyViewsRef);
 
       if (dailyViewsDoc.exists) {
         transaction.update(dailyViewsRef, { count: admin.firestore.FieldValue.increment(1) });

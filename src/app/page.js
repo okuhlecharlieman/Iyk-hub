@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { getApprovedOpportunities } from '../lib/firebase/helpers';
 import ContentCard from '../components/ContentCard';
 import InstallButton from '../components/InstallButton';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaPaintBrush, FaRocket, FaUsers, FaTrophy, FaStar, FaCheckCircle } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -72,6 +72,7 @@ const TestimonialCard = ({ quote, author, role, company }) => (
 );
 
 export default function Home() {
+  const { user } = useAuth();
   const [opps, setOpps] = useState([]);
   const [posts, setPosts] = useState([]);
   const [featuredUsers, setFeaturedUsers] = useState([]);
@@ -82,16 +83,21 @@ export default function Home() {
     async function fetchData() {
       setLoading(true);
       try {
-        const oppsData = await getApprovedOpportunities(3);
-        setOpps(oppsData);
+        const [showcaseRes, oppsRes] = await Promise.all([
+          fetch('/api/showcase').catch(() => null),
+          fetch('/api/opportunities/public?limit=3').catch(() => null),
+        ]);
 
-        const res = await fetch('/api/showcase');
-        if (!res.ok) {
-          throw new Error(`API call failed with status: ${res.status}`);
+        if (showcaseRes && showcaseRes.ok) {
+          const postsData = await showcaseRes.json();
+          const postsArr = postsData.posts || (Array.isArray(postsData) ? postsData : []);
+          setPosts(postsArr.slice(0, 3));
         }
-        const postsData = await res.json();
-        const postsArr = postsData.posts || (Array.isArray(postsData) ? postsData : []);
-        setPosts(postsArr.slice(0, 3));
+
+        if (oppsRes && oppsRes.ok) {
+          const oppsData = await oppsRes.json();
+          setOpps(oppsData.opportunities || []);
+        }
 
         try {
           const featuredRes = await fetch('/api/users/featured');
@@ -140,10 +146,10 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Link
-                href="/signup"
+                href={user ? "/dashboard" : "/signup"}
                 className="group inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
               >
-                Start Your Journey
+                {user ? 'Go to Dashboard' : 'Start Your Journey'}
                 <FaArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
@@ -375,10 +381,10 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/signup"
+              href={user ? "/dashboard" : "/signup"}
               className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 font-bold rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
             >
-              Get Started Free
+              {user ? 'Go to Dashboard' : 'Get Started Free'}
               <FaRocket className="ml-2" />
             </Link>
             <Link

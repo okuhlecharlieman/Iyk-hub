@@ -213,13 +213,15 @@ export default function ProfileByIdPage() {
                 {posts.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {posts.map(post => (
-                      <div key={post.id} className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700/50 dark:to-gray-600/50 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border-l-4 border-purple-200 dark:border-gray-600" style={{ borderLeftColor: accentColor || undefined }}>
-                        {post.mediaUrl && (
-                          <img src={post.mediaUrl} alt={post.title} className="w-full h-40 object-cover rounded-lg mb-3" onError={(e) => { e.target.style.display = 'none'; }} />
+                      <Link key={post.id} href={post.link || '/showcase'} target={post.link ? '_blank' : '_self'} className="block bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700/50 dark:to-gray-600/50 rounded-lg shadow-sm hover:shadow-md transition-shadow border-l-4 border-purple-200 dark:border-gray-600 overflow-hidden" style={{ borderLeftColor: accentColor || undefined }}>
+                        {(post.mediaUrl || post.imageUrl) && (
+                          <img src={post.mediaUrl || post.imageUrl} alt={post.title} className="w-full h-40 object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
                         )}
-                        <h4 className="font-bold text-lg text-purple-600 dark:text-purple-400" style={{ color: accentColor || undefined }}>{post.title}</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{post.description}</p>
-                      </div>
+                        <div className="p-4">
+                          <h4 className="font-bold text-lg text-purple-600 dark:text-purple-400" style={{ color: accentColor || undefined }}>{post.title}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{post.description}</p>
+                        </div>
+                      </Link>
                     ))}
                   </div>
                 ) : (

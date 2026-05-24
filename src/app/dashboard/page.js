@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { fetchLatestQuote, getApprovedOpportunities, recordDailyLogin, getAchievements } from '../../lib/firebase/helpers';
+import { fetchLatestQuote, recordDailyLogin, getAchievements } from '../../lib/firebase/helpers';
 import Link from 'next/link';
 import { FaArrowRight, FaGamepad, FaBriefcase, FaVideo, FaPalette, FaTrophy, FaRocket, FaUsers } from 'react-icons/fa';
 
@@ -53,8 +53,11 @@ export default function DashboardPage() {
           setFormattedDate(date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
         }
         try {
-          const list = await getApprovedOpportunities(3);
-          setOpps(list);
+          const oppsRes = await fetch('/api/opportunities/public?limit=3');
+          if (oppsRes.ok) {
+            const oppsData = await oppsRes.json();
+            setOpps(oppsData.opportunities || []);
+          }
         } catch {
           setOpps([]);
         }

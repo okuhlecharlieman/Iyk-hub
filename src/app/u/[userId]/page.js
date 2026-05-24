@@ -116,6 +116,19 @@ const PublicProfilePage = ({ params }) => {
                     {badge && <BoostBadge badge={badge.badge} label={badge.badgeLabel} />}
                   </div>
 
+                  {/* Points */}
+                  <div className="flex justify-center items-center gap-6 mt-3">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{doc?.points?.lifetime ?? doc?.points ?? 0}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Lifetime Points</p>
+                    </div>
+                    <div className="w-px h-10 bg-gray-300 dark:bg-gray-600"></div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{doc?.points?.weekly ?? 0}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Weekly Points</p>
+                    </div>
+                  </div>
+
                   {/* View count & share */}
                   <div className="flex justify-center items-center gap-4 mt-2">
                     {viewCount !== null && (

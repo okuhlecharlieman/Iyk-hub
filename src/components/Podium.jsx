@@ -27,9 +27,9 @@ const PodiumPlace = ({ user, rank, filter }) => {
       <FaTrophy className={`text-4xl mb-2 ${getTrophyColor()}`} />
       <Link href={`/u/${user.id}`} className="flex flex-col items-center hover:opacity-80 transition-opacity">
         <img src={user.photoURL || '/logo.png'} className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-xl" alt="avatar" />
-        <p className="font-bold text-white dark:text-gray-100 mt-2 text-center truncate w-full flex items-center justify-center gap-1">
-          {user.displayName || 'Anonymous'}
-          {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} inline />}
+        <p className="font-bold text-white dark:text-gray-100 mt-2 text-center w-full flex items-center justify-center gap-1 text-sm break-words whitespace-normal leading-tight px-1">
+          <span className="break-words">{user.displayName || 'Anonymous'}</span>
+          {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} iconOnly />}
         </p>
       </Link>
       <p className="font-extrabold text-2xl text-white dark:text-gray-100">{filter === 'weekly' ? (user.points?.weekly ?? 0) : (user.points?.lifetime ?? user.points ?? 0)}</p>

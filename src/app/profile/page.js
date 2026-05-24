@@ -187,6 +187,20 @@ export default function ProfilePage() {
                         <button onClick={() => setIsEditing(true)} className="p-2 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"><FaEdit /></button>
                        </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email}</p>
+
+                      {/* Points */}
+                      <div className="flex justify-center items-center gap-6 mt-3">
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{doc?.points?.lifetime ?? doc?.points ?? 0}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Lifetime Points</p>
+                        </div>
+                        <div className="w-px h-10 bg-gray-300 dark:bg-gray-600"></div>
+                        <div className="text-center">
+                          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{doc?.points?.weekly ?? 0}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Weekly Points</p>
+                        </div>
+                      </div>
+
                       {(activeBoost?.tier === 'PRO' || activeBoost?.tier === 'ULTRA') && (
                         <div className="mt-2 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
                           <FaEye />

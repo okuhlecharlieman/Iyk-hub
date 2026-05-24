@@ -1,16 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../Modal';
 import Button from '../ui/Button';
 
 const POST_TYPES = ['art', 'code', 'game', 'design', 'music', 'other'];
 
-export default function EditPostModal({ isOpen, post, onClose, onSave }) {
+export default function EditPostModal({ isOpen, open, post, onClose, onSave }) {
   const [title, setTitle] = useState(post?.title || '');
   const [description, setDescription] = useState(post?.description || '');
   const [link, setLink] = useState(post?.link || '');
   const [type, setType] = useState(post?.type || 'art');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (post) {
+      setTitle(post.title || '');
+      setDescription(post.description || '');
+      setLink(post.link || '');
+      setType(post.type || 'art');
+      setError('');
+    }
+  }, [post]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,7 +40,7 @@ export default function EditPostModal({ isOpen, post, onClose, onSave }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Post">
+    <Modal open={isOpen || open} onClose={onClose} title="Edit Post">
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div>

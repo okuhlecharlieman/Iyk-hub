@@ -82,8 +82,6 @@ const ShowcasePage = () => {
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, ...updates } : p));
       setEditingPost(null);
       toast('success', 'Post updated successfully.');
-      // Background refresh to sync with server
-      setTimeout(() => fetchPosts(), 1500);
     } catch (err) {
       console.error('Update error:', err);
       toast('error', err.message || 'Failed to update post.');
@@ -204,7 +202,6 @@ const ShowcasePage = () => {
         if (newPost) {
           setPosts(prev => [newPost, ...prev]);
         }
-        setTimeout(() => fetchPosts(), 2000);
       }} />
 
       {editingPost && (

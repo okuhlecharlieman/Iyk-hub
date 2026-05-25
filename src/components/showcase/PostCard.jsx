@@ -51,6 +51,7 @@ export const PostCardSkeleton = () => (
 export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onVote }) {
   const { user: currentUser } = useAuth();
   const { type, title, description, mediaUrl, link, createdAt, votes, voters, fireCount, fireVoters, heartCount, heartVoters, authorName, authorPhoto, author } = post;
+  const [isExpanded, setIsExpanded] = useState(false);
   const metadata = typeMetadata[type] || {};
   const [reactionState, setReactionState] = useState({
     thumbsUp: {
@@ -131,6 +132,8 @@ export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onV
       ? new Date(createdAt)
       : null;
 
+  const isLongDescription = description && description.length > 100;
+
   return (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col h-full backdrop-blur-sm">
       {mediaUrl && (() => {
@@ -176,7 +179,14 @@ export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onV
 
         <div className="flex-grow mb-4">
             <h3 className="font-bold text-lg leading-snug text-gray-900 dark:text-white mb-2">{title}</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm">{description?.substring(0, 100)}{description && description.length > 100 && '...'}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">
+                {isExpanded ? description : `${description?.substring(0, 100) || ''}${isLongDescription ? '...' : ''}`}
+            </p>
+            {isLongDescription && (
+                <button onClick={() => setIsExpanded(!isExpanded)} className="text-blue-500 dark:text-blue-400 text-sm font-semibold mt-2">
+                    {isExpanded ? 'Show Less' : 'Show More'}
+                </button>
+            )}
         </div>
 
         {link && (

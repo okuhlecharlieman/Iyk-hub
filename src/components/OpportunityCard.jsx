@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { FaEdit, FaTrash, FaCheck, FaTimes, FaExternalLinkAlt, FaEnvelope, FaUser } from 'react-icons/fa';
 
 export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit, onDelete, onApprove, onReject }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const isExternal = Boolean(o.readOnly || o.externalSource);
   const canManage = !isExternal && (isAdmin || o.ownerId === user?.uid);
   const canReview = isAdmin && !isExternal;
-  const isPending = o.status === 'pending' || !o.status; // Treat missing status as pending for admins
+  const isPending = o.status === 'pending' || !o.status;
   const valueLabel = typeof o.value === 'number'
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(o.value)
     : null;
@@ -15,6 +17,8 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
     rejected: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   };
   const statusLabel = o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Pending';
+
+  const isLongDescription = o.description && o.description.length > 100;
 
   return (
     <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between min-h-[220px] border border-gray-200 dark:border-gray-700">
@@ -40,7 +44,16 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
             </span>
           )}
         </div>
-        <p className="text-gray-600 dark:text-gray-300 text-sm mb-3 flex-grow">{o.description}</p>
+        <div className="text-gray-600 dark:text-gray-300 text-sm mb-3 flex-grow">
+            <p className="whitespace-pre-wrap">
+                {isExpanded ? o.description : `${o.description?.substring(0, 100) || ''}${isLongDescription ? '...' : ''}`}
+            </p>
+            {isLongDescription && (
+                <button onClick={() => setIsExpanded(!isExpanded)} className="text-blue-500 dark:text-blue-400 text-sm font-semibold mt-2">
+                    {isExpanded ? 'Show Less' : 'Show More'}
+                </button>
+            )}
+        </div>
         {(o.contactName || o.contactEmail) && (
           <div className="mb-3 space-y-1 text-xs text-gray-500 dark:text-gray-400">
             {o.contactName && (

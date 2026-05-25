@@ -103,7 +103,6 @@ function OpportunitiesContent() {
         await updateOpportunity(editingOpp.id, submissionData);
         toast('success', 'Opportunity updated successfully!');
       } else {
-        submissionData = { ...submissionData, ownerId: user.uid };
         await createOpportunity(submissionData);
         toast('success', 'Opportunity submitted for review!');
       }

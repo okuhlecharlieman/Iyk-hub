@@ -31,9 +31,30 @@ const STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
+const parseFlexibleDate = (value) => {
+  if (!value) return null;
+  if (value?.toDate && typeof value.toDate === 'function') return value.toDate();
+
+  if (typeof value === 'string') {
+    const isoDate = new Date(value);
+    if (!Number.isNaN(isoDate.getTime())) return isoDate;
+
+    const normalized = value
+      .replace(/\bat\b/gi, '')
+      .replace(/UTC([+-]\d{1,2})(?!:)/i, (_, offset) => `GMT${offset.padStart(3, '0')}:00`)
+      .replace(/UTC([+-]\d{2}):?(\d{2})?/i, (_, hh, mm = '00') => `GMT${hh}:${mm}`);
+    const parsed = new Date(normalized);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  const fallback = new Date(value);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+};
+
 const formatExpiryCountdown = (expiresAt) => {
   if (!expiresAt) return null;
-  const target = new Date(expiresAt);
+  const target = parseFlexibleDate(expiresAt);
+  if (!target) return 'Invalid Date';
   const now = new Date();
   const diff = target.getTime() - now.getTime();
   if (diff <= 0) {
@@ -224,7 +245,7 @@ export default function ManageOpportunities() {
                                           {opp.expiresAt && (
                                             <div>
                                               <span className="font-semibold text-gray-900 dark:text-white">Expires</span><br />
-                                              {new Date(opp.expiresAt).toLocaleDateString()}
+                                              {parseFlexibleDate(opp.expiresAt)?.toLocaleDateString() || 'Invalid Date'}
                                             </div>
                                           )}
                                           {opp.expiresAt && (
@@ -235,7 +256,7 @@ export default function ManageOpportunities() {
                                           )}
                                           <div>
                                             <span className="font-semibold text-gray-900 dark:text-white">Created</span><br />
-                                            {opp.createdAt ? new Date(opp.createdAt?.toDate ? opp.createdAt.toDate() : opp.createdAt).toLocaleDateString() : '—'}
+                                            {parseFlexibleDate(opp.createdAt)?.toLocaleDateString() || '—'}
                                           </div>
                                         </div>
                                         {opp.link && (

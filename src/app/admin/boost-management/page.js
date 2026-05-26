@@ -138,6 +138,19 @@ export default function BoostManagementPage() {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
+  const getTimeRemaining = (timestamp) => {
+    const target = timestamp ? new Date(timestamp?.toDate ? timestamp.toDate() : timestamp) : null;
+    if (!target || Number.isNaN(target.getTime())) return 'N/A';
+    const diff = target.getTime() - Date.now();
+    if (diff <= 0) return 'Expired';
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (days > 0) return `${days}d ${hours}h left`;
+    if (hours > 0) return `${hours}h ${minutes}m left`;
+    return `${minutes}m left`;
+  };
+
   if (loading) {
     return (
       <ProtectedRoute adminOnly={true}>
@@ -262,6 +275,7 @@ export default function BoostManagementPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activation</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Expires</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
@@ -293,6 +307,10 @@ export default function BoostManagementPage() {
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[boost.activationStatus] || 'bg-gray-100 text-gray-800'}`}>
                         {boost.activationStatus?.replace('_', ' ') || 'unknown'}
                       </span>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <div>{formatDate(boost.expiresAt)}</div>
+                      <div className="text-xs text-emerald-600 dark:text-emerald-400">{getTimeRemaining(boost.expiresAt)}</div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       <div className="flex items-center gap-2">
@@ -341,6 +359,11 @@ export default function BoostManagementPage() {
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Update Boost Status</h3>
               <div className="space-y-4">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-3 text-sm">
+                  <p className="text-gray-900 dark:text-white font-medium">{selectedBoost.ownerName || selectedBoost.ownerEmail || 'Unknown user'}</p>
+                  <p className="text-gray-600 dark:text-gray-300 mt-1">Expires: {formatDate(selectedBoost.expiresAt)}</p>
+                  <p className="text-emerald-600 dark:text-emerald-400">Time Remaining: {getTimeRemaining(selectedBoost.expiresAt)}</p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment Status</label>
                   <select

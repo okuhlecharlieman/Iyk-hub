@@ -29,6 +29,32 @@ const RoleBadge = ({ role }) => (
   </span>
 );
 
+const parseDateValue = (value) => {
+  if (!value) return null;
+  if (value?.toDate && typeof value.toDate === 'function') return value.toDate();
+  if (value?._seconds != null || value?.seconds != null) {
+    const seconds = Number(value._seconds ?? value.seconds);
+    const nanoseconds = Number(value._nanoseconds ?? value.nanoseconds ?? 0);
+    const parsed = new Date(seconds * 1000 + Math.floor(nanoseconds / 1e6));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getTimeRemaining = (value) => {
+  const target = parseDateValue(value);
+  if (!target) return null;
+  const diff = target.getTime() - Date.now();
+  if (diff <= 0) return 'Expired';
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${minutes}m left`;
+  return `${minutes}m left`;
+};
+
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnline }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -38,6 +64,8 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
   const canManageClaims = user.authExists || Boolean(user.email);
   const creationDate = user.createdAt?.toDate ? user.createdAt.toDate().toLocaleDateString() : (user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A');
   const lastSeen = user.streak?.lastLoginDate ? new Date(user.streak.lastLoginDate).toLocaleDateString() : 'N/A';
+  const boostExpiry = parseDateValue(user.activeBoost?.expiresAt);
+  const boostRemaining = getTimeRemaining(user.activeBoost?.expiresAt);
 
 
   return (
@@ -61,6 +89,11 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{lastSeen}</td>
         <td className="px-4 py-3">
           <RoleBadge role={role} />
+          {user.activeBoost && (
+            <span className="ml-2 text-xs text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded-lg">
+              Boost: {boostRemaining || 'Active'}
+            </span>
+          )}
           {!canManageClaims && (
             <span className="ml-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-lg">setup needed</span>
           )}
@@ -93,6 +126,11 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{canManageClaims ? user.email : 'No email'}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Joined: {creationDate}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last Seen: {lastSeen}</p>
+                {user.activeBoost && (
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                    Active Boost: {user.activeBoost.plan || 'active'}{boostRemaining ? ` • ${boostRemaining}` : ''}
+                  </p>
+                )}
                 <div className="flex items-center gap-1.5 mt-2">
                   <Button size="sm" variant="primary" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>Role</Button>
                   <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} disabled={isProcessing}><FaEdit /></Button>
@@ -131,6 +169,17 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit user">
         <div className="flex flex-col gap-4">
+            {user.activeBoost && (
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-3 text-sm">
+                <p className="font-semibold text-emerald-800 dark:text-emerald-300">Active Boost: {(user.activeBoost.plan || 'active').toUpperCase()}</p>
+                <p className="text-emerald-700 dark:text-emerald-400 mt-1">
+                  Expires: {boostExpiry ? boostExpiry.toLocaleString() : 'N/A'}
+                </p>
+                <p className="text-emerald-700 dark:text-emerald-400">
+                  Time Remaining: {boostRemaining || 'N/A'}
+                </p>
+              </div>
+            )}
             <div>
                 <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Display Name</label>
                 <input

@@ -7,6 +7,7 @@ import Presence from '../components/Presence';
 import { Providers } from './providers';
 import CookieConsent from '../components/CookieConsent';
 import AgeVerification from '../components/AgeVerification';
+import SurveyPopup from '../components/SurveyPopup';
 
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://iyk-hub.vercel.app';
@@ -128,6 +129,7 @@ export default function RootLayout({ children }) {
             <Footer />
             <CookieConsent />
             <AgeVerification />
+            <SurveyPopup />
           </AuthProvider>
         </Providers>
       </body>

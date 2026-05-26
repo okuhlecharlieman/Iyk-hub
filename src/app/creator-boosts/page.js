@@ -6,7 +6,7 @@ import { getCreatorBoostPlan } from '../../lib/monetization/creator-boosts';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import PaystackCheckout from '../../components/PaystackCheckout';
-import { FaCheck, FaRocket, FaStar, FaCrown, FaBolt } from 'react-icons/fa';
+import { FaCheck, FaRocket, FaStar, FaCrown, FaBolt, FaCoins } from 'react-icons/fa';
 
 const PLAN_DETAILS = {
   lite: {
@@ -74,12 +74,15 @@ function buildPlanList() {
 }
 
 export default function CreatorBoostsPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [redeemingPlan, setRedeemingPlan] = useState(null);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [paymentInfo, setPaymentInfo] = useState(null);
   const paymentSectionRef = useRef(null);
+
+  const userPoints = userProfile?.points?.lifetime ?? 0;
 
   useEffect(() => {
     if (paymentInfo && paymentSectionRef.current) {
@@ -178,10 +181,18 @@ export default function CreatorBoostsPage() {
         </div>
 
         {/* Free tier baseline */}
-        <div className="mb-8 text-center">
+        <div className="mb-8 text-center space-y-3">
           <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 inline-block px-4 py-2 rounded-full">
             🆓 <strong>Free account:</strong> 5 showcase posts · 60s random chat · Basic profile · Weekly leaderboard
           </p>
+          {user && (
+            <div className="flex items-center justify-center gap-2">
+              <FaCoins className="text-amber-500" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Your balance: <span className="text-amber-600 dark:text-amber-400">{userPoints.toLocaleString()} points</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {!user ? (
@@ -234,13 +245,54 @@ export default function CreatorBoostsPage() {
                   </div>
 
                   {/* CTA */}
-                  <Button
-                    onClick={() => handleBoost(key)}
-                    disabled={loading}
-                    fullWidth
-                  >
-                    {loading ? 'Processing…' : `Get ${plan.label}`}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => handleBoost(key)}
+                      disabled={loading || redeemingPlan}
+                      fullWidth
+                    >
+                      {loading ? 'Processing…' : `Pay R${(plan.feeCents / 100).toFixed(0)}`}
+                    </Button>
+                    <button
+                      onClick={async () => {
+                        if (!user) return;
+                        if (userPoints < plan.pointsCost) {
+                          setError(`Not enough points. You have ${userPoints} but need ${plan.pointsCost}.`);
+                          return;
+                        }
+                        if (!window.confirm(`Spend ${plan.pointsCost} points for ${plan.label}? You have ${userPoints} points.`)) return;
+                        setError(null);
+                        setMessage(null);
+                        setRedeemingPlan(key);
+                        try {
+                          const res = await fetch('/api/creator-boosts/redeem-points', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${await user.getIdToken()}`,
+                            },
+                            body: JSON.stringify({ plan: key }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) throw new Error(json.error || 'Failed to redeem points');
+                          setMessage(json.message || `${plan.label} activated with points!`);
+                        } catch (err) {
+                          setError(err.message || 'Failed to redeem points');
+                        } finally {
+                          setRedeemingPlan(null);
+                        }
+                      }}
+                      disabled={loading || redeemingPlan || userPoints < plan.pointsCost}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                        userPoints >= plan.pointsCost
+                          ? 'border-amber-400 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <FaCoins className="text-amber-500" />
+                      {redeemingPlan === key ? 'Redeeming…' : `Use ${plan.pointsCost} Points`}
+                    </button>
+                  </div>
                 </div>
               );
             })}

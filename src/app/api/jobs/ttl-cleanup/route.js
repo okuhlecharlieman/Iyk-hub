@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import admin from 'firebase-admin';
 import { db } from '../../../../lib/firebase/admin';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 import { logAdminAction } from '../../../../lib/api/audit-log';
@@ -57,6 +58,61 @@ export async function GET(request) {
     if (healthcheckDoc.exists) {
       await healthcheckRef.delete();
       results['_healthcheck'] = { deleted: 1 };
+    }
+
+    // 6. Purge accounts past the 30-day cooling-off period
+    const expiredAccountsSnap = await db.collection('users')
+      .where('accountStatus', '==', 'pending_deletion')
+      .where('scheduledPurgeAt', '<=', now)
+      .limit(50)
+      .get();
+
+    let purgedCount = 0;
+    for (const userDoc of expiredAccountsSnap.docs) {
+      const uid = userDoc.id;
+      try {
+        // Reassign showcase posts to "Deleted User"
+        const postsSnap = await db.collection('showcasePosts').where('uid', '==', uid).get();
+        if (!postsSnap.empty) {
+          const batch = db.batch();
+          postsSnap.docs.forEach((postDoc) => {
+            batch.update(postDoc.ref, {
+              uid: 'deleted',
+              authorName: 'Deleted User',
+              authorPhotoURL: null,
+            });
+          });
+          await batch.commit();
+        }
+
+        // Soft-delete user document
+        await userDoc.ref.set({
+          accountStatus: 'purged',
+          purgedAt: admin.firestore.FieldValue.serverTimestamp(),
+          displayName: 'Deleted User',
+          bio: '',
+          skills: [],
+          photoURL: null,
+          email: null,
+          activeBoost: admin.firestore.FieldValue.delete(),
+        }, { merge: true });
+
+        // Delete Firebase Auth user
+        try {
+          await admin.auth().deleteUser(uid);
+        } catch (authErr) {
+          if (authErr?.code !== 'auth/user-not-found') {
+            console.error(`Error deleting auth for ${uid}:`, authErr);
+          }
+        }
+
+        purgedCount++;
+      } catch (purgeErr) {
+        console.error(`Error purging user ${uid}:`, purgeErr);
+      }
+    }
+    if (purgedCount > 0) {
+      results['accountsPurged'] = { deleted: purgedCount };
     }
 
     // Log the cleanup action

@@ -9,7 +9,7 @@ import { subscribeOnlineCount } from '../../../lib/presence';
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
-import { FaSearch, FaUserShield, FaEdit, FaTrash, FaUsers, FaUserCog, FaCircle } from 'react-icons/fa';
+import { FaSearch, FaUserShield, FaEdit, FaTrash, FaUsers, FaUserCog, FaCircle, FaBan } from 'react-icons/fa';
 import { ROLE_OPTIONS, canManageTeam, formatRoleLabel, getRoleDefinition } from '../../../lib/roles';
 
 const roleBadgeClasses = {
@@ -55,10 +55,12 @@ const getTimeRemaining = (value) => {
   return `${minutes}m left`;
 };
 
-const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnline }) => {
+const UserRow = ({ user, onRequestUpdate, onRequestDelete, onRequestSuspend, isProcessing, isOnline }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const isSuspended = user.accountStatus === 'suspended';
   const role = (user.role || 'user').toLowerCase();
   const roleDefinition = getRoleDefinition(role);
   const canManageClaims = user.authExists || Boolean(user.email);
@@ -89,6 +91,12 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{lastSeen}</td>
         <td className="px-4 py-3">
           <RoleBadge role={role} />
+          {isSuspended && (
+            <span className="ml-2 text-xs text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded-lg">Suspended</span>
+          )}
+          {user.accountStatus === 'pending_deletion' && (
+            <span className="ml-2 text-xs text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded-lg">Pending Deletion</span>
+          )}
           {user.activeBoost && (
             <span className="ml-2 text-xs text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded-lg">
               Boost: {boostRemaining || 'Active'}
@@ -104,6 +112,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
               <FaUserCog className="mr-1" /> Role
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} disabled={isProcessing}><FaEdit /></Button>
+            <Button size="sm" variant={isSuspended ? 'secondary' : 'warning'} onClick={() => setSuspendOpen(true)} disabled={isProcessing}><FaBan /></Button>
             <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} disabled={isProcessing}><FaTrash /></Button>
           </div>
         </td>
@@ -131,9 +140,12 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
                     Active Boost: {user.activeBoost.plan || 'active'}{boostRemaining ? ` • ${boostRemaining}` : ''}
                   </p>
                 )}
+                {isSuspended && <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-semibold">Account Suspended</p>}
+                {user.accountStatus === 'pending_deletion' && <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-semibold">Pending Deletion</p>}
                 <div className="flex items-center gap-1.5 mt-2">
                   <Button size="sm" variant="primary" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>Role</Button>
                   <Button size="sm" variant="secondary" onClick={() => setEditOpen(true)} disabled={isProcessing}><FaEdit /></Button>
+                  <Button size="sm" variant={isSuspended ? 'secondary' : 'warning'} onClick={() => setSuspendOpen(true)} disabled={isProcessing}><FaBan /></Button>
                   <Button size="sm" variant="danger" onClick={() => setDeleteOpen(true)} disabled={isProcessing}><FaTrash /></Button>
                 </div>
               </div>
@@ -223,6 +235,42 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, isProcessing, isOnlin
         <div className="flex gap-2 justify-end">
             <Button variant="ghost" size="sm" onClick={() => setDeleteOpen(false)}>Cancel</Button>
             <Button variant="danger" size="sm" onClick={async () => { setDeleteOpen(false); await onRequestDelete(user.authUid || user.uid || user.id); }}>Delete</Button>
+        </div>
+      </Modal>
+
+      <Modal open={suspendOpen} onClose={() => setSuspendOpen(false)} title={isSuspended ? 'Unsuspend user' : 'Suspend user'}>
+        <div className="space-y-4">
+          <p className="text-gray-700 dark:text-gray-300 text-sm">
+            {isSuspended
+              ? <>Unsuspend <span className="font-semibold">{user.displayName || user.email || user.uid}</span>? Their account will be re-enabled.</>
+              : <>Suspend <span className="font-semibold">{user.displayName || user.email || user.uid}</span>? They will be logged out and unable to access their account.</>
+            }
+          </p>
+          {!isSuspended && (
+            <div>
+              <label htmlFor={`suspend-reason-${user.uid}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason (optional)</label>
+              <input
+                type="text"
+                id={`suspend-reason-${user.uid}`}
+                placeholder="e.g. Policy violation"
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white text-sm"
+              />
+            </div>
+          )}
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => setSuspendOpen(false)}>Cancel</Button>
+            <Button
+              variant={isSuspended ? 'primary' : 'danger'}
+              size="sm"
+              onClick={async () => {
+                const reason = document.getElementById(`suspend-reason-${user.uid}`)?.value || '';
+                setSuspendOpen(false);
+                await onRequestSuspend(user.authUid || user.uid || user.id, isSuspended ? 'unsuspend' : 'suspend', reason);
+              }}
+            >
+              {isSuspended ? 'Unsuspend' : 'Suspend'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </>
@@ -331,6 +379,28 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleSuspendUser = async (uid, action, reason) => {
+    if (!user) { toast('error', 'Not authenticated'); return; }
+    if (!uid) { toast('error', 'Unable to determine user id'); return; }
+    try {
+        setProcessingUid(uid);
+        const idToken = await user.getIdToken(true);
+        const res = await fetch('/api/admin/users', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ uid, action, reason }),
+        });
+        const json = await res.json();
+        if (!res.ok) { toast('error', json.error || json.message || 'Failed to update user status'); return; }
+        toast('success', json.message || `User ${action === 'suspend' ? 'suspended' : 'unsuspended'} successfully.`);
+    } catch (err) {
+        console.error('Error suspending/unsuspending user:', err);
+        toast('error', 'Error: ' + (err.message || 'Unknown error'));
+    } finally {
+        setProcessingUid(null);
+    }
+  };
+
   const handleDeleteUser = async (uid) => {
     if (!user) { toast('error', 'Not authenticated'); return; }
     if (!uid) { toast('error', 'Unable to determine user id'); return; }
@@ -428,6 +498,7 @@ export default function AdminUsersPage() {
                       user={{ ...u, uid: userKey }}
                       onRequestUpdate={handleUpdateUser}
                       onRequestDelete={handleDeleteUser}
+                      onRequestSuspend={handleSuspendUser}
                       isProcessing={processingUid === userKey}
                       isOnline={onlineUsers.has(userKey)}
                     />

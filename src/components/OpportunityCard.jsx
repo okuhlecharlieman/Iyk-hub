@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaEdit, FaTrash, FaCheck, FaTimes, FaExternalLinkAlt, FaEnvelope, FaUser } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaCheck, FaTimes, FaExternalLinkAlt, FaEnvelope, FaUser, FaStar } from 'react-icons/fa';
 
 export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit, onDelete, onApprove, onReject }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -7,6 +7,7 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
   const canManage = !isExternal && (isAdmin || o.ownerId === user?.uid);
   const canReview = isAdmin && !isExternal;
   const isPending = o.status === 'pending' || !o.status;
+  const isSponsored = o.type === 'sponsoredOpportunity';
   const valueLabel = typeof o.value === 'number'
     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(o.value)
     : null;
@@ -21,7 +22,7 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
   const isLongDescription = o.description && o.description.length > 100;
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between min-h-[220px] border border-gray-200 dark:border-gray-700">
+    <div className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group flex flex-col justify-between min-h-[220px] border ${isSponsored ? 'border-yellow-400 dark:border-yellow-600' : 'border-gray-200 dark:border-gray-700'}`}>
       <div className="flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-2">
             <h3 className="font-bold text-lg text-gray-800 dark:text-white pr-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{o.title}</h3>
@@ -33,6 +34,12 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
         </div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <p className="font-semibold text-blue-600 dark:text-blue-400 text-sm">{o.org}</p>
+          {isSponsored && (
+            <span className="flex items-center gap-1.5 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800 dark:bg-yellow-900/60 dark:text-yellow-200">
+                <FaStar />
+                <span>Sponsored</span>
+            </span>
+          )}
           {o.sourceLabel && (
             <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700 dark:bg-purple-900/40 dark:text-purple-200">
               {o.sourceLabel}

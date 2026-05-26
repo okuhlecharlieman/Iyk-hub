@@ -23,6 +23,7 @@ export default function Button({
     primary: 'btn-primary',
     secondary: 'btn-blue',
     danger: 'btn-red',
+    warning: 'bg-amber-500 text-white hover:bg-amber-600 focus-visible:ring-amber-500',
     ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-200',
   };
 

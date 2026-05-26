@@ -1,6 +1,7 @@
 export const CREATOR_BOOST_PLANS = {
   lite: {
     feeCents: 2000,
+    pointsCost: 500,
     durationHours: 24,
     visibilityMultiplier: 1.2,
     label: 'Lite Boost',
@@ -11,6 +12,7 @@ export const CREATOR_BOOST_PLANS = {
   },
   pro: {
     feeCents: 7000,
+    pointsCost: 2000,
     durationHours: 72,
     visibilityMultiplier: 1.8,
     label: 'Pro Boost',
@@ -21,6 +23,7 @@ export const CREATOR_BOOST_PLANS = {
   },
   ultra: {
     feeCents: 15000,
+    pointsCost: 5000,
     durationHours: 168,
     visibilityMultiplier: 2.5,
     label: 'Ultra Boost',

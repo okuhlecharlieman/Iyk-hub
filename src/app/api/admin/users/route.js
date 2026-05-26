@@ -256,3 +256,80 @@ export async function DELETE(req) {
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 }
+
+export async function PATCH(req) {
+  const rateLimitResponse = await enforceDistributedRateLimit(req, { keyPrefix: 'admin:users:suspend', limit: 20, windowMs: 60 * 1000 });
+  if (rateLimitResponse) return rateLimitResponse;
+
+  try {
+    await initializeFirebaseAdmin();
+    const actor = await authenticateWithRoles(req, TEAM_MANAGEMENT_ROLES);
+
+    const payload = await parseJsonBody(req);
+    ensurePlainObject(payload);
+    validateNoExtraFields(payload, ['uid', 'action', 'reason']);
+
+    const uid = typeof payload.uid === 'string' ? payload.uid.trim() : '';
+    const action = typeof payload.action === 'string' ? payload.action.trim() : '';
+    const reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
+
+    if (!uid) {
+      return NextResponse.json({ error: 'uid is required' }, { status: 400 });
+    }
+    if (!['suspend', 'unsuspend'].includes(action)) {
+      return NextResponse.json({ error: 'action must be suspend or unsuspend' }, { status: 400 });
+    }
+
+    const adminDb = admin.firestore();
+    const userRef = adminDb.collection('users').doc(uid);
+    const isSuspend = action === 'suspend';
+
+    const updatePayload = {
+      accountStatus: isSuspend ? 'suspended' : 'active',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    if (isSuspend) {
+      updatePayload.suspendedAt = admin.firestore.FieldValue.serverTimestamp();
+      updatePayload.suspendedBy = actor.uid;
+      updatePayload.suspendReason = reason || 'Admin action';
+    } else {
+      updatePayload.suspendedAt = admin.firestore.FieldValue.delete();
+      updatePayload.suspendedBy = admin.firestore.FieldValue.delete();
+      updatePayload.suspendReason = admin.firestore.FieldValue.delete();
+    }
+
+    await userRef.set(updatePayload, { merge: true });
+
+    try {
+      await admin.auth().updateUser(uid, { disabled: isSuspend });
+    } catch (authErr) {
+      if (authErr?.code !== 'auth/user-not-found') {
+        console.error('Error updating auth disabled status:', authErr);
+      }
+    }
+
+    await logAdminAction({
+      request: req,
+      actor,
+      action: isSuspend ? 'user.suspended' : 'user.unsuspended',
+      targetType: 'user',
+      targetId: uid,
+      metadata: { reason },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `User ${uid} ${isSuspend ? 'suspended' : 'unsuspended'} successfully`,
+    });
+  } catch (error) {
+    if (error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.code });
+    }
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
+    }
+    console.error('Error suspending/unsuspending user:', error);
+    return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 });
+  }
+}

@@ -28,7 +28,7 @@ const validateShowcasePayload = (payload) => {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'link', message: 'link must be a string.' }]);
   }
 
-  if (payload.mediaUrl !== undefined && typeof payload.mediaUrl !== 'string') {
+  if (payload.mediaUrl !== undefined && payload.mediaUrl !== null && typeof payload.mediaUrl !== 'string') {
     throw new RequestValidationError('Invalid request payload.', [{ path: 'mediaUrl', message: 'mediaUrl must be a string.' }]);
   }
 

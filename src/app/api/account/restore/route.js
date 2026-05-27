@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'account:restore', limit: 5, windowMs: 60 * 1000 });

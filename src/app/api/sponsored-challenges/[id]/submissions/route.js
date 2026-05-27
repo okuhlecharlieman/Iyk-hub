@@ -4,6 +4,7 @@ import { initializeFirebaseAdmin, authenticateAndGetUid } from '../../../../../l
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { logAdminAction, logDataAccess } from '../../../../../lib/api/logging';
+export const dynamic = 'force-dynamic';
 
 const serializeSubmission = (doc) => {
   const data = doc.data();

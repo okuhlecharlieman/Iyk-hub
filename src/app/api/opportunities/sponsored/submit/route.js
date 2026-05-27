@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../l
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getSponsoredTierConfig } from '../../../../../lib/monetization/sponsored-opportunities';
+export const dynamic = 'force-dynamic';
 
 const validateSponsoredPayload = (payload) => {
   ensurePlainObject(payload);

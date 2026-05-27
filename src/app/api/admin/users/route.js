@@ -5,6 +5,7 @@ import { TEAM_MANAGEMENT_ROLES, VALID_ROLE_KEYS } from '../../../../lib/roles';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit, enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
+export const dynamic = 'force-dynamic';
 
 const validateUidPayload = (payload) => {
   ensurePlainObject(payload);

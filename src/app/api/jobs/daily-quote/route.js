@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
+export const dynamic = 'force-dynamic';
 
 const NINJAS_API_KEY = process.env.NINJAS_API_KEY;
 const NINJAS_API_URL = 'https://api.api-ninjas.com/v1/quotes';

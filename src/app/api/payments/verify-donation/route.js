@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { recordChargeWithFees } from '../../../../lib/monetization/ledger';
 import { DEFAULT_PLATFORM_FEE_RATE } from '../../../../lib/monetization/constants';
+export const dynamic = 'force-dynamic';
 
 const PAYSTACK_FEE_RATE = 0.015;
 const PAYSTACK_FEE_FIXED_CENTS = 100;

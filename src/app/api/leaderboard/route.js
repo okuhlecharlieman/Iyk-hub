@@ -3,6 +3,7 @@ import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 let serviceAccount = null;
 const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.FIREBASE_SERVICE_ACCOUNT;

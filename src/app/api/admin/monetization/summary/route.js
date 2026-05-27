@@ -4,6 +4,7 @@ import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/fireba
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { buildCacheKey, getOrSetCache } from '../../../../../lib/api/cache';
 import { buildMonetizationSummary } from '../../../../../lib/monetization/summary';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:monetization:summary:get', limit: 60, windowMs: 60 * 1000 });

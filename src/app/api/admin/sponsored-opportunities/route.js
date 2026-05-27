@@ -4,6 +4,7 @@ import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
+export const dynamic = 'force-dynamic';
 
 const validateUpdatePayload = (payload) => {
   ensurePlainObject(payload);

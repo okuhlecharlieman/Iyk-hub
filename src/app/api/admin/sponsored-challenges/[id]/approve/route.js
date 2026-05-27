@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../.
 import { AuthMiddleware } from '../../../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../../../lib/api/logging';
+export const dynamic = 'force-dynamic';
 
 export async function POST(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:sponsored-challenges:approve', limit: 20, windowMs: 60 * 1000 });

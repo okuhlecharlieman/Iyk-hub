@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:sponsored-challenges:list', limit: 60, windowMs: 60 * 1000 });

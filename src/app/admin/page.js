@@ -5,8 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Link from 'next/link';
 import { FaUsers, FaClock, FaCheckCircle, FaExclamationTriangle, FaCrown, FaChartLine, FaShieldAlt, FaTrophy, FaMoneyBillWave, FaRocket, FaBriefcase, FaBuilding, FaArrowRight, FaSyncAlt } from 'react-icons/fa';
-import { db } from '../../lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+
+
 import UserManagementCard from '../../components/admin/UserManagementCard';
 import PendingOppsCard from '../../components/admin/PendingOppsCard';
 import LeaderboardCard from '../../components/admin/LeaderboardCard';
@@ -29,51 +29,26 @@ export default function AdminPage() {
 
     setLoading(true);
 
-    const usersUnsubscribe = onSnapshot(collection(db, 'users'),
-      (snapshot) => setStats(prev => ({ ...prev, users: snapshot.size })),
-      (err) => {
-        console.error("Error fetching user stats:", err);
-        setError("Could not load user statistics.");
-      }
-    );
-
-    const oppsUnsubscribe = onSnapshot(collection(db, 'opportunities'),
-      (snapshot) => {
-        let pending = 0, approved = 0;
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.status === 'pending') pending++;
-          if (data.status === 'approved') approved++;
+    async function fetchStats() {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch('/api/admin/stats', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setStats(prev => ({ ...prev, pending, approved }));
-      },
-      (err) => {
-        console.error("Error fetching opportunity stats:", err);
-        setError("Could not load opportunity statistics.");
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        } else {
+          setError('Could not load dashboard statistics.');
+        }
+      } catch (err) {
+        console.error('Error fetching admin stats:', err);
+        setError('Could not load dashboard statistics.');
       }
-    );
+      setLoading(false);
+    }
 
-    const boostsUnsubscribe = onSnapshot(collection(db, 'creatorBoostOrders'),
-      (snapshot) => setStats(prev => ({ ...prev, boostOrders: snapshot.size })),
-      () => {}
-    );
-
-    const challengesUnsubscribe = onSnapshot(collection(db, 'sponsoredChallenges'),
-      (snapshot) => setStats(prev => ({ ...prev, challengeOrders: snapshot.size })),
-      () => {}
-    );
-
-    Promise.allSettled([
-        new Promise(res => onSnapshot(collection(db, 'users'), res)),
-        new Promise(res => onSnapshot(collection(db, 'opportunities'), res))
-    ]).then(() => setLoading(false));
-
-    return () => {
-      usersUnsubscribe();
-      oppsUnsubscribe();
-      boostsUnsubscribe();
-      challengesUnsubscribe();
-    };
+    fetchStats();
   }, [user, userProfile]);
 
   if (loading) {

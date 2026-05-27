@@ -18,7 +18,7 @@ const SEGMENTS = [
 
 const WEIGHTS = [30, 25, 20, 5, 30, 25, 20, 30];
 const TOTAL_WEIGHT = WEIGHTS.reduce((a, b) => a + b, 0);
-const SPIN_COST = 50;
+const SPIN_COST = 10;
 
 function pickSegment() {
   let rand = Math.random() * TOTAL_WEIGHT;
@@ -242,10 +242,14 @@ export default function SpinWheelGame() {
     setBuyingSpins(true);
     try {
       const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
-        'points.lifetime': increment(-SPIN_COST),
-        'points.weekly': increment(-SPIN_COST),
-      });
+      const userSnap = await getDoc(userRef);
+      const currentWeekly = userSnap.data()?.points?.weekly || 0;
+      const weeklyDeduction = Math.min(SPIN_COST, Math.max(0, currentWeekly));
+      const updateFields = { 'points.lifetime': increment(-SPIN_COST) };
+      if (weeklyDeduction > 0) {
+        updateFields['points.weekly'] = increment(-weeklyDeduction);
+      }
+      await updateDoc(userRef, updateFields);
 
       const spinRef = doc(db, 'dailySpins', user.uid);
       await setDoc(spinRef, {

@@ -215,5 +215,35 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // Game sessions — users can create their own, admins can read all
+    match /sessions/{sessionId} {
+      allow read: if isAdmin();
+      allow create: if request.auth.uid != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Daily spins — users can read/write their own spin data
+    match /dailySpins/{userId} {
+      allow read: if request.auth.uid == userId;
+      allow write: if request.auth.uid == userId;
+    }
+
+    // Engagement tracking — users can write their own, admins can read
+    match /engagement/{docId} {
+      allow read: if isAdmin();
+      allow create, update: if request.auth.uid != null
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // Engagement events — users can create, admins can read
+    match /engagementEvents/{eventId} {
+      allow read: if isAdmin();
+      allow create: if request.auth.uid != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
   }
 }

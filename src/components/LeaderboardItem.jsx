@@ -15,16 +15,17 @@ export default function LeaderboardItem({ user, rank, filter }) {
     return <span className="font-bold text-lg text-gray-500 dark:text-gray-400 w-6 text-center">{rank}</span>;
   };
 
+  const accentColor = user.accentColor || null;
   const cardStyle = `p-4 flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-lg transition-shadow duration-300 border dark:border-gray-700`;
 
   return (
-    <li className={cardStyle}>
+    <li className={cardStyle} style={accentColor ? { borderLeftWidth: '4px', borderLeftColor: accentColor } : {}}>
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0 w-8 text-center">{getRankIndicator()}</div>
         <Link href={`/u/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <img src={user.photoURL || '/logo.png'} className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-gray-200 dark:border-gray-600" alt="avatar" />
+          <img src={user.photoURL || '/logo.png'} className="w-12 h-12 rounded-full object-cover shadow-md border-2 border-gray-200 dark:border-gray-600" style={accentColor ? { borderColor: accentColor } : {}} alt="avatar" />
           <div>
-            <span className="font-semibold text-gray-800 dark:text-white text-base md:text-lg flex items-center gap-1.5">
+            <span className="font-semibold text-gray-800 dark:text-white text-base md:text-lg flex items-center gap-1.5" style={accentColor ? { color: accentColor } : {}}>
               {user.displayName || 'Anonymous User'}
               {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} iconOnly />}
             </span>

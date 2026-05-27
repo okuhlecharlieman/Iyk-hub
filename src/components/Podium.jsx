@@ -22,12 +22,14 @@ const PodiumPlace = ({ user, rank, filter }) => {
     }
   };
 
+  const accentColor = user.accentColor || null;
+
   return (
     <div className={`flex flex-col items-center justify-end p-4 rounded-t-xl w-1/3 shadow-lg ${getPodiumClass()}`}>
       <FaTrophy className={`text-4xl mb-2 ${getTrophyColor()}`} />
       <Link href={`/u/${user.id}`} className="flex flex-col items-center hover:opacity-80 transition-opacity">
-        <img src={user.photoURL || '/logo.png'} className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-xl" alt="avatar" />
-        <p className="font-bold text-white dark:text-gray-100 mt-2 text-center w-full flex items-center justify-center gap-1 text-sm break-words whitespace-normal leading-tight px-1">
+        <img src={user.photoURL || '/logo.png'} className="w-16 h-16 rounded-full border-4 border-white dark:border-gray-800 shadow-xl" style={accentColor ? { borderColor: accentColor } : {}} alt="avatar" />
+        <p className="font-bold text-white dark:text-gray-100 mt-2 text-center w-full flex items-center justify-center gap-1 text-sm break-words whitespace-normal leading-tight px-1" style={accentColor ? { color: accentColor } : {}}>
           <span className="break-words">{user.displayName || 'Anonymous'}</span>
           {user.activeBoost && <BoostBadge badge={user.activeBoost.badge} label={user.activeBoost.badgeLabel} iconOnly />}
         </p>

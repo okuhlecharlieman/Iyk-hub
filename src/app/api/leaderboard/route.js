@@ -46,20 +46,27 @@ export async function GET(request) {
     const snap = await queryRef.get();
     const { getCreatorBoostPlan } = await import('../../../lib/monetization/creator-boosts');
 
-    const users = snap.docs.map((doc) => {
-      const d = doc.data();
-      return {
-        id: doc.id,
-        displayName: d.displayName || null,
-        photoURL: d.photoURL || null,
-        points: d.points || { weekly: 0, lifetime: 0 },
-        activeBoost: d.activeBoost ? {
-          badge: d.activeBoost.badge || null,
-          badgeLabel: d.activeBoost.badgeLabel || null,
-          tier: d.activeBoost.tier || null,
-        } : null,
-      };
-    });
+    const EXCLUDED_STATUSES = new Set(['suspended', 'pending_deletion', 'purged']);
+
+    const users = snap.docs
+      .filter((doc) => {
+        const status = doc.data().accountStatus;
+        return !status || !EXCLUDED_STATUSES.has(status);
+      })
+      .map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          displayName: d.displayName || null,
+          photoURL: d.photoURL || null,
+          points: d.points || { weekly: 0, lifetime: 0 },
+          activeBoost: d.activeBoost ? {
+            badge: d.activeBoost.badge || null,
+            badgeLabel: d.activeBoost.badgeLabel || null,
+            tier: d.activeBoost.tier || null,
+          } : null,
+        };
+      });
 
     // Fetch active boosts for users that don't have activeBoost cached on doc
     const uidsWithoutBoost = users.filter(u => !u.activeBoost).map(u => u.id);

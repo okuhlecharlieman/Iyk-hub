@@ -76,6 +76,8 @@ export async function GET(request) {
 
         const authorUids = [...new Set(posts.map((p) => p.uid).filter(Boolean))];
         const authors = {};
+        const excludedUids = new Set();
+        const EXCLUDED_STATUSES = new Set(['suspended', 'pending_deletion', 'purged']);
 
         if (authorUids.length > 0) {
           const uidChunks = chunkArray(authorUids, 10);
@@ -87,17 +89,24 @@ export async function GET(request) {
                 .get();
 
               authorDocs.forEach((doc) => {
-                const { displayName, photoURL } = doc.data();
+                const data = doc.data();
+                if (data.accountStatus && EXCLUDED_STATUSES.has(data.accountStatus)) {
+                  excludedUids.add(doc.id);
+                  return;
+                }
                 authors[doc.id] = {
-                  displayName: displayName || 'Anonymous User',
-                  photoURL: photoURL || null,
+                  displayName: data.displayName || 'Anonymous User',
+                  photoURL: data.photoURL || null,
                 };
               });
             })
           );
         }
 
-        const postsWithAuthors = posts.map((post) => ({
+        // Filter out posts from suspended/deleted users
+        const visiblePosts = posts.filter((p) => !excludedUids.has(p.uid));
+
+        const postsWithAuthors = visiblePosts.map((post) => ({
           ...post,
           author: authors[post.uid] || { displayName: 'Anonymous User', photoURL: null },
         }));

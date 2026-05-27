@@ -41,7 +41,28 @@ export async function GET(request) {
     await initializeFirebaseAdmin();
 
     const snap = await admin.firestore().collection('creatorBoostOrders').orderBy('createdAt', 'desc').limit(200).get();
-    const items = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const items = snap.docs.map((doc) => {
+      const data = doc.data();
+      const toISO = (val) => {
+        if (!val) return null;
+        if (val.toDate && typeof val.toDate === 'function') return val.toDate().toISOString();
+        if (val instanceof Date) return val.toISOString();
+        if (typeof val === 'string') return val;
+        if (val._seconds != null || val.seconds != null) {
+          const seconds = Number(val._seconds ?? val.seconds);
+          return new Date(seconds * 1000).toISOString();
+        }
+        return null;
+      };
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: toISO(data.createdAt),
+        updatedAt: toISO(data.updatedAt),
+        expiresAt: toISO(data.expiresAt),
+        activatedAt: toISO(data.activatedAt),
+      };
+    });
 
     return NextResponse.json({ items });
   } catch (error) {

@@ -45,15 +45,27 @@ export async function GET(request) {
     }
 
     const snap = await queryRef.get();
+    const toISO = (val) => {
+      if (!val) return null;
+      if (val.toDate && typeof val.toDate === 'function') return val.toDate().toISOString();
+      if (val instanceof Date) return val.toISOString();
+      if (typeof val === 'string') return val;
+      if (val._seconds != null || val.seconds != null) {
+        const seconds = Number(val._seconds ?? val.seconds);
+        return new Date(seconds * 1000).toISOString();
+      }
+      return null;
+    };
+
     const opportunities = snap.docs.map((doc) => {
       const data = doc.data();
       return {
         id: doc.id,
         ...data,
-        createdAt: data.createdAt?.toDate?.toISOString?.() || data.createdAt || null,
-        updatedAt: data.updatedAt?.toDate?.toISOString?.() || data.updatedAt || null,
-        expiresAt: data.expiresAt?.toDate?.toISOString?.() || data.expiresAt || null,
-        deletionScheduledAt: data.deletionScheduledAt?.toDate?.toISOString?.() || data.deletionScheduledAt || null,
+        createdAt: toISO(data.createdAt),
+        updatedAt: toISO(data.updatedAt),
+        expiresAt: toISO(data.expiresAt),
+        deletionScheduledAt: toISO(data.deletionScheduledAt),
       };
     });
 

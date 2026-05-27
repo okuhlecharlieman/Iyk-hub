@@ -97,6 +97,7 @@ export async function GET(request) {
                 authors[doc.id] = {
                   displayName: data.displayName || 'Anonymous User',
                   photoURL: data.photoURL || null,
+                  accentColor: data.accentColor || null,
                 };
               });
             })
@@ -149,6 +150,7 @@ export async function GET(request) {
           ...post,
           isBoosted: boostedUids.has(post.uid),
           boostBadge: boostInfo[post.uid] || null,
+          accentColor: post.author?.accentColor || null,
         }));
 
         // Sort: boosted posts first (by multiplier desc), then by creation date

@@ -80,6 +80,7 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
                 src={p.author.photoURL}
                 alt={p.author.displayName || 'User'}
                 className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
+                style={p.accentColor ? { borderColor: p.accentColor } : {}}
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
@@ -87,7 +88,7 @@ function ContentCard({ p, react, onEdit, onDelete, canManage }) {
               </div>
             )}
             <div>
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1" style={p.accentColor ? { color: p.accentColor } : {}}>
                 {p.author?.displayName || 'Anonymous'}
                 {p.isBoosted && p.boostBadge && <BoostBadge badge={p.boostBadge.badge} label={p.boostBadge.badgeLabel} inline />}
               </p>

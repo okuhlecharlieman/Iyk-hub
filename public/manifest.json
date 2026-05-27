@@ -152,7 +152,8 @@
   },
   "share_target": {
     "action": "/showcase",
-    "method": "GET",
+    "method": "POST",
+    "enctype": "multipart/form-data",
     "params": {
       "title": "title",
       "text": "text",
@@ -171,7 +172,8 @@
   "handle_links": "preferred",
   "scope_extensions": [
     {
-      "origin": "*.vercel.app"
+      "type": "origin",
+      "origin": "https://iyk-hub.vercel.app"
     }
   ]
 }

@@ -6,6 +6,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/logging';
 import { PAYOUT_STATUSES, LEDGER_ENTRY_TYPES } from '../../../../lib/monetization/constants';
 import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payouts:list', limit: 30, windowMs: 60 * 1000 });

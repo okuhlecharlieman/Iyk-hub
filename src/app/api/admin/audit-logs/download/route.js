@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticate, initializeFirebaseAdmin } from 'src/lib/firebase/admin.js';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const MAX_LIMIT = 500;
 

@@ -7,6 +7,7 @@ import {
   DEFAULT_PLATFORM_FEE_RATE,
 } from '../../../../lib/monetization/constants';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
+export const dynamic = 'force-dynamic';
 
 const PAYSTACK_FEE_RATE = 0.015;
 const PAYSTACK_FEE_FIXED_CENTS = 100;

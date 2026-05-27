@@ -5,6 +5,7 @@ import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExt
 import { enforceRateLimit } from '@/lib/api/rate-limit';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const validateProfileUpdatePayload = (payload) => {
   ensurePlainObject(payload);

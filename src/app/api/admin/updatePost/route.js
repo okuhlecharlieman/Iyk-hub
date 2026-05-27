@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticate } from '@/lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
+export const dynamic = 'force-dynamic';
 
 const allowedPostFields = ['title', 'description', 'link', 'mediaUrl', 'type'];
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);

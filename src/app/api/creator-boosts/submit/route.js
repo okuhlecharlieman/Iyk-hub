@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
+export const dynamic = 'force-dynamic';
 
 const validateBoostPayload = (payload) => {
   ensurePlainObject(payload);

@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../../lib/monetization/creator-boosts';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'creator-boosts:active:public', limit: 120, windowMs: 60 * 1000 });

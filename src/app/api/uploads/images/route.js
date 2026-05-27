@@ -5,6 +5,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getGcsConfig, getPublicGcsUrl, getStorageClient } from '../../../../lib/storage/gcs';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_CONTEXTS = new Set(['opportunities', 'showcase', 'sponsored-challenges', 'profiles', 'uploads']);

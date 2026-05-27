@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {

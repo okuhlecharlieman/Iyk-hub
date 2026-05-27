@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/moderation';
+export const dynamic = 'force-dynamic';
 
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
 

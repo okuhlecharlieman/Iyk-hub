@@ -6,6 +6,7 @@ import { enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logDataAccess } from '../../../../lib/api/logging';
 import { createStripePaymentIntent, createOrGetStripeCustomer } from '../../../../lib/stripe/stripe-client';
 import { getOrderConfig } from '../../../../lib/monetization/constants';
+export const dynamic = 'force-dynamic';
 
 const validatePayload = (payload) => {
   ensurePlainObject(payload);

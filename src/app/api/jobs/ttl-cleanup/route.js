@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 import { logAdminAction } from '../../../../lib/api/audit-log';
+export const dynamic = 'force-dynamic';
 
 const BATCH_DELETE_LIMIT = 400;
 

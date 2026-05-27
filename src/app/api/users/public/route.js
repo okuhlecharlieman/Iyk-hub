@@ -27,6 +27,25 @@ export async function GET(request) {
 
     const data = userDoc.data();
 
+    // Check if user has active ULTRA boost for accent color
+    let hasUltraBoost = data.activeBoost?.tier === 'ULTRA';
+    if (!hasUltraBoost) {
+      try {
+        const boostSnap = await db.collection('creatorBoostOrders')
+          .where('ownerUid', '==', uid.trim())
+          .where('activationStatus', '==', 'active')
+          .limit(1)
+          .get();
+        if (!boostSnap.empty) {
+          const bData = boostSnap.docs[0].data();
+          const expiresAt = bData.expiresAt?.toDate ? bData.expiresAt.toDate() : null;
+          if ((!expiresAt || expiresAt > new Date()) && bData.plan?.toUpperCase() === 'ULTRA') {
+            hasUltraBoost = true;
+          }
+        }
+      } catch {}
+    }
+
     // Only return safe public fields
     const publicProfile = {
       id: userDoc.id,
@@ -36,7 +55,7 @@ export async function GET(request) {
       skills: Array.isArray(data.skills) ? data.skills : [],
       points: data.points || { weekly: 0, lifetime: 0 },
       profileViewCount: data.profileViewCount || 0,
-      accentColor: data.accentColor || null,
+      accentColor: hasUltraBoost ? (data.accentColor || null) : null,
       role: data.role || 'user',
     };
 

@@ -86,6 +86,36 @@ export async function GET(request) {
       errors.push({ step: 'videoRooms_ended', error: err?.message });
     }
 
+    // 4c. Remove empty videoRoom docs (docs with no fields, only subcollections)
+    try {
+      const allRoomsSnap = await db.collection('videoRooms').get();
+      let emptyRoomCount = 0;
+      const emptyBatch = db.batch();
+      for (const roomDoc of allRoomsSnap.docs) {
+        const data = roomDoc.data();
+        const hasFields = Object.keys(data).length > 0;
+        if (!hasFields) {
+          emptyBatch.delete(roomDoc.ref);
+          emptyRoomCount++;
+          // Also delete subcollections (e.g. signals)
+          const subcolls = await roomDoc.ref.listCollections();
+          for (const sub of subcolls) {
+            const subDocs = await sub.get();
+            const subBatch = db.batch();
+            subDocs.docs.forEach(d => subBatch.delete(d.ref));
+            await subBatch.commit();
+          }
+        }
+      }
+      if (emptyRoomCount > 0) {
+        await emptyBatch.commit();
+        results['videoRooms_empty'] = { deleted: emptyRoomCount };
+      }
+    } catch (err) {
+      console.warn('TTL step 4c (empty videoRooms) skipped:', err?.message);
+      errors.push({ step: 'videoRooms_empty', error: err?.message });
+    }
+
     // 5. Clean health check pings (temporary document)
     try {
       const healthcheckRef = db.collection('_healthcheck').doc('ping');
@@ -156,7 +186,51 @@ export async function GET(request) {
       errors.push({ step: 'accountPurge', error: err?.message });
     }
 
-    // 7. Remove empty collections (collections left with zero documents)
+    // 7. Clear accent color from users whose ULTRA boost has expired
+    try {
+      const usersWithAccent = await db.collection('users')
+        .where('accentColor', '!=', null)
+        .limit(100)
+        .get();
+      let clearedCount = 0;
+      for (const userDoc of usersWithAccent.docs) {
+        const userData = userDoc.data();
+        const hasActiveUltra = userData.activeBoost?.tier === 'ULTRA';
+        if (!hasActiveUltra) {
+          // Double-check in creatorBoostOrders
+          let stillActive = false;
+          try {
+            const boostSnap = await db.collection('creatorBoostOrders')
+              .where('ownerUid', '==', userDoc.id)
+              .where('activationStatus', '==', 'active')
+              .limit(1)
+              .get();
+            if (!boostSnap.empty) {
+              const bData = boostSnap.docs[0].data();
+              const expiresAt = bData.expiresAt?.toDate ? bData.expiresAt.toDate() : null;
+              if ((!expiresAt || expiresAt > now) && bData.plan?.toUpperCase() === 'ULTRA') {
+                stillActive = true;
+              }
+            }
+          } catch {}
+          if (!stillActive) {
+            await userDoc.ref.update({
+              accentColor: admin.firestore.FieldValue.delete(),
+              activeBoost: admin.firestore.FieldValue.delete(),
+            });
+            clearedCount++;
+          }
+        }
+      }
+      if (clearedCount > 0) {
+        results['expiredBoostColors'] = { cleared: clearedCount };
+      }
+    } catch (err) {
+      console.warn('TTL step 7 (expiredBoostColors) skipped:', err?.message);
+      errors.push({ step: 'expiredBoostColors', error: err?.message });
+    }
+
+    // 8. Remove empty collections (collections left with zero documents)
     try {
       const collectionsToCheck = [
         'rateLimits', 'moderationQueue', 'quotes', 'videoChatRooms',

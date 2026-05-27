@@ -8,6 +8,7 @@ import { Providers } from './providers';
 import CookieConsent from '../components/CookieConsent';
 import AgeVerification from '../components/AgeVerification';
 import SurveyPopup from '../components/SurveyPopup';
+import ServiceWorkerRegistration from '../components/ServiceWorkerRegistration';
 
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://iyk-hub.vercel.app';
@@ -85,6 +86,9 @@ export const metadata = {
 
 export const viewport = {
   themeColor: '#3b82f6',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({ children }) {
@@ -93,7 +97,15 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="IYK Hub" />
+        <meta name="application-name" content="IYK Hub" />
+        <meta name="msapplication-TileColor" content="#3b82f6" />
+        <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-48x48.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -130,6 +142,7 @@ export default function RootLayout({ children }) {
             <CookieConsent />
             <AgeVerification />
             <SurveyPopup />
+            <ServiceWorkerRegistration />
           </AuthProvider>
         </Providers>
       </body>

@@ -35,118 +35,151 @@ export async function GET(request) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const results = {};
 
+  const errors = [];
+
   try {
     await initializeFirebaseAdmin();
     const db = admin.firestore();
 
     // 1. Clean expired rate limits (older than 24 hours)
-    const rateLimitsQuery = db.collection('rateLimits').where('timestamp', '<', twentyFourHoursAgo);
-    await batchDelete(db, rateLimitsQuery, results, 'rateLimits');
+    try {
+      const rateLimitsQuery = db.collection('rateLimits').where('timestamp', '<', twentyFourHoursAgo);
+      await batchDelete(db, rateLimitsQuery, results, 'rateLimits');
+    } catch (err) {
+      console.warn('TTL step 1 (rateLimits) skipped:', err?.message);
+      errors.push({ step: 'rateLimits', error: err?.message });
+    }
 
     // 2. Clean resolved moderation items (older than 30 days)
-    const moderationQuery = db.collection('moderationQueue').where('resolved', '==', true).where('resolvedAt', '<', thirtyDaysAgo);
-    await batchDelete(db, moderationQuery, results, 'moderationQueue');
+    try {
+      const moderationQuery = db.collection('moderationQueue').where('resolved', '==', true).where('resolvedAt', '<', thirtyDaysAgo);
+      await batchDelete(db, moderationQuery, results, 'moderationQueue');
+    } catch (err) {
+      console.warn('TTL step 2 (moderationQueue) skipped:', err?.message);
+      errors.push({ step: 'moderationQueue', error: err?.message });
+    }
 
     // 3. Clean old daily quotes (older than 24 hours)
-    const quotesQuery = db.collection('dailyQuotes').where('createdAt', '<', twentyFourHoursAgo);
-    await batchDelete(db, quotesQuery, results, 'dailyQuotes');
+    try {
+      const quotesQuery = db.collection('dailyQuotes').where('createdAt', '<', twentyFourHoursAgo);
+      await batchDelete(db, quotesQuery, results, 'dailyQuotes');
+    } catch (err) {
+      console.warn('TTL step 3 (dailyQuotes) skipped:', err?.message);
+      errors.push({ step: 'dailyQuotes', error: err?.message });
+    }
 
     // 4. Clean stale video chat rooms (not updated in 24 hours)
-    const videoRoomsQuery = db.collection('videoChatRooms').where('updatedAt', '<', twentyFourHoursAgo);
-    await batchDelete(db, videoRoomsQuery, results, 'videoChatRooms');
+    try {
+      const videoRoomsQuery = db.collection('videoChatRooms').where('updatedAt', '<', twentyFourHoursAgo);
+      await batchDelete(db, videoRoomsQuery, results, 'videoChatRooms');
+    } catch (err) {
+      console.warn('TTL step 4 (videoChatRooms) skipped:', err?.message);
+      errors.push({ step: 'videoChatRooms', error: err?.message });
+    }
 
     // 5. Clean health check pings (temporary document)
-    const healthcheckRef = db.collection('_healthcheck').doc('ping');
-    const healthcheckDoc = await healthcheckRef.get();
-    if (healthcheckDoc.exists) {
-      await healthcheckRef.delete();
-      results['_healthcheck'] = { deleted: 1 };
+    try {
+      const healthcheckRef = db.collection('_healthcheck').doc('ping');
+      const healthcheckDoc = await healthcheckRef.get();
+      if (healthcheckDoc.exists) {
+        await healthcheckRef.delete();
+        results['_healthcheck'] = { deleted: 1 };
+      }
+    } catch (err) {
+      console.warn('TTL step 5 (_healthcheck) skipped:', err?.message);
+      errors.push({ step: '_healthcheck', error: err?.message });
     }
 
     // 6. Purge accounts past the 30-day cooling-off period
-    const expiredAccountsSnap = await db.collection('users')
-      .where('accountStatus', '==', 'pending_deletion')
-      .where('scheduledPurgeAt', '<=', now)
-      .limit(50)
-      .get();
+    try {
+      const expiredAccountsSnap = await db.collection('users')
+        .where('accountStatus', '==', 'pending_deletion')
+        .where('scheduledPurgeAt', '<=', now)
+        .limit(50)
+        .get();
 
-    let purgedCount = 0;
-    for (const userDoc of expiredAccountsSnap.docs) {
-      const uid = userDoc.id;
-      try {
-        // Reassign showcase posts to "Deleted User"
-        const postsSnap = await db.collection('wallPosts').where('uid', '==', uid).get();
-        if (!postsSnap.empty) {
-          const batch = db.batch();
-          postsSnap.docs.forEach((postDoc) => {
-            batch.update(postDoc.ref, {
-              uid: 'deleted',
-              authorName: 'Deleted User',
-              authorPhotoURL: null,
-            });
-          });
-          await batch.commit();
-        }
-
-        // Soft-delete user document
-        await userDoc.ref.set({
-          accountStatus: 'purged',
-          purgedAt: admin.firestore.FieldValue.serverTimestamp(),
-          displayName: 'Deleted User',
-          bio: '',
-          skills: [],
-          photoURL: null,
-          email: null,
-          activeBoost: admin.firestore.FieldValue.delete(),
-        }, { merge: true });
-
-        // Delete Firebase Auth user
+      let purgedCount = 0;
+      for (const userDoc of expiredAccountsSnap.docs) {
+        const uid = userDoc.id;
         try {
-          await admin.auth().deleteUser(uid);
-        } catch (authErr) {
-          if (authErr?.code !== 'auth/user-not-found') {
-            console.error(`Error deleting auth for ${uid}:`, authErr);
+          const postsSnap = await db.collection('wallPosts').where('uid', '==', uid).get();
+          if (!postsSnap.empty) {
+            const batch = db.batch();
+            postsSnap.docs.forEach((postDoc) => {
+              batch.update(postDoc.ref, {
+                uid: 'deleted',
+                authorName: 'Deleted User',
+                authorPhotoURL: null,
+              });
+            });
+            await batch.commit();
           }
-        }
 
-        purgedCount++;
-      } catch (purgeErr) {
-        console.error(`Error purging user ${uid}:`, purgeErr);
+          await userDoc.ref.set({
+            accountStatus: 'purged',
+            purgedAt: admin.firestore.FieldValue.serverTimestamp(),
+            displayName: 'Deleted User',
+            bio: '',
+            skills: [],
+            photoURL: null,
+            email: null,
+            activeBoost: admin.firestore.FieldValue.delete(),
+          }, { merge: true });
+
+          try {
+            await admin.auth().deleteUser(uid);
+          } catch (authErr) {
+            if (authErr?.code !== 'auth/user-not-found') {
+              console.error(`Error deleting auth for ${uid}:`, authErr);
+            }
+          }
+
+          purgedCount++;
+        } catch (purgeErr) {
+          console.error(`Error purging user ${uid}:`, purgeErr);
+        }
       }
-    }
-    if (purgedCount > 0) {
-      results['accountsPurged'] = { deleted: purgedCount };
+      if (purgedCount > 0) {
+        results['accountsPurged'] = { deleted: purgedCount };
+      }
+    } catch (err) {
+      console.warn('TTL step 6 (accountPurge) skipped:', err?.message);
+      errors.push({ step: 'accountPurge', error: err?.message });
     }
 
     // Log the cleanup action
-    if (Object.keys(results).length > 0) {
+    if (Object.keys(results).length > 0 || errors.length > 0) {
         await logAdminAction({
             request,
             actor: { uid: 'system:cron', email: 'System (Cron Job)' },
             action: 'system.ttl.cleanup',
             targetType: 'system',
             targetId: 'ttl-cleanup',
-            metadata: results,
+            metadata: { ...results, ...(errors.length > 0 ? { skippedSteps: errors } : {}) },
         });
     }
 
     return NextResponse.json({
       success: true,
       cleaned: results,
+      ...(errors.length > 0 ? { skippedSteps: errors } : {}),
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('TTL cleanup error:', error);
-    // Also log the error to the admin log
-    await logAdminAction({
-        request,
-        actor: { uid: 'system:cron', email: 'System (Cron Job)' },
-        action: 'system.ttl.cleanup',
-        targetType: 'system',
-        targetId: 'ttl-cleanup',
-        status: 'failed',
-        errorMessage: error?.message || 'Unknown error',
-    });
+    try {
+      await logAdminAction({
+          request,
+          actor: { uid: 'system:cron', email: 'System (Cron Job)' },
+          action: 'system.ttl.cleanup',
+          targetType: 'system',
+          targetId: 'ttl-cleanup',
+          status: 'failed',
+          errorMessage: error?.message || 'Unknown error',
+      });
+    } catch (logErr) {
+      console.error('Failed to log cleanup error:', logErr);
+    }
     return NextResponse.json({ error: 'Cleanup failed' }, { status: 500 });
   }
 }

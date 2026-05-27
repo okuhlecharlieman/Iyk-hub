@@ -150,7 +150,7 @@ export async function GET(request) {
           ...post,
           isBoosted: boostedUids.has(post.uid),
           boostBadge: boostInfo[post.uid] || null,
-          accentColor: post.author?.accentColor || null,
+          accentColor: (boostInfo[post.uid]?.plan?.toUpperCase() === 'ULTRA') ? (post.author?.accentColor || null) : null,
         }));
 
         // Sort: boosted posts first (by multiplier desc), then by creation date

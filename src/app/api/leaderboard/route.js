@@ -60,7 +60,7 @@ export async function GET(request) {
           displayName: d.displayName || null,
           photoURL: d.photoURL || null,
           points: d.points || { weekly: 0, lifetime: 0 },
-          accentColor: d.accentColor || null,
+          accentColor: (d.activeBoost?.tier === 'ULTRA') ? (d.accentColor || null) : null,
           activeBoost: d.activeBoost ? {
             badge: d.activeBoost.badge || null,
             badgeLabel: d.activeBoost.badgeLabel || null,

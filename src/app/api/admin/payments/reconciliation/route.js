@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getOrderConfig, LEDGER_ENTRY_TYPES } from '../../../../../lib/monetization/constants';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payments:reconciliation:get', limit: 60, windowMs: 60 * 1000 });

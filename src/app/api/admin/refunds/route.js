@@ -6,6 +6,7 @@ import { enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
 import { LEDGER_ENTRY_TYPES } from '../../../../lib/monetization/constants';
+export const dynamic = 'force-dynamic';
 
 const validateRefundPayload = (payload) => {
   ensurePlainObject(payload);

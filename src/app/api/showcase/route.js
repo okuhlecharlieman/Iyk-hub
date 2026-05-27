@@ -6,6 +6,7 @@ import { buildCacheKey, getOrSetCache } from '../../../lib/api/cache';
 import { getCreatorBoostPlan } from '../../../lib/monetization/creator-boosts';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const MAX_LIMIT = 50;
 

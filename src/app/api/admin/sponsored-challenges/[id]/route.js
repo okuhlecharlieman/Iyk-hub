@@ -5,6 +5,7 @@ import { AuthMiddleware } from '../../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../../lib/api/logging';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../../lib/api/validation';
+export const dynamic = 'force-dynamic';
 
 const allowedStatuses = new Set(['pending', 'approved', 'rejected']);
 

@@ -5,6 +5,7 @@ import admin from 'firebase-admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const validateDeleteShowcasePostPayload = (payload) => {
   ensurePlainObject(payload);

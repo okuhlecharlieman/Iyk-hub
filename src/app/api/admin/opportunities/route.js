@@ -4,6 +4,7 @@ import { authenticate, listAllOpportunities } from '../../../../lib/firebase/adm
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
+export const dynamic = 'force-dynamic';
 
 const allowedOpportunityStatuses = new Set(['pending', 'approved', 'rejected']);
 

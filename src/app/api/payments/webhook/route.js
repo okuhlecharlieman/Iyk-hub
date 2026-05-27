@@ -10,6 +10,7 @@ import {
   handleDisputeCreated,
   handleDisputeClosed,
 } from '../../../../lib/stripe/stripe-client';
+export const dynamic = 'force-dynamic';
 
 /**
  * Check idempotency: return true if this event was already processed.

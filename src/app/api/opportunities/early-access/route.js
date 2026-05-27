@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:early-access', limit: 30, windowMs: 60 * 1000 });

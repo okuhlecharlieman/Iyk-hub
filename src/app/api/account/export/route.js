@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+export const dynamic = 'force-dynamic';
 
 function serializeValue(val) {
   if (!val) return val;

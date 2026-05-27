@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { buildFinancialSummary, queryLedger } from '../../../../lib/monetization/ledger';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:financial-ledger', limit: 30, windowMs: 60 * 1000 });

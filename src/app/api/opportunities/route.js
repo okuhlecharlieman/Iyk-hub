@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../lib/fir
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const MAX_LIMIT = 30;
 const EXTERNAL_OPPORTUNITIES_API_URL =

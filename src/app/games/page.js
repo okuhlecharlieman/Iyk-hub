@@ -6,7 +6,7 @@ import InstallButton from '../../components/InstallButton';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaGamepad, FaSearch } from 'react-icons/fa';
 
-const GAMES = ['rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
+const GAMES = ['spinwheel', 'rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
 
 export default function GamesPage() {
   const [search, setSearch] = useState('');

@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { FaArrowLeft, FaCopy, FaCheck } from 'react-icons/fa';
 import { db } from '../../../lib/firebase';
 import { doc, updateDoc, increment, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { trackEvent } from '../../../lib/engagement';
 
 const GAME_DETAILS = {
   rps: { name: 'Rock-Paper-Scissors', icon: <GiSwordman size={32} /> },
@@ -74,7 +75,7 @@ export default function GamePage() {
         mode,
       });
       
-      console.log(`Game session logged for user ${user.uid}. Score: ${finalScore}`);
+      trackEvent(user.uid, 'game_played', { game: baseGameId, score: finalScore, mode });
     } catch (error) {
       console.error("Error updating points or logging session:", error);
     }

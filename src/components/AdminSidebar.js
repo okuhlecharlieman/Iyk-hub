@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding, FaUserCog, FaHistory, FaPoll } from 'react-icons/fa';
+import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding, FaUserCog, FaHistory, FaPoll, FaChartLine } from 'react-icons/fa';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useState } from 'react';
@@ -24,6 +24,7 @@ const AdminSidebar = () => {
     { href: '/admin/sponsored-challenges', label: 'Challenges', icon: <FaTrophy /> },
     { href: '/admin/payments', label: 'Revenue Management', icon: <FaMoneyBillWave /> },
     { href: '/admin/survey', label: 'Survey Responses', icon: <FaPoll /> },
+    { href: '/admin/engagement', label: 'Engagement', icon: <FaChartLine /> },
     { href: '/admin/logs', label: 'System Logs', icon: <FaHistory /> },
   ];
 

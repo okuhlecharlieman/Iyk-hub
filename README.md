@@ -27,10 +27,15 @@ No chats, no negativity — just a space for kasi youth to shine.
 - **Opportunities Board**: Browse curated jobs, gigs, and collaboration opportunities that are reviewed and approved by administrators.
 - **User profiles**: Create a profile to showcase your skills, earned points, uploaded content, and participation history.
 - **Admin portal**: Manage platform content, users, and monetization settings through a protected admin interface.
-- **Creator Boosts (Monetization)**: Offer tiered plans (Pro and Ultra) for creators to enhance their visibility and unlock exclusive features.
-    - **Pro Boost**: Includes portfolio view count analytics.
-    - **Ultra Boost**: Includes all Pro features plus full portfolio analytics (engagement stats), a custom profile accent color, a profile feature on the homepage carousel, and early access to sponsor opportunities.
-- **Revenue Management (new)**: Admin-only financial dashboard for tracking paid revenue streams, transaction history, and revenue breakdown across creator boosts, sponsored challenges, institution plans, sponsored opportunities, and placement fees.
+- **Creator Boosts (Monetization)**: Offer tiered plans (Lite, Pro, and Ultra) for creators to enhance their visibility and unlock exclusive features.
+    - **Lite Boost**: Blue "Boosted" badge, 1.2x visibility on posts, featured section placement.
+    - **Pro Boost**: Purple "Pro Creator" badge, 1.8x visibility, extended video chat (3 min), portfolio analytics.
+    - **Ultra Boost**: Gold "Verified Creator" badge, 2.5x visibility, 5 min video chat, full analytics, custom profile accent, homepage carousel, early access to sponsors.
+- **Points-Based Boost Purchasing**: Users can spend their earned lifetime points (500/2,000/5,000) to buy Lite/Pro/Ultra boosts as an alternative to ZAR payment.
+- **In-App Feedback Survey**: Users can share feedback via a dedicated /survey page or a random popup. Admins can view all responses with stats at /admin/survey.
+- **Account Management**: Full self-service account lifecycle — data export (JSON download), 30-day soft-delete with cooling-off period, account restoration, and password re-authentication before deletion.
+- **Admin Account Suspension**: Admins can suspend/unsuspend users with audit logging. Suspended and deleted users are hidden from showcase and leaderboard.
+- **Revenue Management**: Admin-only financial dashboard for tracking paid revenue streams, transaction history, and revenue breakdown across creator boosts, sponsored challenges, institution plans, sponsored opportunities, and placement fees.
 - **Reactive search and filters**: Search transactions by order ID, description, or type, filter revenue streams, and view performance over different time periods.
 - **Secure authentication**: Firebase Auth protects user and admin access while supporting a safe, moderated community.
 
@@ -136,13 +141,13 @@ MIT License – free to use and adapt.
 
 ## Background Jobs
 
-A weekly leaderboard reset cron is configured in `vercel.json` to call:
+Cron jobs configured in `vercel.json`:
 
-- `GET /api/jobs/weekly-leaderboard-reset` every Monday at 00:00 UTC.
+- **`GET /api/jobs/weekly-leaderboard-reset`** — Runs every Monday at 00:00 UTC. Resets `users.points.weekly` to `0` and records metadata in `systemJobs/weeklyLeaderboardReset`.
 
-Set `CRON_SECRET` in Vercel environment variables. The cron route requires:
+- **`GET /api/jobs/ttl-cleanup`** — Runs daily. Cleans expired rate limits, resolved moderation items (30d), old daily quotes (24h), stale video chat rooms (24h), and purges user accounts past the 30-day deletion cooling-off period (reassigns posts, soft-deletes user doc, removes Firebase Auth user).
+
+Set `CRON_SECRET` in Vercel environment variables. The cron routes require:
 
 - `Authorization: Bearer $CRON_SECRET`
-
-The job resets `users.points.weekly` to `0` and records metadata in `systemJobs/weeklyLeaderboardReset`.
 

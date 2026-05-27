@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { db } from '../../../../lib/firebase/admin';
+import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 
 const BATCH_DELETE_LIMIT = 400;
 
-async function batchDelete(query, results, collectionName) {
+async function batchDelete(firestore, query, results, collectionName) {
   let deletedCount = 0;
   let snapshot;
   do {
     snapshot = await query.limit(BATCH_DELETE_LIMIT).get();
     if (snapshot.empty) break;
 
-    const batch = db.batch();
+    const batch = firestore.batch();
     snapshot.docs.forEach(doc => batch.delete(doc.ref));
     await batch.commit();
     
@@ -36,21 +36,24 @@ export async function GET(request) {
   const results = {};
 
   try {
+    await initializeFirebaseAdmin();
+    const db = admin.firestore();
+
     // 1. Clean expired rate limits (older than 24 hours)
     const rateLimitsQuery = db.collection('rateLimits').where('timestamp', '<', twentyFourHoursAgo);
-    await batchDelete(rateLimitsQuery, results, 'rateLimits');
+    await batchDelete(db, rateLimitsQuery, results, 'rateLimits');
 
     // 2. Clean resolved moderation items (older than 30 days)
     const moderationQuery = db.collection('moderationQueue').where('resolved', '==', true).where('resolvedAt', '<', thirtyDaysAgo);
-    await batchDelete(moderationQuery, results, 'moderationQueue');
+    await batchDelete(db, moderationQuery, results, 'moderationQueue');
 
     // 3. Clean old daily quotes (older than 24 hours)
     const quotesQuery = db.collection('dailyQuotes').where('createdAt', '<', twentyFourHoursAgo);
-    await batchDelete(quotesQuery, results, 'dailyQuotes');
+    await batchDelete(db, quotesQuery, results, 'dailyQuotes');
 
     // 4. Clean stale video chat rooms (not updated in 24 hours)
     const videoRoomsQuery = db.collection('videoChatRooms').where('updatedAt', '<', twentyFourHoursAgo);
-    await batchDelete(videoRoomsQuery, results, 'videoChatRooms');
+    await batchDelete(db, videoRoomsQuery, results, 'videoChatRooms');
 
     // 5. Clean health check pings (temporary document)
     const healthcheckRef = db.collection('_healthcheck').doc('ping');
@@ -72,7 +75,7 @@ export async function GET(request) {
       const uid = userDoc.id;
       try {
         // Reassign showcase posts to "Deleted User"
-        const postsSnap = await db.collection('showcasePosts').where('uid', '==', uid).get();
+        const postsSnap = await db.collection('wallPosts').where('uid', '==', uid).get();
         if (!postsSnap.empty) {
           const batch = db.batch();
           postsSnap.docs.forEach((postDoc) => {

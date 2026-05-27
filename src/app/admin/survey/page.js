@@ -154,7 +154,7 @@ export default function AdminSurveyPage() {
             {responses.length > 0 ? responses.map((response) => (
               <div key={response.id} className="p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-mono text-gray-500 dark:text-gray-400">User: {response.uid?.slice(0, 8)}...</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{response.userName || 'Anonymous'}</span>
                   <span className="text-xs text-gray-400 dark:text-gray-500">
                     {response.createdAt ? new Date(response.createdAt).toLocaleDateString() : '—'}
                   </span>

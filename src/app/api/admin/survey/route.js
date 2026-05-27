@@ -24,7 +24,29 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json({ success: true, responses });
+    // Fetch user display names
+    const uids = [...new Set(responses.map((r) => r.uid).filter(Boolean))];
+    const userNames = {};
+    if (uids.length > 0) {
+      const chunks = [];
+      for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+      await Promise.all(chunks.map(async (chunk) => {
+        const userSnap = await db.collection('users')
+          .where(admin.firestore.FieldPath.documentId(), 'in', chunk)
+          .get();
+        userSnap.forEach((uDoc) => {
+          const uData = uDoc.data();
+          userNames[uDoc.id] = uData.displayName || uData.email || null;
+        });
+      }));
+    }
+
+    const enrichedResponses = responses.map((r) => ({
+      ...r,
+      userName: userNames[r.uid] || null,
+    }));
+
+    return NextResponse.json({ success: true, responses: enrichedResponses });
   } catch (error) {
     if (error?.code === 401 || error?.code === 403) {
       return NextResponse.json({ error: error.message }, { status: error.code });

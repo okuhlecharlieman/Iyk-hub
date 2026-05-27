@@ -160,12 +160,12 @@ export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onV
         <div className="flex items-start justify-between mb-4">
           <Link href={`/u/${post.uid}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             {profilePhoto ? (
-                <img src={profilePhoto} alt={displayName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" />
+                <img src={profilePhoto} alt={displayName} className="w-11 h-11 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600" style={post.accentColor ? { borderColor: post.accentColor } : {}} />
             ) : (
                 <div className="w-11 h-11 rounded-full bg-gray-200 dark:bg-gray-700" />
             )}
             <div>
-              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight flex items-center gap-1.5">
+              <p className="font-bold text-gray-800 dark:text-gray-50 leading-tight flex items-center gap-1.5" style={post.accentColor ? { color: post.accentColor } : {}}>
                 {displayName}
                 {post.boostBadge && <BoostBadge badge={post.boostBadge.badge} label={post.boostBadge.badgeLabel} inline />}
               </p>

@@ -13,8 +13,8 @@ export async function trackPageView(userId, page) {
       [`pages.${page.replace(/\//g, '_')}`]: increment(1),
       totalPageViews: increment(1),
     }, { merge: true });
-  } catch (err) {
-    console.error('Engagement tracking error:', err);
+  } catch {
+    // Silently fail — engagement tracking is non-critical
   }
 }
 
@@ -36,8 +36,8 @@ export async function trackEvent(userId, eventType, metadata = {}) {
       lastActiveAt: serverTimestamp(),
       [`events.${eventType}`]: increment(1),
     }, { merge: true });
-  } catch (err) {
-    console.error('Engagement event tracking error:', err);
+  } catch {
+    // Silently fail — engagement tracking is non-critical
   }
 }
 
@@ -51,7 +51,7 @@ export async function trackSessionDuration(userId, durationSeconds) {
       date: today,
       totalSessionSeconds: increment(Math.round(durationSeconds)),
     }, { merge: true });
-  } catch (err) {
-    console.error('Session duration tracking error:', err);
+  } catch {
+    // Silently fail — engagement tracking is non-critical
   }
 }

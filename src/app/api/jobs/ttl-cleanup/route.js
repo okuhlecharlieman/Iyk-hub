@@ -68,13 +68,22 @@ export async function GET(request) {
       errors.push({ step: 'quotes', error: err?.message });
     }
 
-    // 4. Clean stale video chat rooms (not updated in 24 hours)
+    // 4. Clean stale video rooms (not updated in 24 hours)
     try {
-      const videoRoomsQuery = db.collection('videoChatRooms').where('updatedAt', '<', twentyFourHoursAgo);
-      await batchDelete(db, videoRoomsQuery, results, 'videoChatRooms');
+      const videoRoomsQuery = db.collection('videoRooms').where('updatedAt', '<', twentyFourHoursAgo);
+      await batchDelete(db, videoRoomsQuery, results, 'videoRooms');
     } catch (err) {
-      console.warn('TTL step 4 (videoChatRooms) skipped:', err?.message);
-      errors.push({ step: 'videoChatRooms', error: err?.message });
+      console.warn('TTL step 4 (videoRooms) skipped:', err?.message);
+      errors.push({ step: 'videoRooms', error: err?.message });
+    }
+
+    // 4b. Remove empty videoRooms (status === 'ended' or no participants)
+    try {
+      const endedRoomsQuery = db.collection('videoRooms').where('status', '==', 'ended');
+      await batchDelete(db, endedRoomsQuery, results, 'videoRooms_ended');
+    } catch (err) {
+      console.warn('TTL step 4b (videoRooms ended) skipped:', err?.message);
+      errors.push({ step: 'videoRooms_ended', error: err?.message });
     }
 
     // 5. Clean health check pings (temporary document)

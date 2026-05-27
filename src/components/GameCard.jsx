@@ -1,10 +1,16 @@
 'use client';
-import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain, GiVideoCamera } from 'react-icons/gi';
+import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain, GiVideoCamera, GiCartwheel } from 'react-icons/gi';
 import { FaCopy, FaCheck } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const GAME_DETAILS = {
+  spinwheel: {
+    name: 'Daily Spin the Wheel',
+    icon: <GiCartwheel size={40} />,
+    description: 'Spin once daily for free points!',
+    color: 'from-amber-500 to-orange-500',
+  },
   rps: {
     name: 'Rock-Paper-Scissors',
     icon: <GiSwordman size={40} />,
@@ -50,8 +56,12 @@ export default function GameCard({ gameId }) {
   const [lastCreatedId, setLastCreatedId] = useState('');
   const [copied, setCopied] = useState(false);
 
+  const isSpinWheel = gameId === 'spinwheel';
+
   const handleCreateSession = () => {
-    if (gameId === 'randomchat') {
+    if (gameId === 'spinwheel') {
+      router.push('/games/spin-wheel');
+    } else if (gameId === 'randomchat') {
       router.push('/video');
     } else {
       const newGameId = `${gameId}-${Date.now()}`;
@@ -96,7 +106,7 @@ export default function GameCard({ gameId }) {
             onClick={handleCreateSession}
             className={`bg-gradient-to-r ${details.color} hover:opacity-90 text-white font-bold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md`}
           >
-            {isRandomChat ? 'Join Random Chat' : 'Create New Game'}
+            {isSpinWheel ? 'Spin Now' : isRandomChat ? 'Join Random Chat' : 'Create New Game'}
           </button>
           {lastCreatedId && (
             <button
@@ -106,7 +116,7 @@ export default function GameCard({ gameId }) {
               {copied ? <><FaCheck className="text-green-500" /> Copied!</> : <><FaCopy /> Copy Room ID</>}
             </button>
           )}
-          {!isRandomChat && (
+          {!isRandomChat && !isSpinWheel && (
             <div className="flex flex-col sm:flex-row gap-2 mt-1">
               <input
                 type="text"

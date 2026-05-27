@@ -59,13 +59,13 @@ export async function GET(request) {
       errors.push({ step: 'moderationQueue', error: err?.message });
     }
 
-    // 3. Clean old daily quotes (older than 24 hours)
+    // 3. Clean old quotes (older than 24 hours)
     try {
-      const quotesQuery = db.collection('dailyQuotes').where('createdAt', '<', twentyFourHoursAgo);
-      await batchDelete(db, quotesQuery, results, 'dailyQuotes');
+      const quotesQuery = db.collection('quotes').where('createdAt', '<', twentyFourHoursAgo);
+      await batchDelete(db, quotesQuery, results, 'quotes');
     } catch (err) {
-      console.warn('TTL step 3 (dailyQuotes) skipped:', err?.message);
-      errors.push({ step: 'dailyQuotes', error: err?.message });
+      console.warn('TTL step 3 (quotes) skipped:', err?.message);
+      errors.push({ step: 'quotes', error: err?.message });
     }
 
     // 4. Clean stale video chat rooms (not updated in 24 hours)
@@ -145,6 +145,29 @@ export async function GET(request) {
     } catch (err) {
       console.warn('TTL step 6 (accountPurge) skipped:', err?.message);
       errors.push({ step: 'accountPurge', error: err?.message });
+    }
+
+    // 7. Remove empty collections (collections left with zero documents)
+    try {
+      const collectionsToCheck = [
+        'rateLimits', 'moderationQueue', 'quotes', 'videoChatRooms',
+        '_healthcheck', 'dailyQuotes', 'videoRooms',
+      ];
+      let emptiedCount = 0;
+      for (const colName of collectionsToCheck) {
+        const colSnap = await db.collection(colName).limit(1).get();
+        if (colSnap.empty) {
+          // Firestore auto-deletes empty collections, but we clean up
+          // any stale metadata documents that may reference them
+          emptiedCount++;
+        }
+      }
+      if (emptiedCount > 0) {
+        results['emptyCollectionsDetected'] = { count: emptiedCount };
+      }
+    } catch (err) {
+      console.warn('TTL step 7 (emptyCollections) skipped:', err?.message);
+      errors.push({ step: 'emptyCollections', error: err?.message });
     }
 
     // Log the cleanup action

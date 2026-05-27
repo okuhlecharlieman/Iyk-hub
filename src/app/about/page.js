@@ -1,5 +1,5 @@
 'use client';
-import { FaRocket, FaPalette, FaVideo, FaTrophy, FaBriefcase, FaGamepad, FaUsers, FaStar, FaBolt, FaCode, FaMusic, FaPencilRuler, FaEllipsisH, FaPaintBrush, FaCrown } from 'react-icons/fa';
+import { FaRocket, FaPalette, FaVideo, FaTrophy, FaBriefcase, FaGamepad, FaUsers, FaStar, FaBolt, FaCode, FaMusic, FaPencilRuler, FaEllipsisH, FaPaintBrush, FaCrown, FaCoins, FaPoll, FaUserShield } from 'react-icons/fa';
 import Link from 'next/link';
 
 const features = [
@@ -39,12 +39,30 @@ const features = [
     description: 'Supercharge your profile with Lite, Pro, or Ultra boosts. Get featured placement, extended video chat, profile analytics, custom accents, and more.',
     color: 'from-indigo-500 to-purple-500',
   },
+  {
+    icon: <FaCoins className="text-2xl" />,
+    title: 'Points-Based Boosts',
+    description: 'Spend your earned lifetime points (500/2000/5000) to purchase Lite, Pro, or Ultra boosts instead of paying with ZAR. Reward your engagement!',
+    color: 'from-yellow-500 to-amber-500',
+  },
+  {
+    icon: <FaPoll className="text-2xl" />,
+    title: 'Feedback Survey',
+    description: 'Share your experience and help shape the future of Iyk Hub. Take the feedback survey anytime from the footer or /survey page.',
+    color: 'from-teal-500 to-cyan-500',
+  },
+  {
+    icon: <FaUserShield className="text-2xl" />,
+    title: 'Account Management',
+    description: 'Full control over your account: export your data, request account deletion with a 30-day cooling-off period, or restore a pending deletion at any time.',
+    color: 'from-gray-500 to-slate-500',
+  },
 ];
 
 const boostTiers = [
-  { name: 'Lite', price: 'R20', duration: '24 hours', perks: ['Blue "Boosted" badge next to name', '1.2x visibility on showcase posts', 'Posts appear in "Featured" section'] },
-  { name: 'Pro', price: 'R70', duration: '72 hours', perks: ['Purple "Pro Creator" badge', '1.8x visibility on showcase posts', 'Extended random chat (3 min)', 'Portfolio view count analytics', 'Priority matchmaking in random chat'] },
-  { name: 'Ultra', price: 'R150', duration: '7 days', perks: ['Gold "Verified Creator" badge', '2.5x visibility on showcase posts', 'Extended random chat (5 min)', 'Full portfolio analytics with engagement stats', 'Custom profile accent color', 'Featured on homepage carousel', 'Early access to sponsor opportunities', 'Posts pinned in "Featured" section'] },
+  { name: 'Lite', price: 'R20', points: '500 pts', duration: '24 hours', perks: ['Blue "Boosted" badge next to name', '1.2x visibility on showcase posts', 'Posts appear in "Featured" section'] },
+  { name: 'Pro', price: 'R70', points: '2,000 pts', duration: '72 hours', perks: ['Purple "Pro Creator" badge', '1.8x visibility on showcase posts', 'Extended random chat (3 min)', 'Portfolio view count analytics', 'Priority matchmaking in random chat'] },
+  { name: 'Ultra', price: 'R150', points: '5,000 pts', duration: '7 days', perks: ['Gold "Verified Creator" badge', '2.5x visibility on showcase posts', 'Extended random chat (5 min)', 'Full portfolio analytics with engagement stats', 'Custom profile accent color', 'Featured on homepage carousel', 'Early access to sponsor opportunities', 'Posts pinned in "Featured" section'] },
 ];
 
 const showcaseIcons = [
@@ -141,6 +159,7 @@ export default function AboutPage() {
             <div key={tier.name} className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700 flex flex-col">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{tier.name}</h3>
               <p className="text-3xl font-extrabold text-purple-600 dark:text-purple-400">{tier.price}</p>
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">or {tier.points}</p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">for {tier.duration}</p>
               <ul className="space-y-2 flex-1">
                 {tier.perks.map((perk) => (

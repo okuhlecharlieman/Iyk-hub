@@ -7,6 +7,7 @@ const productLinks = [
   { label: 'Showcase', href: '/showcase' },
   { label: 'Opportunities', href: '/opportunities' },
   { label: 'Leaderboard', href: '/leaderboard' },
+  { label: 'Feedback Survey', href: '/survey' },
   { label: 'About', href: '/about' },
 ];
 

@@ -1,18 +1,15 @@
 import { db } from './firebase';
-import { doc, setDoc, increment, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { serverTimestamp, collection, addDoc } from 'firebase/firestore';
 
 export async function trackPageView(userId, page) {
   if (!userId || !page) return;
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const ref = doc(db, 'engagement', `${today}_${userId}`);
-    await setDoc(ref, {
+    await addDoc(collection(db, 'engagementEvents'), {
       userId,
-      date: today,
-      lastActiveAt: serverTimestamp(),
-      [`pages.${page.replace(/\//g, '_')}`]: increment(1),
-      totalPageViews: increment(1),
-    }, { merge: true });
+      eventType: 'page_view',
+      metadata: { page },
+      createdAt: serverTimestamp(),
+    });
   } catch {
     // Silently fail — engagement tracking is non-critical
   }
@@ -27,15 +24,6 @@ export async function trackEvent(userId, eventType, metadata = {}) {
       metadata,
       createdAt: serverTimestamp(),
     });
-
-    const today = new Date().toISOString().split('T')[0];
-    const ref = doc(db, 'engagement', `${today}_${userId}`);
-    await setDoc(ref, {
-      userId,
-      date: today,
-      lastActiveAt: serverTimestamp(),
-      [`events.${eventType}`]: increment(1),
-    }, { merge: true });
   } catch {
     // Silently fail — engagement tracking is non-critical
   }
@@ -44,13 +32,12 @@ export async function trackEvent(userId, eventType, metadata = {}) {
 export async function trackSessionDuration(userId, durationSeconds) {
   if (!userId || !durationSeconds) return;
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const ref = doc(db, 'engagement', `${today}_${userId}`);
-    await setDoc(ref, {
+    await addDoc(collection(db, 'engagementEvents'), {
       userId,
-      date: today,
-      totalSessionSeconds: increment(Math.round(durationSeconds)),
-    }, { merge: true });
+      eventType: 'session_end',
+      metadata: { durationSeconds: Math.round(durationSeconds) },
+      createdAt: serverTimestamp(),
+    });
   } catch {
     // Silently fail — engagement tracking is non-critical
   }

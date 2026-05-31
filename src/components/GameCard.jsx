@@ -60,10 +60,13 @@ export default function GameCard({ gameId }) {
   const [joinGameId, setJoinGameId] = useState('');
   const [lastCreatedId, setLastCreatedId] = useState('');
   const [copied, setCopied] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   const isScratchCard = gameId === 'scratchcard';
 
   const handleCreateSession = () => {
+    setCreating(true);
     if (gameId === 'scratchcard') {
       router.push('/games/spin-wheel');
     } else if (gameId === 'randomchat') {
@@ -77,6 +80,7 @@ export default function GameCard({ gameId }) {
 
   const handleJoinGame = () => {
     if (joinGameId.trim()) {
+      setJoining(true);
       router.push(`/games/${joinGameId.trim()}`);
     }
   };
@@ -109,9 +113,10 @@ export default function GameCard({ gameId }) {
         <div className="flex flex-col gap-2">
           <button
             onClick={handleCreateSession}
-            className={`bg-gradient-to-r ${details.color} hover:opacity-90 text-white font-bold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md`}
+            disabled={creating}
+            className={`bg-gradient-to-r ${details.color} hover:opacity-90 text-white font-bold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md disabled:opacity-60`}
           >
-            {isScratchCard ? 'Play Now' : isRandomChat ? 'Join Random Chat' : 'Create New Game'}
+            {creating ? 'Loading...' : isScratchCard ? 'Play Now' : isRandomChat ? 'Join Random Chat' : 'Create New Game'}
           </button>
           {lastCreatedId && (
             <button
@@ -133,10 +138,10 @@ export default function GameCard({ gameId }) {
               />
               <button
                 onClick={handleJoinGame}
-                disabled={!joinGameId.trim()}
+                disabled={!joinGameId.trim() || joining}
                 className="bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-xl transition-colors"
               >
-                Join
+                {joining ? 'Joining...' : 'Join'}
               </button>
             </div>
           )}

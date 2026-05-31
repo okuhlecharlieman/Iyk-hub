@@ -15,17 +15,15 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '7', 10);
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const prevStartDate = new Date(now.getTime() - days * 2 * 24 * 60 * 60 * 1000);
 
-    const prevStartDate = new Date();
-    prevStartDate.setDate(prevStartDate.getDate() - days * 2);
-    const prevStartDateStr = prevStartDate.toISOString().split('T')[0];
-
-    const engagementSnap = await db
-      .collection('engagement')
-      .where('date', '>=', prevStartDateStr)
+    // Fetch all engagement events from the previous period start
+    const eventsSnap = await db
+      .collection('engagementEvents')
+      .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(prevStartDate))
+      .orderBy('createdAt', 'desc')
       .get();
 
     let totalPageViews = 0;
@@ -41,89 +39,107 @@ export async function GET(request) {
     const dailyMap = {};
     const userPageMap = {};
 
-    engagementSnap.forEach((docSnap) => {
+    eventsSnap.forEach((docSnap) => {
       const data = docSnap.data();
-      const isCurrent = data.date >= startDateStr;
+      const eventDate = data.createdAt?.toDate?.();
+      if (!eventDate) return;
+
+      const isCurrent = eventDate >= startDate;
+      const dateStr = eventDate.toISOString().split('T')[0];
 
       if (isCurrent) {
         uniqueUserIds.add(data.userId);
-        totalPageViews += data.totalPageViews || 0;
 
-        if (data.totalSessionSeconds) {
-          totalSessionSeconds += data.totalSessionSeconds;
+        // Count page views
+        if (data.eventType === 'page_view') {
+          totalPageViews++;
+          const page = data.metadata?.page || '/unknown';
+          pageViewCounts[page] = (pageViewCounts[page] || 0) + 1;
+
+          // Track user-page map for feature adoption
+          if (data.userId) {
+            if (!userPageMap[data.userId]) userPageMap[data.userId] = {};
+            userPageMap[data.userId][page] = (userPageMap[data.userId][page] || 0) + 1;
+          }
+        }
+
+        // Count session durations
+        if (data.eventType === 'session_end' && data.metadata?.durationSeconds) {
+          totalSessionSeconds += data.metadata.durationSeconds;
           sessionEntries++;
         }
 
-        if (data.pages) {
-          Object.entries(data.pages).forEach(([page, count]) => {
-            const pageName = page.replace(/_/g, '/');
-            pageViewCounts[pageName] = (pageViewCounts[pageName] || 0) + count;
-          });
+        // Count all event types (excluding page_view for the events list)
+        if (data.eventType !== 'page_view' && data.eventType !== 'session_end') {
+          eventCounts[data.eventType] = (eventCounts[data.eventType] || 0) + 1;
         }
 
-        if (data.events) {
-          Object.entries(data.events).forEach(([event, count]) => {
-            eventCounts[event] = (eventCounts[event] || 0) + count;
-          });
+        // Daily activity
+        if (!dailyMap[dateStr]) {
+          dailyMap[dateStr] = { date: dateStr, views: 0, users: new Set() };
         }
-
-        const date = data.date;
-        if (date) {
-          if (!dailyMap[date]) {
-            dailyMap[date] = { date, views: 0, users: new Set() };
-          }
-          dailyMap[date].views += data.totalPageViews || 0;
-          dailyMap[date].users.add(data.userId);
+        if (data.eventType === 'page_view') {
+          dailyMap[dateStr].views++;
         }
-
-        if (data.userId && data.pages) {
-          if (!userPageMap[data.userId]) userPageMap[data.userId] = {};
-          Object.entries(data.pages).forEach(([page, count]) => {
-            const pageName = page.replace(/_/g, '/');
-            userPageMap[data.userId][pageName] = (userPageMap[data.userId][pageName] || 0) + count;
-          });
-        }
+        dailyMap[dateStr].users.add(data.userId);
       } else {
+        // Previous period
         prevUniqueUserIds.add(data.userId);
-        prevPageViews += data.totalPageViews || 0;
-        if (data.totalSessionSeconds) {
-          prevSessionSeconds += data.totalSessionSeconds;
+        if (data.eventType === 'page_view') {
+          prevPageViews++;
+        }
+        if (data.eventType === 'session_end' && data.metadata?.durationSeconds) {
+          prevSessionSeconds += data.metadata.durationSeconds;
           prevSessionEntries++;
         }
       }
     });
 
+    // Top pages
     const topPages = Object.entries(pageViewCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([page, views]) => ({ page, views }));
 
+    // Top events
     const topEvents = Object.entries(eventCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([event, count]) => ({ event, count }));
 
+    // Daily activity
     const dailyActivity = Object.values(dailyMap)
       .map((d) => ({ date: d.date, views: d.views, users: d.users.size }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    let recentEvents = [];
-    try {
-      const eventsSnap = await db
-        .collection('engagementEvents')
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get();
-      recentEvents = eventsSnap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.()?.toISOString() || null,
-      }));
-    } catch {
-      // engagementEvents may not exist yet
+    // Recent events with user display names
+    const recentDocs = eventsSnap.docs.slice(0, 20);
+    const recentUserIds = [...new Set(recentDocs.map((d) => d.data().userId).filter(Boolean))];
+
+    // Batch fetch user display names
+    const userNameMap = {};
+    if (recentUserIds.length > 0) {
+      const chunks = [];
+      for (let i = 0; i < recentUserIds.length; i += 10) {
+        chunks.push(recentUserIds.slice(i, i + 10));
+      }
+      for (const chunk of chunks) {
+        const usersSnap = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', chunk).get();
+        usersSnap.forEach((uDoc) => {
+          const uData = uDoc.data();
+          userNameMap[uDoc.id] = uData.displayName || uData.username || null;
+        });
+      }
     }
 
-    // Compute period-over-period changes
+    const recentEvents = recentDocs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      userName: userNameMap[d.data().userId] || null,
+      createdAt: d.data().createdAt?.toDate?.()?.toISOString() || null,
+    }));
+
+    // Period-over-period changes
     const prevAvgSession = prevSessionEntries > 0 ? Math.round(prevSessionSeconds / prevSessionEntries) : 0;
     const avgSession = sessionEntries > 0 ? Math.round(totalSessionSeconds / sessionEntries) : 0;
 
@@ -133,7 +149,7 @@ export async function GET(request) {
       sessionChange: prevAvgSession > 0 ? Math.round(((avgSession - prevAvgSession) / prevAvgSession) * 100) : null,
     };
 
-    // User journey analysis
+    // Feature adoption
     const featureAdoption = {};
     const featurePages = {
       'Games': ['/games', '/games/spin-wheel'],
@@ -178,7 +194,6 @@ export async function GET(request) {
     // Generate actionable insights
     const insights = [];
 
-    // Low engagement pages
     const lowEngagementFeatures = Object.entries(featureAdoption)
       .filter(([, data]) => data.percentage < 15 && data.percentage > 0)
       .map(([name]) => name);
@@ -191,7 +206,6 @@ export async function GET(request) {
       });
     }
 
-    // Unused features
     const unusedFeatures = Object.entries(featureAdoption)
       .filter(([, data]) => data.users === 0)
       .map(([name]) => name);
@@ -204,7 +218,6 @@ export async function GET(request) {
       });
     }
 
-    // Session duration insights
     if (avgSession > 0 && avgSession < 60) {
       insights.push({
         type: 'warning',
@@ -221,7 +234,6 @@ export async function GET(request) {
       });
     }
 
-    // Growth trends
     if (trends.usersChange !== null && trends.usersChange < -20) {
       insights.push({
         type: 'critical',
@@ -238,7 +250,6 @@ export async function GET(request) {
       });
     }
 
-    // Top feature recommendation
     const topFeature = Object.entries(featureAdoption)
       .filter(([, data]) => data.percentage > 0)
       .sort((a, b) => b[1].percentage - a[1].percentage)[0];
@@ -251,7 +262,6 @@ export async function GET(request) {
       });
     }
 
-    // Game engagement
     if (eventCounts['spin_wheel'] || eventCounts['buy_spin']) {
       const spins = (eventCounts['spin_wheel'] || 0);
       const buys = (eventCounts['buy_spin'] || 0);
@@ -265,7 +275,6 @@ export async function GET(request) {
       }
     }
 
-    // No data insight
     if (totalPageViews === 0 && uniqueUserIds.size === 0) {
       insights.push({
         type: 'info',

@@ -1,14 +1,19 @@
 'use client';
-import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain, GiVideoCamera, GiCartwheel } from 'react-icons/gi';
+/**
+ * GameCard — renders a card for each game on the games listing page.
+ * Handles session creation, room ID copying, and join-by-ID for multiplayer.
+ * The GAME_DETAILS map defines display name, icon, description, and color gradient.
+ */
+import { GiSwordman, GiTicTacToe, GiCardRandom, GiHanger, GiBrain, GiVideoCamera, GiTicket } from 'react-icons/gi';
 import { FaCopy, FaCheck } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 const GAME_DETAILS = {
-  spinwheel: {
-    name: 'Daily Spin the Wheel',
-    icon: <GiCartwheel size={40} />,
-    description: 'Spin once daily for free points!',
+  scratchcard: {
+    name: 'Daily Scratch Card',
+    icon: <GiTicket size={40} />,
+    description: 'Scratch to reveal symbols and win points!',
     color: 'from-amber-500 to-orange-500',
   },
   rps: {
@@ -56,10 +61,10 @@ export default function GameCard({ gameId }) {
   const [lastCreatedId, setLastCreatedId] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const isSpinWheel = gameId === 'spinwheel';
+  const isScratchCard = gameId === 'scratchcard';
 
   const handleCreateSession = () => {
-    if (gameId === 'spinwheel') {
+    if (gameId === 'scratchcard') {
       router.push('/games/spin-wheel');
     } else if (gameId === 'randomchat') {
       router.push('/video');
@@ -106,7 +111,7 @@ export default function GameCard({ gameId }) {
             onClick={handleCreateSession}
             className={`bg-gradient-to-r ${details.color} hover:opacity-90 text-white font-bold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-md`}
           >
-            {isSpinWheel ? 'Spin Now' : isRandomChat ? 'Join Random Chat' : 'Create New Game'}
+            {isScratchCard ? 'Play Now' : isRandomChat ? 'Join Random Chat' : 'Create New Game'}
           </button>
           {lastCreatedId && (
             <button
@@ -116,7 +121,7 @@ export default function GameCard({ gameId }) {
               {copied ? <><FaCheck className="text-green-500" /> Copied!</> : <><FaCopy /> Copy Room ID</>}
             </button>
           )}
-          {!isRandomChat && !isSpinWheel && (
+          {!isRandomChat && !isScratchCard && (
             <div className="flex flex-col sm:flex-row gap-2 mt-1">
               <input
                 type="text"

@@ -1,3 +1,14 @@
+/**
+ * Engagement tracking library — writes events to `engagementEvents` collection.
+ *
+ * Event types:
+ *   - page_view: tracked by EngagementTracker on route change
+ *   - session_duration: tracked when user leaves or navigates away
+ *   - game_play, game_win: tracked by individual game components
+ *
+ * The admin Engagement API (/api/admin/engagement) aggregates these events
+ * for the dashboard, computing feature adoption, top pages, and trends.
+ */
 import { db } from './firebase';
 import { serverTimestamp, collection, addDoc } from 'firebase/firestore';
 

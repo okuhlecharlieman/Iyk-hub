@@ -1,3 +1,10 @@
+/**
+ * Admin Dashboard — overview of platform stats and quick links.
+ * Shows total users, opportunities, challenges, revenue, and recent activity.
+ * All stats are fetched server-side via /api/admin/stats.
+ *
+ * Testers: Requires admin role (user.role === 'admin') to access.
+ */
 'use client';
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';

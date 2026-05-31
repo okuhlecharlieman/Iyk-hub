@@ -210,7 +210,7 @@ export async function createOpportunity(data) {
     throw new Error(json.error || 'Failed to create opportunity');
   }
 
-  return json.id;
+  return { id: json.id || json.opportunityId };
 }
 
 export async function updateOpportunity(opportunityId, data) {

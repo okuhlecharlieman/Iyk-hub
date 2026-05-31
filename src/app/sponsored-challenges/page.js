@@ -1,3 +1,14 @@
+/**
+ * Sponsored Challenges listing page — displays all approved challenges.
+ * Companies create challenges (with budget/prize) and pay via Paystack.
+ * Users browse and participate by submitting entries.
+ *
+ * Testers:
+ *   - Non-admin users must complete Paystack payment after creating a challenge.
+ *   - Admin-created challenges skip payment (platformFeeWaived: true).
+ *   - Challenge.ownerType is always 'company' for revenue tracking.
+ *   - Payment status (pending/paid/waived) visible on the manage page.
+ */
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';

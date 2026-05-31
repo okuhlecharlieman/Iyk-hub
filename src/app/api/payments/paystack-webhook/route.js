@@ -1,3 +1,18 @@
+/**
+ * Paystack Webhook — handles charge.success events from Paystack.
+ *
+ * Supported order types (metadata.orderType):
+ *   - creatorBoost: activates boost plan, updates user doc with badge/tier
+ *   - sponsoredChallenge: marks challenge paymentStatus='paid' for admin review
+ *   - sponsoredOpportunity: marks opportunity as sponsored+pinned
+ *   - donation: logs donation payment
+ *
+ * Security: HMAC signature verification using PAYSTACK_SECRET_KEY.
+ * All payments are logged to paymentLogs and financialLedger collections.
+ *
+ * Testers: Use Paystack test mode to simulate payments. The webhook URL
+ * must be configured in the Paystack dashboard under Settings > API Keys & Webhooks.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -135,9 +150,11 @@ export async function POST(request) {
       }
 
       if (orderType && orderId) {
+          // Map order types to Firestore collections for status updates
           const collectionMap = {
             creatorBoost: 'creatorBoostOrders',
             sponsoredChallenge: 'sponsoredChallenges',
+            sponsoredOpportunity: 'opportunities',
             donation: 'donations',
           };
         const col = collectionMap[orderType];
@@ -176,6 +193,13 @@ export async function POST(request) {
                 }, { merge: true });
               }
             }
+          }
+
+          // Sponsored opportunity: mark as sponsored and pinned after payment
+          if (orderType === 'sponsoredOpportunity') {
+            updateData.type = 'sponsoredOpportunity';
+            updateData.sponsored = true;
+            updateData.sponsoredAt = admin.firestore.FieldValue.serverTimestamp();
           }
 
           await db.collection(col).doc(orderId).set(updateData, { merge: true });

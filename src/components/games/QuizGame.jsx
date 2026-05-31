@@ -1,3 +1,8 @@
+/**
+ * QuizGame — single-player and multiplayer quiz.
+ * Questions are fetched from /api/games/content?type=quiz (Firestore-backed).
+ * Falls back to built-in defaults if the API is unavailable.
+ */
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -5,21 +10,29 @@ import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 
-const allQuestions = [
+// Minimal hardcoded fallback if API fails
+const FALLBACK_QUESTIONS = [
   { question: 'What is the powerhouse of the cell?', options: ['Nucleus', 'Mitochondrion', 'Ribosome', 'Chloroplast'], answer: 'Mitochondrion' },
   { question: 'Which planet is known as the Red Planet?', options: ['Earth', 'Mars', 'Jupiter', 'Venus'], answer: 'Mars' },
-  { question: 'What is the largest mammal in the world?', options: ['Elephant', 'Blue Whale', 'Giraffe', 'Great White Shark'], answer: 'Blue Whale' },
-  { question: 'Who wrote the play \'Romeo and Juliet\'?', options: ['Charles Dickens', 'William Shakespeare', 'Jane Austen', 'Mark Twain'], answer: 'William Shakespeare' },
+  { question: 'What is the capital of Japan?', options: ['Beijing', 'Seoul', 'Tokyo', 'Bangkok'], answer: 'Tokyo' },
   { question: 'What is the chemical symbol for Gold?', options: ['Au', 'Ag', 'Go', 'Gd'], answer: 'Au' },
   { question: 'How many continents are there?', options: ['5', '6', '7', '8'], answer: '7' },
-  { question: 'What is the capital of Japan?', options: ['Beijing', 'Seoul', 'Tokyo', 'Bangkok'], answer: 'Tokyo' },
-  { question: 'Which is the only vowel on a standard keyboard that is not on the top row?', options: ['A', 'E', 'I', 'O'], answer: 'A' },
-  { question: 'What is the hardest natural substance on Earth?', options: ['Gold', 'Iron', 'Diamond', 'Quartz'], answer: 'Diamond' },
-  { question: 'How many hearts does an octopus have?', options: ['1', '2', '3', '4'], answer: '3' }
 ];
 
-const shuffleAndPickQuestions = (count = 5) => {
-  return [...allQuestions].sort(() => 0.5 - Math.random()).slice(0, count);
+/** Fetch quiz questions from the game content API, falling back to hardcoded. */
+async function fetchQuizQuestions() {
+  try {
+    const res = await fetch('/api/games/content?type=quiz');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.items?.length > 0) return data.items;
+    }
+  } catch { /* silent */ }
+  return FALLBACK_QUESTIONS;
+}
+
+const shuffleAndPick = (all, count = 5) => {
+  return [...all].sort(() => 0.5 - Math.random()).slice(0, count);
 };
 
 function QuizSinglePlayer({ onEnd }) {
@@ -28,20 +41,24 @@ function QuizSinglePlayer({ onEnd }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [localQuestions] = useState(shuffleAndPickQuestions());
+  const [localQuestions, setLocalQuestions] = useState([]);
   const [localIndex, setLocalIndex] = useState(0);
   const [localScore, setLocalScore] = useState(0);
   const [localFinished, setLocalFinished] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showResult, setShowResult] = useState(false);
 
+  // Fetch questions from API on mount
   useEffect(() => {
     if (!user) {
       setError('You must be logged in to play.');
       setLoading(false);
       return;
     }
-    setLoading(false);
+    fetchQuizQuestions().then((all) => {
+      setLocalQuestions(shuffleAndPick(all, 5));
+      setLoading(false);
+    });
   }, [user]);
 
   const handleAnswerSingle = (option) => {
@@ -150,8 +167,9 @@ function QuizMultiplayer({ gameId, onEnd }) {
       try {
         const snap = await getDoc(gameDocRef);
         if (!snap.exists()) {
+          const allQ = await fetchQuizQuestions();
           await setDoc(gameDocRef, {
-            questions: shuffleAndPickQuestions(),
+            questions: shuffleAndPick(allQ, 5),
             currentQuestionIndex: 0,
             players: {
               player1: { uid: user.uid, displayName: user.displayName, score: 0, answer: null },
@@ -276,8 +294,9 @@ function QuizMultiplayer({ gameId, onEnd }) {
 
   const handleResetGame = async () => {
     if (gameState.status !== 'result') return;
+    const allQ = await fetchQuizQuestions();
     await updateDoc(gameDocRef, {
-      questions: shuffleAndPickQuestions(),
+      questions: shuffleAndPick(allQ, 5),
       currentQuestionIndex: 0,
       'players.player1.score': 0,
       'players.player1.answer': null,

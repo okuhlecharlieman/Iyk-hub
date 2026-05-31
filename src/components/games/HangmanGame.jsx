@@ -1,11 +1,38 @@
+/**
+ * HangmanGame — single-player and multiplayer hangman.
+ * Words are fetched from /api/games/content?type=hangman (Firestore-backed).
+ * Falls back to built-in defaults if the API is unavailable.
+ */
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 
-const words = ['react', 'nextjs', 'firebase', 'tailwind', 'javascript', 'google', 'coding', 'interface'];
-const randomWord = () => words[Math.floor(Math.random() * words.length)];
+const FALLBACK_WORDS = [
+  { word: 'react', hint: 'A JavaScript UI library' },
+  { word: 'nextjs', hint: 'React framework' },
+  { word: 'firebase', hint: 'Google cloud platform' },
+  { word: 'tailwind', hint: 'CSS framework' },
+  { word: 'javascript', hint: 'Language of the web' },
+];
+
+/** Fetch hangman words from the game content API, falling back to hardcoded. */
+async function fetchHangmanWords() {
+  try {
+    const res = await fetch('/api/games/content?type=hangman');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.items?.length > 0) return data.items;
+    }
+  } catch { /* silent */ }
+  return FALLBACK_WORDS;
+}
+
+const pickRandomWord = (words) => {
+  const item = words[Math.floor(Math.random() * words.length)];
+  return typeof item === 'string' ? item : item.word;
+};
 
 const HANGMAN_PARTS = [
   { part: 'head', draw: '  O' },
@@ -31,10 +58,21 @@ function HangmanDrawing({ wrongGuesses }) {
 }
 
 function HangmanSinglePlayer({ onEnd }) {
-  const [word] = useState(randomWord);
+  const [word, setWord] = useState('');
+  const [loading, setLoading] = useState(true);
   const [guessedLetters, setGuessedLetters] = useState([]);
   const [gameOver, setGameOver] = useState(false);
   const onEndCalledRef = useRef(false);
+  const allWordsRef = useRef([]);
+
+  // Fetch words from API on mount
+  useEffect(() => {
+    fetchHangmanWords().then((words) => {
+      allWordsRef.current = words;
+      setWord(pickRandomWord(words));
+      setLoading(false);
+    });
+  }, []);
 
   const wrongGuesses = guessedLetters.filter(l => !word.includes(l)).length;
   const wordGuessed = word.split('').every(l => guessedLetters.includes(l));
@@ -55,12 +93,15 @@ function HangmanSinglePlayer({ onEnd }) {
     setGuessedLetters(prev => [...prev, letter]);
   };
 
-  const [resetKey, setResetKey] = useState(0);
-  const reset = () => setResetKey(k => k + 1);
+  const reset = () => {
+    onEndCalledRef.current = false;
+    setGuessedLetters([]);
+    setGameOver(false);
+    setWord(pickRandomWord(allWordsRef.current));
+  };
 
-  if (resetKey > 0) {
-    return <HangmanSinglePlayer key={resetKey} onEnd={onEnd} />;
-  }
+  if (loading) return <p className="text-center py-8">Loading words...</p>;
+  if (!word) return <p className="text-center py-8 text-red-500">Could not load words.</p>;
 
   return (
     <div className="text-center max-w-2xl mx-auto">
@@ -132,8 +173,9 @@ function HangmanMultiplayer({ gameId, onEnd }) {
       try {
         const snap = await getDoc(gameDocRef);
         if (!snap.exists()) {
+          const allW = await fetchHangmanWords();
           await setDoc(gameDocRef, {
-            word: randomWord(),
+            word: pickRandomWord(allW),
             guessedLetters: [],
             players: {
               player1: { uid: user.uid, displayName: user.displayName, wrongGuesses: 0 },
@@ -258,8 +300,9 @@ function HangmanMultiplayer({ gameId, onEnd }) {
 
   const handleResetGame = async () => {
     gameEndedRef.current = false;
+    const allW = await fetchHangmanWords();
     await updateDoc(gameDocRef, {
-      word: randomWord(),
+      word: pickRandomWord(allW),
       guessedLetters: [],
       players: {
         ...gameState.players,

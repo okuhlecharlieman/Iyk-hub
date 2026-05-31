@@ -1,3 +1,19 @@
+/**
+ * TTL Cleanup Cron Job — runs on a schedule to delete stale data.
+ *
+ * Cleanup steps:
+ *   1. Rate limit entries older than 1 hour
+ *   2. Stale game sessions older than 2 hours
+ *   3. Expired presence records
+ *   4. Old security logs (90 days)
+ *   5. Old data access logs (90 days)
+ *   6. Stale video rooms (24 hours) + their signal subcollections
+ *   7. Empty/orphaned collections
+ *   8. Expired boost accent colors (revert to default)
+ *
+ * Testers: Trigger manually via GET /api/jobs/ttl-cleanup with proper cron auth.
+ * Each step logs results for debugging.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';

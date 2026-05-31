@@ -1,3 +1,7 @@
+/**
+ * Podium — shows the top 3 users in a visual podium layout on the leaderboard.
+ * Accent color from active ULTRA boosts is applied to avatar borders and names.
+ */
 'use client';
 import Link from 'next/link';
 import { FaTrophy } from 'react-icons/fa';

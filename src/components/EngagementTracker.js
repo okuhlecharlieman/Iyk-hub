@@ -1,3 +1,12 @@
+/**
+ * EngagementTracker — silently tracks user page views and session duration.
+ * Mounted once in the root layout. Writes to the `engagementEvents` Firestore
+ * collection. Data is aggregated by the /api/admin/engagement API and shown
+ * on the admin Engagement dashboard (/admin/engagement).
+ *
+ * Testers: Check the browser console for "Engagement tracking error" if
+ * Firestore rules for engagementEvents are not deployed.
+ */
 'use client';
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';

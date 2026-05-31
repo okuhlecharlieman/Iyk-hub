@@ -80,9 +80,11 @@ async function cacheFirst(request) {
 
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(STATIC_CACHE);
-      cache.put(request, response.clone());
+    if (response.ok && response.type !== 'opaque') {
+      try {
+        const cache = await caches.open(STATIC_CACHE);
+        await cache.put(request, response.clone());
+      } catch { /* cache write failed — non-critical */ }
     }
     return response;
   } catch {
@@ -93,9 +95,11 @@ async function cacheFirst(request) {
 async function networkFirst(request) {
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone());
+    if (response.ok && response.type !== 'opaque') {
+      try {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        await cache.put(request, response.clone());
+      } catch { /* cache write failed — non-critical */ }
     }
     return response;
   } catch {
@@ -111,9 +115,11 @@ async function networkFirst(request) {
 async function navigationHandler(request) {
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone());
+    if (response.ok && response.type !== 'opaque') {
+      try {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        await cache.put(request, response.clone());
+      } catch { /* cache write failed — non-critical */ }
     }
     return response;
   } catch {

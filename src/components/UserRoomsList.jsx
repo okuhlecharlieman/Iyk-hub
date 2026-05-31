@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '@/lib/firebase'; // Corrected Path
-import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { FaPlay, FaTrash } from 'react-icons/fa';
 
@@ -18,6 +18,8 @@ export default function UserRoomsList() {
   const { user } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [leavingId, setLeavingId] = useState(null);
+  const [joiningId, setJoiningId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -50,7 +52,8 @@ export default function UserRoomsList() {
           }
         });
 
-        setRooms(userRooms);
+        const activeRooms = userRooms.filter(r => r.status !== 'ended' && r.status !== 'result');
+        setRooms(activeRooms);
       } catch (error) {
         console.error("Error fetching user rooms:", error);
       }
@@ -62,25 +65,37 @@ export default function UserRoomsList() {
 
   const leaveRoom = async (gameId) => {
     if (!user) return;
+    setLeavingId(gameId);
     try {
       const gameDocRef = doc(db, 'games', gameId);
       const gameDoc = await getDoc(gameDocRef);
-      if (!gameDoc.exists()) return;
+      if (!gameDoc.exists()) {
+        setRooms(rooms.filter(room => room.id !== gameId));
+        setLeavingId(null);
+        return;
+      }
 
       const gameData = gameDoc.data();
-      const player1 = gameData.players.player1;
-      const player2 = gameData.players.player2;
+      const player1 = gameData.players?.player1;
+      const player2 = gameData.players?.player2;
+      const isP1 = player1 && player1.uid === user.uid;
+      const isP2 = player2 && player2.uid === user.uid;
 
-      if (player1 && player1.uid === user.uid) {
-        await updateDoc(gameDocRef, { 'players.player1': null });
-      } else if (player2 && player2.uid === user.uid) {
-        await updateDoc(gameDocRef, { 'players.player2': null });
+      if (isP1 && !player2) {
+        await deleteDoc(gameDocRef);
+      } else if (isP2 && !player1) {
+        await deleteDoc(gameDocRef);
+      } else if (isP1) {
+        await updateDoc(gameDocRef, { 'players.player1': null, status: 'ended' });
+      } else if (isP2) {
+        await updateDoc(gameDocRef, { 'players.player2': null, status: 'ended' });
       }
 
       setRooms(rooms.filter(room => room.id !== gameId));
     } catch (error) {
       console.error("Error leaving room:", error);
     }
+    setLeavingId(null);
   };
 
   if (loading) {
@@ -106,15 +121,15 @@ export default function UserRoomsList() {
                         <p className="text-sm text-gray-500 dark:text-gray-400">Room ID: {room.id}</p>
                     </div>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                        <Link href={`/games/${room.id}`}>
-                            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                        <Link href={`/games/${room.id}`} onClick={() => setJoiningId(room.id)}>
+                            <button disabled={joiningId === room.id} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:opacity-60">
                                 <FaPlay />
-                                Join
+                                {joiningId === room.id ? 'Loading...' : 'Join'}
                             </button>
                         </Link>
-                        <button onClick={() => leaveRoom(room.id)} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">
+                        <button onClick={() => leaveRoom(room.id)} disabled={leavingId === room.id} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors disabled:opacity-60">
                             <FaTrash />
-                            Leave
+                            {leavingId === room.id ? 'Leaving...' : 'Leave'}
                         </button>
                     </div>
                 </div>

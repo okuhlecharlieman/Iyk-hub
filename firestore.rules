@@ -245,5 +245,11 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
       allow update, delete: if false;
     }
+
+    // Game content — public read (quiz questions, hangman words), admin write
+    match /gameContent/{type}/items/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

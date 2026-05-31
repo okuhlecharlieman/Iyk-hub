@@ -1,3 +1,8 @@
+/**
+ * LeaderboardItem — single row in the leaderboard table.
+ * Shows rank, avatar, name, boost badge, and points.
+ * Accent color from active ULTRA boosts is applied to the border and name.
+ */
 import Link from 'next/link';
 import { FaCrown } from 'react-icons/fa';
 import BoostBadge from './BoostBadge';

@@ -1,3 +1,14 @@
+/**
+ * Opportunity Board — users submit, browse, and manage opportunities.
+ * Admins can approve/reject. Users can optionally sponsor (pin) an
+ * opportunity by paying R50 via Paystack after submission.
+ *
+ * Analytics: Each OpportunityCard tracks views (on mount) and clicks
+ * (on link open) via /api/opportunities/analytics. Admin dashboard at
+ * /admin/opportunity-analytics shows aggregate stats.
+ *
+ * Sponsored opportunities get a 'sponsoredOpportunity' type and yellow border.
+ */
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
@@ -19,7 +30,8 @@ import Modal from '../../components/Modal';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import { useActiveBoost } from '../../hooks/useActiveBoost';
-import { FaBriefcase, FaBolt, FaCalendarAlt, FaTrophy } from 'react-icons/fa';
+import { FaBriefcase, FaBolt, FaCalendarAlt, FaTrophy, FaStar } from 'react-icons/fa';
+import PaystackCheckout from '../../components/PaystackCheckout';
 
 const TABS = { ALL: 'All', PENDING: 'Pending' };
 const PAGE_SIZE = 12;
@@ -37,6 +49,7 @@ function OpportunitiesContent() {
   const [activeTab, setActiveTab] = useState(TABS.ALL);
   const [searchQuery, setSearchQuery] = useState('');
   const [earlyAccessOpps, setEarlyAccessOpps] = useState([]);
+  const [sponsorPayment, setSponsorPayment] = useState(null); // { oppId, email }
 
   const isAdmin = useMemo(() => userProfile?.role?.toLowerCase() === 'admin', [userProfile]);
   const isUltra = activeBoost?.tier === 'ULTRA';
@@ -97,29 +110,35 @@ function OpportunitiesContent() {
     
     try {
       const tags = typeof data.tags === 'string' ? data.tags.split(',').map((t) => t.trim()) : [];
-      let submissionData = { ...data, tags };
+      const wantsSponsor = data.wantsSponsor;
+      const submissionData = { ...data, tags };
+      delete submissionData.wantsSponsor;
 
+      let result;
       if (editingOpp) {
         await updateOpportunity(editingOpp.id, submissionData);
         toast('success', 'Opportunity updated successfully!');
       } else {
-        await createOpportunity(submissionData);
+        result = await createOpportunity(submissionData);
         toast('success', 'Opportunity submitted for review!');
       }
 
       setEditingOpp(null);
       setError('');
-      await loadOpportunities(); // Reload all opportunities
-      
-      // Scroll to top to see the new post
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await loadOpportunities();
 
+      // If user wants to sponsor, show Paystack payment modal
+      if (wantsSponsor && result?.id && !editingOpp) {
+        setSponsorPayment({ oppId: result.id, email: user?.email });
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('Error submitting form:', error);
       const errorMessage = error.message || 'There was an error. Please try again.';
       setError(errorMessage);
       toast('error', `Error submitting opportunity: ${errorMessage}`);
-      setIsFormModalOpen(true); // Re-open modal on error
+      setIsFormModalOpen(true);
     }
   };
 
@@ -339,6 +358,38 @@ function OpportunitiesContent() {
           submitButtonText={editingOpp ? 'Update' : 'Submit for Review'}
         />
       </Modal>
+
+      {/* Sponsor payment modal — shown after submission when user opts to sponsor */}
+      {sponsorPayment && (
+        <Modal open={true} onClose={() => setSponsorPayment(null)} title="Sponsor Opportunity">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+              <FaStar /> <span className="font-semibold">Pin your opportunity to the top for 30 days</span>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Pay R50 to have your opportunity appear at the top of the board, highlighted as a sponsored listing.
+            </p>
+            <PaystackCheckout
+              email={sponsorPayment.email}
+              amountCents={5000}
+              reference={`opp-sponsor-${sponsorPayment.oppId}-${Date.now()}`}
+              metadata={{
+                orderType: 'sponsoredOpportunity',
+                orderId: sponsorPayment.oppId,
+              }}
+              onSuccess={() => {
+                toast('success', 'Payment successful! Your opportunity is now sponsored and pinned.');
+                setSponsorPayment(null);
+                loadOpportunities();
+              }}
+              onError={(err) => {
+                toast('error', `Payment failed: ${err.message}`);
+                setSponsorPayment(null);
+              }}
+            />
+          </div>
+        </Modal>
+      )}
 
       {/* FAB for mobile */}
       <button

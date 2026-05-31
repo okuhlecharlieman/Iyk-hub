@@ -1,8 +1,31 @@
-import { useState } from 'react';
+/**
+ * OpportunityCard — displays a single opportunity with status, tags, and actions.
+ * Tracks views (on mount) and clicks (on link open) via /api/opportunities/analytics.
+ * Sponsored opportunities are highlighted with a yellow border and star badge.
+ */
+import { useState, useEffect, useRef } from 'react';
 import { FaEdit, FaTrash, FaCheck, FaTimes, FaExternalLinkAlt, FaEnvelope, FaUser, FaStar } from 'react-icons/fa';
+
+/** Fire-and-forget analytics event */
+function trackOppEvent(opportunityId, event) {
+  fetch('/api/opportunities/analytics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ opportunityId, event }),
+  }).catch(() => {});
+}
 
 export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit, onDelete, onApprove, onReject }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const viewTracked = useRef(false);
+
+  // Track view once when the card mounts
+  useEffect(() => {
+    if (!viewTracked.current && o.id) {
+      viewTracked.current = true;
+      trackOppEvent(o.id, 'view');
+    }
+  }, [o.id]);
   const isExternal = Boolean(o.readOnly || o.externalSource);
   const canManage = !isExternal && (isAdmin || o.ownerId === user?.uid);
   const canReview = isAdmin && !isExternal;
@@ -27,7 +50,7 @@ export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit,
         <div className="flex justify-between items-start mb-2">
             <h3 className="font-bold text-lg text-gray-800 dark:text-white pr-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{o.title}</h3>
             {o.link ? (
-              <a href={o.link} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0" aria-label={`Open ${o.title}`}>
+              <a href={o.link} target="_blank" rel="noreferrer" onClick={() => trackOppEvent(o.id, 'click')} className="text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0" aria-label={`Open ${o.title}`}>
                   <FaExternalLinkAlt />
               </a>
             ) : null}

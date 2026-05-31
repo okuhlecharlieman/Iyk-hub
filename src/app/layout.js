@@ -1,4 +1,12 @@
-// src/app/layout.js
+/**
+ * Root layout — wraps every page with providers, navbar, footer, and global utilities.
+ *
+ * Providers chain:
+ *   AuthProvider → Presence → EngagementTracker → ServiceWorkerRegistration
+ *
+ * Testers: The EngagementTracker silently logs page views and session durations
+ * to the `engagementEvents` Firestore collection for the admin dashboard.
+ */
 import './globals.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';

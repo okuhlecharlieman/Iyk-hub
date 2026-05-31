@@ -110,12 +110,17 @@ export async function POST(request) {
 
     const db = admin.firestore();
     const challengeRef = db.collection('sponsoredChallenges').doc();
+    // Challenge data with company ownership and payment tracking
     const challengeData = {
       ...validatedData,
       id: challengeRef.id,
       creatorUid: uid,
-      status: isAdmin ? 'approved' : 'pending', // Auto-approve for admins
-      platformFeeWaived: isAdmin, // No platform fee for admin-created challenges
+      ownerType: 'company',
+      status: isAdmin ? 'approved' : 'pending',
+      paymentStatus: isAdmin ? 'waived' : 'pending',
+      platformFeeWaived: isAdmin,
+      platformFeeCents: isAdmin ? 0 : Math.round(validatedData.budgetCents * 0.2),
+      submissionCount: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };

@@ -1,8 +1,14 @@
+/**
+ * OpportunityForm — reusable form for submitting and editing opportunities.
+ * Includes an optional "Sponsor this Opportunity" toggle that allows users
+ * to sponsor (pin) the opportunity by paying via Paystack.
+ */
 import { useState, useEffect } from 'react';
 import Button from './ui/Button';
 import FileUploadField from './ui/FileUploadField';
 import { uploadToStorage } from '../lib/firebase/helpers';
 import { useToast } from './ui/ToastProvider';
+import { FaStar } from 'react-icons/fa';
 
 export default function OpportunityForm({ onSubmit, initialFormState, submitButtonText }) {
   const [form, setForm] = useState(initialFormState);
@@ -75,6 +81,26 @@ export default function OpportunityForm({ onSubmit, initialFormState, submitButt
             min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">If set, this opportunity will automatically be hidden after this date.</p>
+        </div>
+        
+        {/* Optional sponsor toggle — users can pay to pin the opportunity */}
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              name="wantsSponsor"
+              checked={form.wantsSponsor || false}
+              onChange={(e) => setForm(prev => ({ ...prev, wantsSponsor: e.target.checked }))}
+              className="w-5 h-5 rounded text-yellow-500 focus:ring-yellow-500"
+            />
+            <div className="flex items-center gap-2">
+              <FaStar className="text-yellow-500" />
+              <span className="font-semibold text-gray-800 dark:text-white">Sponsor this Opportunity (R50)</span>
+            </div>
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-8">
+            Sponsored opportunities are pinned to the top of the board for 30 days. You will be redirected to pay via Paystack after submission.
+          </p>
         </div>
         
         <FileUploadField

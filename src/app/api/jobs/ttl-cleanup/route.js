@@ -87,34 +87,37 @@ export async function GET(request) {
       errors.push({ step: 'videoRooms_ended', error: err?.message });
     }
 
-    // 4c. Remove empty videoRoom docs (docs with no fields, only subcollections)
+    // 4c. Remove stale videoRoom docs (empty docs, or docs older than 24h by createdAt)
     try {
       const allRoomsSnap = await db.collection('videoRooms').get();
-      let emptyRoomCount = 0;
-      const emptyBatch = db.batch();
+      let staleRoomCount = 0;
       for (const roomDoc of allRoomsSnap.docs) {
         const data = roomDoc.data();
         const hasFields = Object.keys(data).length > 0;
-        if (!hasFields) {
-          emptyBatch.delete(roomDoc.ref);
-          emptyRoomCount++;
-          // Also delete subcollections (e.g. signals)
+        const createdAt = data.createdAt?.toDate?.();
+        const isStale = !hasFields || (createdAt && createdAt < twentyFourHoursAgo);
+
+        if (isStale) {
+          // Delete subcollections first (e.g. signals)
           const subcolls = await roomDoc.ref.listCollections();
           for (const sub of subcolls) {
             const subDocs = await sub.get();
-            const subBatch = db.batch();
-            subDocs.docs.forEach(d => subBatch.delete(d.ref));
-            await subBatch.commit();
+            if (!subDocs.empty) {
+              const subBatch = db.batch();
+              subDocs.docs.forEach(d => subBatch.delete(d.ref));
+              await subBatch.commit();
+            }
           }
+          await roomDoc.ref.delete();
+          staleRoomCount++;
         }
       }
-      if (emptyRoomCount > 0) {
-        await emptyBatch.commit();
-        results['videoRooms_empty'] = { deleted: emptyRoomCount };
+      if (staleRoomCount > 0) {
+        results['videoRooms_stale'] = { deleted: staleRoomCount };
       }
     } catch (err) {
-      console.warn('TTL step 4c (empty videoRooms) skipped:', err?.message);
-      errors.push({ step: 'videoRooms_empty', error: err?.message });
+      console.warn('TTL step 4c (stale videoRooms) skipped:', err?.message);
+      errors.push({ step: 'videoRooms_stale', error: err?.message });
     }
 
     // 5. Clean health check pings (temporary document)
@@ -254,17 +257,20 @@ export async function GET(request) {
       errors.push({ step: 'emptyCollections', error: err?.message });
     }
 
-    // Log the cleanup action
-    if (Object.keys(results).length > 0 || errors.length > 0) {
-        await logAdminAction({
-            request,
-            actor: { uid: 'system:cron', email: 'System (Cron Job)' },
-            action: 'system.ttl.cleanup',
-            targetType: 'system',
-            targetId: 'ttl-cleanup',
-            metadata: { ...results, ...(errors.length > 0 ? { skippedSteps: errors } : {}) },
-        });
-    }
+    // Always log the cleanup action so it appears in audit logs
+    await logAdminAction({
+        request,
+        actor: { uid: 'system:cron', email: 'System (Cron Job)' },
+        action: 'system.ttl.cleanup',
+        targetType: 'system',
+        targetId: 'ttl-cleanup',
+        metadata: {
+          ranAt: new Date().toISOString(),
+          ...results,
+          ...(errors.length > 0 ? { skippedSteps: errors } : {}),
+          ...(Object.keys(results).length === 0 ? { note: 'No items needed cleanup' } : {}),
+        },
+    });
 
     return NextResponse.json({
       success: true,

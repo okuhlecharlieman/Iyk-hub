@@ -308,7 +308,7 @@ export default function EngagementPage() {
                 {stats.recentEvents.map((evt) => (
                   <tr key={evt.id} className="border-b border-gray-100 dark:border-gray-700/50">
                     <td className="py-2 px-3 font-medium text-gray-700 dark:text-gray-300">{evt.eventType}</td>
-                    <td className="py-2 px-3 text-gray-500 dark:text-gray-400 font-mono text-xs">{evt.userId?.slice(0, 8)}...</td>
+                    <td className="py-2 px-3 text-gray-500 dark:text-gray-400 text-xs">{evt.userName || 'Anonymous'}</td>
                     <td className="py-2 px-3 text-gray-500 dark:text-gray-400">
                       {evt.createdAt ? new Date(evt.createdAt).toLocaleString() : '-'}
                     </td>

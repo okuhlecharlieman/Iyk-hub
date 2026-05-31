@@ -1,3 +1,8 @@
+/**
+ * PostCard — renders a single showcase post with voting, media preview, and actions.
+ * Author accent color (from active ULTRA boost) is applied to the avatar and name.
+ * Voting uses optimistic UI with Firestore listeners for real-time updates.
+ */
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FaCode, FaMusic, FaPaintBrush, FaGamepad, FaPencilRuler, FaEllipsisH, FaThumbsUp, FaFire, FaHeart, FaEdit, FaTrash, FaPlay } from 'react-icons/fa';

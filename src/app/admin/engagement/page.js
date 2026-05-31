@@ -1,3 +1,16 @@
+/**
+ * Admin Engagement Dashboard — actionable insights on user activity.
+ *
+ * Sections:
+ *   - Summary stats: page views, active users, avg session, top events
+ *   - Recommendations: auto-generated insights for low adoption, drop-off, etc.
+ *   - Feature Adoption: % of users engaging with each feature
+ *   - Traffic Funnel: where users go and where they leave
+ *   - Period Trends: comparison with previous period
+ *   - Recent Events: live feed of user actions
+ *
+ * Data source: /api/admin/engagement (aggregates from engagementEvents collection)
+ */
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';

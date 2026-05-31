@@ -1,3 +1,11 @@
+/**
+ * Games listing page — shows all available games as cards.
+ * Order defined by the GAMES array. Each game supports single-player and multiplayer.
+ *
+ * Testers: Games are identified by their slug (e.g. 'scratchcard', 'quiz', 'hangman').
+ * The scratchcard replaced the old spin wheel. Quiz and Hangman now pull content from
+ * Firestore (gameContent/{type}/items) via the /api/games/content API.
+ */
 'use client';
 import { useMemo, useState } from 'react';
 import GameCard from '../../components/GameCard';
@@ -6,7 +14,8 @@ import InstallButton from '../../components/InstallButton';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaGamepad, FaSearch } from 'react-icons/fa';
 
-const GAMES = ['spinwheel', 'rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
+/** Game IDs rendered on the games listing page. Order determines display order. */
+const GAMES = ['scratchcard', 'rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
 
 export default function GamesPage() {
   const [search, setSearch] = useState('');

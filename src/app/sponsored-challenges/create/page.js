@@ -1,3 +1,15 @@
+/**
+ * Create Sponsored Challenge page — companies create challenges with a budget.
+ * Non-admin users must pay via Paystack before the challenge goes live.
+ * Admin-created challenges skip payment and are auto-approved.
+ *
+ * Flow:
+ *   1. Fill out challenge form
+ *   2. Submit → creates challenge in Firestore with paymentStatus='pending'
+ *   3. Non-admins see Paystack checkout to pay the budget amount
+ *   4. After payment, challenge paymentStatus → 'paid' (via webhook)
+ *   5. Admins review and approve
+ */
 'use client';
 import { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
@@ -7,6 +19,7 @@ import { FaRocket, FaTrophy, FaUsers, FaLightbulb, FaCheckCircle, FaArrowRight }
 import FileUploadField from '../../../components/ui/FileUploadField';
 import { uploadToStorage } from '../../../lib/firebase/helpers';
 import { useToast } from '../../../components/ui/ToastProvider';
+import PaystackCheckout from '../../../components/PaystackCheckout';
 
 export default function CreateSponsoredChallenge() {
   const { user, userProfile } = useAuth();
@@ -24,6 +37,8 @@ export default function CreateSponsoredChallenge() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bannerFile, setBannerFile] = useState(null);
+  const [showPayment, setShowPayment] = useState(false);
+  const [createdChallenge, setCreatedChallenge] = useState(null);
   const toast = useToast();
 
   const isAdmin = userProfile?.role?.toLowerCase() === 'admin';
@@ -67,8 +82,16 @@ export default function CreateSponsoredChallenge() {
       }
 
       const data = await response.json();
-      toast('success', 'Challenge created successfully! It will be reviewed by admins before going live.');
-      router.push('/sponsored-challenges');
+
+      // Non-admin users need to pay via Paystack before challenge goes live
+      if (!isAdmin && data.challenge?.id) {
+        setCreatedChallenge(data.challenge);
+        setShowPayment(true);
+        toast('success', 'Challenge created! Complete payment to activate it.');
+      } else {
+        toast('success', 'Challenge created successfully! It will be reviewed before going live.');
+        router.push('/sponsored-challenges');
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -350,24 +373,57 @@ export default function CreateSponsoredChallenge() {
                   </div>
 
                   <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full flex justify-center items-center px-8 py-4 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
-                    >
-                      {loading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
-                          Creating Challenge...
-                        </>
-                      ) : (
-                        <>
-                          <FaRocket className="mr-3" />
-                          Launch Challenge
-                          <FaArrowRight className="ml-3" />
-                        </>
-                      )}
-                    </button>
+                    {/* Paystack payment step for non-admin users */}
+                    {showPayment && createdChallenge ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <p className="text-green-800 dark:text-green-200 font-medium">Challenge created! Complete payment to activate it.</p>
+                          <p className="text-sm text-green-600 dark:text-green-400 mt-1">Owner: {createdChallenge.sponsorName} (Company)</p>
+                        </div>
+                        <PaystackCheckout
+                          email={formData.sponsorEmail || user?.email}
+                          amountCents={createdChallenge.budgetCents}
+                          reference={`challenge-${createdChallenge.id}-${Date.now()}`}
+                          metadata={{
+                            orderType: 'sponsoredChallenge',
+                            orderId: createdChallenge.id,
+                            sponsorName: createdChallenge.sponsorName,
+                            ownerType: 'company',
+                          }}
+                          onSuccess={() => {
+                            toast('success', 'Payment successful! Your challenge is now pending review.');
+                            router.push('/sponsored-challenges');
+                          }}
+                          onError={(err) => setError(err.message)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => router.push('/sponsored-challenges')}
+                          className="w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                        >
+                          Pay Later (challenge stays inactive)
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full flex justify-center items-center px-8 py-4 border border-transparent rounded-lg shadow-sm text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
+                      >
+                        {loading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                            Creating Challenge...
+                          </>
+                        ) : (
+                          <>
+                            <FaRocket className="mr-3" />
+                            {isAdmin ? 'Launch Challenge' : 'Create & Pay'}
+                            <FaArrowRight className="ml-3" />
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
                 </form>
 

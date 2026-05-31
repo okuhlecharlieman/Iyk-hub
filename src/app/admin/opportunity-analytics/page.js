@@ -6,8 +6,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import AdminSidebar from '../../../components/AdminSidebar';
 import { FaEye, FaMousePointer, FaChartBar, FaStar, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 
 export default function OpportunityAnalyticsPage() {
@@ -60,10 +58,6 @@ export default function OpportunityAnalyticsPage() {
   };
 
   return (
-    <ProtectedRoute adminOnly>
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-        <AdminSidebar />
-        <main className="flex-1 p-4 lg:p-8 lg:ml-64">
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
@@ -166,8 +160,5 @@ export default function OpportunityAnalyticsPage() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </ProtectedRoute>
   );
 }

@@ -10,8 +10,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import AdminSidebar from '../../../components/AdminSidebar';
 import { FaGamepad, FaPlus, FaTrash, FaUpload, FaQuestionCircle, FaFont } from 'react-icons/fa';
 
 const TABS = { QUIZ: 'quiz', HANGMAN: 'hangman' };
@@ -125,10 +123,6 @@ export default function GameManagerPage() {
   const inputClass = 'w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none';
 
   return (
-    <ProtectedRoute adminOnly>
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-        <AdminSidebar />
-        <main className="flex-1 p-4 lg:p-8 lg:ml-64">
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
@@ -262,8 +256,5 @@ export default function GameManagerPage() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </ProtectedRoute>
   );
 }

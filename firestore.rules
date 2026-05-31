@@ -130,12 +130,16 @@ service cloud.firestore {
     match /games/{gameId} {
       allow read: if request.auth.uid != null;
       allow create: if request.auth.uid != null;
-      // Only players/host or admin can update
+      // Players in the game or admin can update
       allow update: if request.auth.uid != null
-        && (resource.data.hostId == request.auth.uid
-            || request.auth.uid in resource.data.players
+        && (resource.data.players.player1.uid == request.auth.uid
+            || resource.data.players.player2.uid == request.auth.uid
             || isAdmin());
-      allow delete: if resource.data.hostId == request.auth.uid || isAdmin();
+      // Player1 (creator) or admin can delete
+      allow delete: if request.auth.uid != null
+        && (resource.data.players.player1.uid == request.auth.uid
+            || resource.data.players.player2.uid == request.auth.uid
+            || isAdmin());
     }
 
     // Rules for video chat

@@ -75,18 +75,19 @@ function HangmanSinglePlayer({ onEnd }) {
   }, []);
 
   const wrongGuesses = guessedLetters.filter(l => !word.includes(l)).length;
-  const wordGuessed = word.split('').every(l => guessedLetters.includes(l));
-  const lost = wrongGuesses >= 6;
+  const wordGuessed = word.length > 0 && word.split('').every(l => guessedLetters.includes(l));
+  const lost = word.length > 0 && wrongGuesses >= 6;
   const wordDisplay = word.split('').map(l => guessedLetters.includes(l) ? l : '_').join(' ');
 
   useEffect(() => {
+    if (!word || loading) return;
     if ((wordGuessed || lost) && !onEndCalledRef.current) {
       onEndCalledRef.current = true;
       setGameOver(true);
       const score = wordGuessed ? Math.max(1, 10 - wrongGuesses) : 1;
       if (onEnd) onEnd({ score, resultKey: `hangman-sp:${Date.now()}:${wordGuessed ? 'win' : 'loss'}` });
     }
-  }, [wordGuessed, lost, wrongGuesses, onEnd]);
+  }, [word, loading, wordGuessed, lost, wrongGuesses, onEnd]);
 
   const handleGuess = (letter) => {
     if (guessedLetters.includes(letter) || gameOver) return;

@@ -24,6 +24,14 @@ export const initializeFirebaseAdmin = () => {
   }
 };
 
+const extractBearerToken = (req) => {
+  const authHeader = req.headers?.get ? req.headers.get('authorization') : req.headers?.authorization;
+  if (!authHeader || !/^Bearer\s+/i.test(authHeader)) {
+    return null;
+  }
+  return authHeader.replace(/^Bearer\s+/i, '').trim();
+};
+
 const verifyIdToken = async (token) => {
   const decoded = await admin.auth().verifyIdToken(token);
   if (!decoded || !decoded.uid) {

@@ -1,5 +1,4 @@
-import { FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes } from 'react-icons/fa';
-import { useState } from 'react';
+import { FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 
 export const ErrorAlert = ({ message, onClose = null, details = null }) => {
   return (
@@ -13,42 +12,6 @@ export const ErrorAlert = ({ message, onClose = null, details = null }) => {
       </div>
       {onClose && (
         <button onClick={onClose} className="text-red-500 hover:text-red-700">
-          <FaTimes className="h-4 w-4" />
-        </button>
-      )}
-    </div>
-  );
-};
-
-export const SuccessAlert = ({ message, onClose = null }) => {
-  return (
-    <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-4">
-      <div className="flex-shrink-0 mt-0.5">
-        <FaCheckCircle className="h-5 w-5 text-green-500" />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-sm font-semibold text-green-800 dark:text-green-200">{message}</h3>
-      </div>
-      {onClose && (
-        <button onClick={onClose} className="text-green-500 hover:text-green-700">
-          <FaTimes className="h-4 w-4" />
-        </button>
-      )}
-    </div>
-  );
-};
-
-export const InfoAlert = ({ message, onClose = null }) => {
-  return (
-    <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-4">
-      <div className="flex-shrink-0 mt-0.5">
-        <FaInfoCircle className="h-5 w-5 text-blue-500" />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200">{message}</h3>
-      </div>
-      {onClose && (
-        <button onClick={onClose} className="text-blue-500 hover:text-blue-700">
           <FaTimes className="h-4 w-4" />
         </button>
       )}

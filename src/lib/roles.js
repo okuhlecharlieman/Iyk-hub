@@ -1,4 +1,4 @@
-export const ROLE_KEYS = {
+const ROLE_KEYS = {
   BUSINESS_OWNER: 'business_owner',
   ADMIN: 'admin',
   OPERATIONS: 'operations',
@@ -99,7 +99,7 @@ export const ROLE_DEFINITIONS = [
 export const ROLE_OPTIONS = ROLE_DEFINITIONS.map(({ key, label }) => ({ value: key, label }));
 export const VALID_ROLE_KEYS = ROLE_DEFINITIONS.map((role) => role.key);
 export const TEAM_MANAGEMENT_ROLES = [ROLE_KEYS.BUSINESS_OWNER, ROLE_KEYS.ADMIN, ROLE_KEYS.OPERATIONS];
-export const ADMIN_DASHBOARD_ROLES = [
+const ADMIN_DASHBOARD_ROLES = [
   ROLE_KEYS.BUSINESS_OWNER,
   ROLE_KEYS.ADMIN,
   ROLE_KEYS.OPERATIONS,
@@ -115,4 +115,4 @@ export const formatRoleLabel = (roleKey) => getRoleDefinition(roleKey)?.label ||
 
 export const canManageTeam = (roleKey) => TEAM_MANAGEMENT_ROLES.includes((roleKey || '').toLowerCase());
 export const hasAdminDashboardAccess = (roleKey) => ADMIN_DASHBOARD_ROLES.includes((roleKey || '').toLowerCase());
-export const roleHasPermission = (roleKey, permission) => getRoleDefinition((roleKey || '').toLowerCase())?.permissions.includes(permission) || false;
+

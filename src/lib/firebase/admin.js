@@ -24,15 +24,6 @@ export const initializeFirebaseAdmin = () => {
   }
 };
 
-// Extracts the bearer token from a request object (works for both Pages and App Routers).
-export const extractBearerToken = (req) => {
-  const authHeader = req.headers?.get ? req.headers.get('authorization') : req.headers?.authorization;
-  if (!authHeader || !/^Bearer\s+/i.test(authHeader)) {
-    return null;
-  }
-  return authHeader.replace(/^Bearer\s+/i, '').trim();
-};
-
 const verifyIdToken = async (token) => {
   const decoded = await admin.auth().verifyIdToken(token);
   if (!decoded || !decoded.uid) {
@@ -129,20 +120,6 @@ export async function getApprovedOpportunities(limitN = 50) {
 
   const qy = adminDb.collection('opportunities')
     .where('status', '==', 'approved')
-    .orderBy('createdAt', 'desc')
-    .limit(limitN);
-
-  const snap = await qy.get();
-
-  return snap.docs.map(serializeFirestoreData);
-}
-
-// Server-side function for listing showcase posts
-export async function listShowcasePosts(limitN = 50) {
-  await initializeFirebaseAdmin();
-  const adminDb = admin.firestore();
-
-  const qy = adminDb.collection('wallPosts')
     .orderBy('createdAt', 'desc')
     .limit(limitN);
 

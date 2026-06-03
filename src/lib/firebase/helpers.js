@@ -126,15 +126,6 @@ export async function listUserShowcasePosts(uid, limitN = 50) {
     return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export async function deleteShowcasePost(postId) {
-    await deleteDoc(doc(db, 'wallPosts', postId));
-}
-
-export async function updateShowcasePost(postId, data) {
-    const postRef = doc(db, 'wallPosts', postId);
-    await updateDoc(postRef, { ...data, updatedAt: serverTimestamp() });
-}
-
 const REACTION_FIELDS = {
   thumbsUp: { votersField: 'voters', countField: 'votes' },
   fire: { votersField: 'fireVoters', countField: 'fireCount' },

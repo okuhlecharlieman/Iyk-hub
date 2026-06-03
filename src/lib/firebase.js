@@ -7,8 +7,7 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { getDatabase } from 'firebase/database';
+
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -50,6 +49,4 @@ if (app) {
 }
 
 export const auth = app ? getAuth(app) : null;
-export const storage = app ? getStorage(app) : null;
-export const rtdb = app ? getDatabase(app) : null;
 export { db };

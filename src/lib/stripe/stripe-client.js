@@ -4,7 +4,7 @@ import { appendLedgerEntry, recordChargeWithFees } from '../monetization/ledger'
 
 let stripeInstance = null;
 
-export function getStripeClient() {
+function getStripeClient() {
   if (!stripeInstance) {
     const apiKey = process.env.STRIPE_SECRET_KEY;
     if (!apiKey) {
@@ -49,17 +49,6 @@ export async function createStripePaymentIntent({
     return intent;
   } catch (error) {
     console.error('Error creating Stripe payment intent:', error);
-    throw error;
-  }
-}
-
-export async function getStripePaymentIntent(intentId) {
-  const stripe = getStripeClient();
-  try {
-    const intent = await stripe.paymentIntents.retrieve(intentId);
-    return intent;
-  } catch (error) {
-    console.error('Error retrieving Stripe payment intent:', error);
     throw error;
   }
 }

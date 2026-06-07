@@ -4,7 +4,7 @@
  * defining ad-hoc maps in individual files.
  */
 
-export const ORDER_TYPES = {
+const ORDER_TYPES = {
   SPONSORED_CHALLENGE: 'sponsoredChallenge',
   CREATOR_BOOST: 'creatorBoost',
   INSTITUTION_PLAN: 'institutionPlan',

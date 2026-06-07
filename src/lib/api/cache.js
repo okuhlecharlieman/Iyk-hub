@@ -2,7 +2,7 @@ const memoryCache = new Map();
 
 const now = () => Date.now();
 
-export function readCache(key) {
+function readCache(key) {
   const entry = memoryCache.get(key);
   if (!entry) return null;
 
@@ -14,7 +14,7 @@ export function readCache(key) {
   return entry.value;
 }
 
-export function writeCache(key, value, ttlMs) {
+function writeCache(key, value, ttlMs) {
   memoryCache.set(key, {
     value,
     expiresAt: now() + ttlMs,

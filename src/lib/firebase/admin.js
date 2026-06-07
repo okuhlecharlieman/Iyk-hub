@@ -121,20 +121,6 @@ const serializeFirestoreData = (doc) => {
 };
 
 
-// Server-side function for fetching approved opportunities
-export async function getApprovedOpportunities(limitN = 50) {
-  await initializeFirebaseAdmin();
-  const adminDb = admin.firestore();
-
-  const qy = adminDb.collection('opportunities')
-    .where('status', '==', 'approved')
-    .orderBy('createdAt', 'desc')
-    .limit(limitN);
-
-  const snap = await qy.get();
-
-  return snap.docs.map(serializeFirestoreData);
-}
 
 export async function listAllUsers() {
     await initializeFirebaseAdmin();
@@ -157,8 +143,4 @@ export async function listAllOpportunities() {
     return snap.docs.map(serializeFirestoreData);
 }
 
-export async function updateOpportunity(id, data) {
-    await initializeFirebaseAdmin();
-    const adminDb = admin.firestore();
-    await adminDb.collection('opportunities').doc(id).update(data);
-}
+

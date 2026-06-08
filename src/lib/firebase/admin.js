@@ -24,6 +24,14 @@ export const initializeFirebaseAdmin = () => {
   }
 };
 
+const extractBearerToken = (req) => {
+  const authHeader = req.headers?.get ? req.headers.get('authorization') : req.headers?.authorization;
+  if (!authHeader || !/^Bearer\s+/i.test(authHeader)) {
+    return null;
+  }
+  return authHeader.replace(/^Bearer\s+/i, '').trim();
+};
+
 const verifyIdToken = async (token) => {
   const decoded = await admin.auth().verifyIdToken(token);
   if (!decoded || !decoded.uid) {
@@ -113,20 +121,6 @@ const serializeFirestoreData = (doc) => {
 };
 
 
-// Server-side function for fetching approved opportunities
-export async function getApprovedOpportunities(limitN = 50) {
-  await initializeFirebaseAdmin();
-  const adminDb = admin.firestore();
-
-  const qy = adminDb.collection('opportunities')
-    .where('status', '==', 'approved')
-    .orderBy('createdAt', 'desc')
-    .limit(limitN);
-
-  const snap = await qy.get();
-
-  return snap.docs.map(serializeFirestoreData);
-}
 
 export async function listAllUsers() {
     await initializeFirebaseAdmin();
@@ -149,8 +143,4 @@ export async function listAllOpportunities() {
     return snap.docs.map(serializeFirestoreData);
 }
 
-export async function updateOpportunity(id, data) {
-    await initializeFirebaseAdmin();
-    const adminDb = admin.firestore();
-    await adminDb.collection('opportunities').doc(id).update(data);
-}
+

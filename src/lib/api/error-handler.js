@@ -22,10 +22,4 @@ export class ForbiddenError extends ApiError {
   }
 }
 
-export class NotFoundError extends ApiError {
-  constructor(message = 'Resource not found') {
-    super(message, 404, null);
-  }
-}
 
-export { ApiError };

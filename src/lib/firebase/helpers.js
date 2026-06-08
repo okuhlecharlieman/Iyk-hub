@@ -1,22 +1,11 @@
 import { auth, db } from './../firebase';
 import {
-  addDoc, collection, doc, getDoc, getDocs, limit,
+  collection, doc, getDoc, getDocs, limit,
   orderBy, query, runTransaction, serverTimestamp, setDoc,
   updateDoc, where, deleteDoc, onSnapshot
 } from 'firebase/firestore';
 
 // NOTE: This file should ONLY contain client-side safe Firebase functions.
-
-// Users
-export async function getUserDoc(uid) {
-  if (!uid) return null;
-  const snap = await getDoc(doc(db, 'users', uid));
-  if (snap.exists()) {
-    const data = snap.data();
-    return { id: uid, ...data, isAdmin: data.role === 'admin' };
-  }
-  return null;
-}
 
 export async function ensureUserDoc(user, profile = {}) {
   if (!user) return;
@@ -175,13 +164,6 @@ export async function togglePostVote(postId, uid, reactionType = 'thumbsUp') {
 
 // Opportunities
 
-// Admin function to get all opportunities
-export async function listAllOpportunities() {
-    const qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(qy);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-}
-
 export async function createOpportunity(data) {
   const user = auth.currentUser;
   if (!user) throw new Error('User not authenticated');
@@ -211,18 +193,6 @@ export async function updateOpportunity(opportunityId, data) {
 
 export async function deleteOpportunity(opportunityId) {
   await deleteDoc(doc(db, 'opportunities', opportunityId));
-}
-
-export async function getApprovedOpportunities(limitN = 50) {
-  try {
-    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), orderBy('createdAt', 'desc'), limit(limitN));
-    const snap = await getDocs(qy);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  } catch {
-    const qy = query(collection(db, 'opportunities'), where('status', '==', 'approved'), limit(limitN));
-    const snap = await getDocs(qy);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  }
 }
 
 export async function listOpportunitiesPage({ limit: limitN = 12, cursor = null } = {}) {
@@ -264,32 +234,6 @@ export async function listOpportunitiesPage({ limit: limitN = 12, cursor = null 
   }
 }
 
-// Client-side real-time listener
-export function onOpportunitiesUpdate(isAdmin, user, callback, onError) {
-  let qy;
-  if (isAdmin) {
-    qy = query(collection(db, 'opportunities'), orderBy('createdAt', 'desc'));
-  } else {
-    qy = query(
-      collection(db, 'opportunities'),
-      where('status', 'in', ['approved', 'pending']),
-      orderBy('createdAt', 'desc')
-    );
-  }
-
-  const unsubscribe = onSnapshot(qy, (querySnapshot) => {
-    const opportunities = querySnapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(opp => isAdmin || opp.status === 'approved' || opp.ownerId === user?.uid);
-
-    callback(opportunities);
-  }, (error) => {
-    console.error("Error in onOpportunitiesUpdate listener:", error);
-    if (onError) onError(error);
-  });
-
-  return unsubscribe;
-}
 
 // Client-side real-time listener for users collection (admin UI)
 export function onUsersUpdate(callback, onError) {
@@ -303,30 +247,6 @@ export function onUsersUpdate(callback, onError) {
   });
 
   return unsubscribe;
-}
-
-export function subscribeOnlineCount(callback, onError) {
-    if (!db) {
-        callback(new Map());
-        return () => {};
-    }
-
-    const presenceRef = collection(db, "presence");
-    const q = query(presenceRef, where("state", "==", "online"));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const onlineUsers = new Map();
-        snapshot.forEach((doc) => {
-            onlineUsers.set(doc.id, doc.data());
-        });
-        callback(onlineUsers);
-    }, (error) => {
-        console.error("[Presence] subscribeOnlineCount read failed:", error);
-        if (onError) onError(error);
-        callback(new Map());
-    });
-
-    return unsubscribe;
 }
 
 

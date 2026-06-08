@@ -157,18 +157,5 @@ export async function logDataAccess({
   }
 }
 
-/**
- * Structured console logging for development
- */
-export function logApiRequest(request, details = {}) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[API]', {
-      method: request.method,
-      url: request.url,
-      timestamp: new Date().toISOString(),
-      ...details,
-    });
-  }
-}
 
 

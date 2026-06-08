@@ -1,4 +1,4 @@
-export const CREATOR_BOOST_PLANS = {
+const CREATOR_BOOST_PLANS = {
   lite: {
     feeCents: 2000,
     pointsCost: 500,

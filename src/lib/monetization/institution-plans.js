@@ -1,4 +1,4 @@
-export const INSTITUTION_PLANS = {
+const INSTITUTION_PLANS = {
   starter: {
     feeCentsMonthly: 19900,
     label: 'Starter',

@@ -1,4 +1,4 @@
-import { verifyIdTokenFromRequest, requireRole, initializeFirebaseAdmin } from '../firebase/admin.js';
+import { verifyIdTokenFromRequest, requireRole } from '../firebase/admin.js';
 import { UnauthorizedError, ForbiddenError } from './error-handler.js';
 import { logSecurityEvent } from './logging.js';
 
@@ -51,45 +51,6 @@ export class AuthMiddleware {
     }
   }
 
-  /**
-   * Require specific role
-   */
-  static async requireRole(request, roles) {
-    try {
-      await initializeFirebaseAdmin();
-      const decodedToken = await verifyIdTokenFromRequest(request);
-
-      const userRole = decodedToken.role || 'user';
-      if (!roles.includes(userRole)) {
-        throw new ForbiddenError(`Access requires one of: ${roles.join(', ')}`);
-      }
-
-      return {
-        uid: decodedToken.uid,
-        email: decodedToken.email,
-        token: decodedToken,
-        role: userRole,
-      };
-    } catch (error) {
-      if (error instanceof ForbiddenError) throw error;
-
-      await logSecurityEvent({
-        request,
-        eventType: 'role_check_failed',
-        severity: 'warning',
-        description: error.message,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Get user info without strict role check (just auth)
-   */
-  static async getUser(request) {
-    const user = await this.authenticate(request);
-    return user;
-  }
 }
 
 

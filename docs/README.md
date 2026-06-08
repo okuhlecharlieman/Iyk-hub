@@ -40,10 +40,11 @@ Complete guide to all documentation for security and scalability improvements (2
 3. **[EXAMPLE_REFACTORED_API.js](./EXAMPLE_REFACTORED_API.js)** - Security in action
 
 ### Want to write tests?
-1. **[api.integration.test.js](../src/__tests__/api.integration.test.js)** - Test template
-2. **[docs/QA_TESTING.md](./QA_TESTING.md)** - QA test steps for the full app
-3. **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md#-testing-checklist)** - Testing basics
-4. **[EXAMPLE_REFACTORED_API.js](./EXAMPLE_REFACTORED_API.js)** - Patterns to test
+1. **[MANUAL_TEST_KIT.md](./MANUAL_TEST_KIT.md)** - Full-app manual regression kit covering every user type and page
+2. **[api.integration.test.js](../src/__tests__/api.integration.test.js)** - Test template
+3. **[docs/QA_TESTING.md](./QA_TESTING.md)** - QA test steps for the full app
+4. **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md#-testing-checklist)** - Testing basics
+5. **[EXAMPLE_REFACTORED_API.js](./EXAMPLE_REFACTORED_API.js)** - Patterns to test
 
 ### Want to set up monitoring?
 1. **[IMPROVEMENTS_IMPLEMENTATION.md](./IMPROVEMENTS_IMPLEMENTATION.md#priority-3-monitoring--observability-ongoing)** - Checklist

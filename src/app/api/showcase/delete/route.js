@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import admin from 'firebase-admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 
@@ -50,14 +50,6 @@ export async function POST(request) {
 
     return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error deleting post:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return handleApiError(error, 'Error deleting post');
   }
 }

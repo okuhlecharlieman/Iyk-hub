@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, listAllOpportunities } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
@@ -85,11 +85,7 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, opportunities: filtered, nextCursor });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error in GET /api/admin/opportunities:', error?.message || error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in GET /api/admin/opportunities');
   }
 }
 
@@ -146,13 +142,6 @@ export async function PUT(request) {
 
     return NextResponse.json({ success: true, message: 'Opportunity updated successfully', id, title });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error in PUT /api/admin/opportunities:', error?.message || error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in PUT /api/admin/opportunities');
   }
 }

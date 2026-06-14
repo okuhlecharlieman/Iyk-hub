@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { authenticateWithRoles, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { TEAM_MANAGEMENT_ROLES } from '../../../lib/roles';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
+import { handleApiError } from 'lib/api/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

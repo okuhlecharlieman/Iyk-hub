@@ -9,10 +9,10 @@
  */
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
-import { trackEvent } from '@/lib/engagement';
+import { trackEvent } from '../../lib/engagement';
 
 const SPIN_COST = 10;
 const SYMBOLS = ['💎', '⭐', '🎯', '🔥', '🍀', '💰'];

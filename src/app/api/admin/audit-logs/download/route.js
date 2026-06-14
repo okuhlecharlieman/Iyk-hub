@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticate, initializeFirebaseAdmin } from 'src/lib/firebase/admin.js';
+import { handleApiError } from '../../lib/api/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

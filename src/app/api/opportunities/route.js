@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
+import { handleApiError } from 'lib/api/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -324,11 +325,6 @@ export async function GET(request) {
 
     return NextResponse.json({ opportunities: mergedOpportunities, nextCursor });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/opportunities:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/opportunities:');
   }
 }

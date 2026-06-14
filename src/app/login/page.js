@@ -1,12 +1,12 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, fetchSignInMethodsForEmail, linkWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { ensureUserDoc } from '../../lib/firebase/helpers';
 import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import Button from '../../components/ui/Button';
+import PasswordInput from '../../components/ui/PasswordInput';
 import { useToast } from '../../components/ui/ToastProvider';
 import { getFriendlyError } from '../../lib/firebaseErrors';
 
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [resetSent, setResetSent] = useState(false);
@@ -116,23 +116,10 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="relative">
-            <input
-              className="w-full p-3 rounded-lg bg-gray-100/80 dark:bg-gray-900/60 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-800 transition-all"
-              placeholder="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
-          </div>
+          <PasswordInput
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
           {passwordHint && <p className="text-xs text-gray-500 dark:text-gray-400">{passwordHint}</p>}
           <Button type="submit" className="w-full rounded-lg py-3" variant="primary" disabled={loading}>{loading ? <LoadingSpinner /> : 'Sign in'}</Button>
         </form>

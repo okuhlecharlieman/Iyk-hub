@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
-import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
-import { getCreatorBoostPlan } from '../../../../../lib/monetization/creator-boosts';
+import { queryActiveBoost } from '../../../../../lib/api/boost-query';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
@@ -18,52 +17,17 @@ export async function GET(request) {
 
     await initializeFirebaseAdmin();
 
-    const now = new Date();
-    let snap;
-    try {
-      snap = await admin
-        .firestore()
-        .collection('creatorBoostOrders')
-        .where('ownerUid', '==', uid.trim())
-        .where('activationStatus', '==', 'active')
-        .orderBy('createdAt', 'desc')
-        .limit(1)
-        .get();
-    } catch (queryErr) {
-      snap = await admin
-        .firestore()
-        .collection('creatorBoostOrders')
-        .where('ownerUid', '==', uid.trim())
-        .where('activationStatus', '==', 'active')
-        .limit(5)
-        .get();
-    }
-
-    if (snap.empty) {
+    const boost = await queryActiveBoost(uid.trim());
+    if (!boost) {
       return NextResponse.json({ active: false, boost: null });
     }
-
-    const sortedDocs = [...snap.docs].sort((a, b) => {
-      const aTime = a.data().createdAt?.toDate?.() || new Date(0);
-      const bTime = b.data().createdAt?.toDate?.() || new Date(0);
-      return bTime - aTime;
-    });
-    const doc = sortedDocs[0];
-    const data = doc.data();
-
-    const expiresAt = data.expiresAt?.toDate ? data.expiresAt.toDate() : data.expiresAt ? new Date(data.expiresAt) : null;
-    if (expiresAt && expiresAt <= now) {
-      return NextResponse.json({ active: false, boost: null });
-    }
-
-    const plan = getCreatorBoostPlan(data.plan);
 
     return NextResponse.json({
       active: true,
       boost: {
-        plan: data.plan,
-        badge: plan?.badge || null,
-        badgeLabel: plan?.badgeLabel || null,
+        plan: boost.plan,
+        badge: boost.badge,
+        badgeLabel: boost.badgeLabel,
       },
     });
   } catch (error) {

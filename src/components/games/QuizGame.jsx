@@ -6,8 +6,8 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 
 // Minimal hardcoded fallback if API fails

@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
+import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {

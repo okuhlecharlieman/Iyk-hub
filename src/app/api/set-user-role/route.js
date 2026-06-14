@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateWithRoles, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { TEAM_MANAGEMENT_ROLES, VALID_ROLE_KEYS } from '../../../lib/roles';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../lib/api/validation';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
@@ -39,60 +39,6 @@ export async function GET(request) {
 
     return NextResponse.json({ items });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error in /api/admin/placements-fees GET:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-export async function PUT(request) {
-  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:placements-fees:put', limit: 40, windowMs: 60 * 1000 });
-  if (rateLimitResponse) return rateLimitResponse;
-
-  try {
-    const actor = await authenticate(request);
-    await initializeFirebaseAdmin();
-
-    const payload = await parseJsonBody(request);
-    const update = validatePlacementFeeUpdate(payload);
-
-    const db = admin.firestore();
-    const reportRef = db.collection('placementReports').doc(update.placementReportId);
-    const reportSnap = await reportRef.get();
-
-    if (!reportSnap.exists) {
-      return NextResponse.json({ error: 'Placement report not found.' }, { status: 404 });
-    }
-
-    await reportRef.set({
-      feeStatus: update.feeStatus,
-      reviewedBy: actor.uid,
-      reviewNote: update.note,
-      reviewedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
-
-    await logAdminAction({
-      request,
-      actor,
-      action: 'placement.fee.updated',
-      targetType: 'placementReport',
-      targetId: update.placementReportId,
-      metadata: { feeStatus: update.feeStatus },
-    });
-
-    return NextResponse.json({ success: true, message: 'Placement fee status updated.' });
-  } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/admin/placements-fees PUT:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/admin/placements-fees PUT');
   }
 }

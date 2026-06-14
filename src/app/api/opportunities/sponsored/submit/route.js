@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getSponsoredTierConfig } from '../../../../../lib/monetization/sponsored-opportunities';
 export const dynamic = 'force-dynamic';
@@ -88,14 +88,6 @@ export async function POST(request) {
       message: 'Sponsored opportunity submitted. Please complete payment to continue review.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/opportunities/sponsored/submit:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/opportunities/sponsored/submit');
   }
 }

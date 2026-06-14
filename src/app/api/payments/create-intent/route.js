@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logDataAccess } from '../../../../lib/api/logging';
 import { createStripePaymentIntent, createOrGetStripeCustomer } from '../../../../lib/stripe/stripe-client';
@@ -140,14 +140,6 @@ export async function POST(request) {
       message: 'Payment intent created successfully. Use clientSecret to complete checkout.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/payments/create-intent:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/payments/create-intent');
   }
 }

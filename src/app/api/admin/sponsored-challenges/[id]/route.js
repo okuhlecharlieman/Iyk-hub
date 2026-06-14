@@ -4,7 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../l
 import { AuthMiddleware } from '../../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../../lib/api/logging';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 const allowedStatuses = new Set(['pending', 'approved', 'rejected']);
@@ -80,13 +80,6 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json({ success: true, status });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error updating sponsored challenge status:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error updating sponsored challenge status:');
   }
 }

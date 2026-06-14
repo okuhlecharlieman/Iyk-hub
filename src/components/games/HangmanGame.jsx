@@ -5,8 +5,8 @@
  */
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 
 const FALLBACK_WORDS = [

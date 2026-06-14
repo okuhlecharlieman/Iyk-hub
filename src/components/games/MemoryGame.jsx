@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
-import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
+import { updateDoc, runTransaction } from 'firebase/firestore';
+import useMultiplayerGame from '../../hooks/useMultiplayerGame';
 
 const cardEmojis = ['🍎', '🍌', '🍇', '🍒', '🍓', '🍍', '🥝', '🍊'];
 
@@ -112,77 +113,22 @@ function MemorySinglePlayer({ onEnd }) {
   );
 }
 
+const createMemoryInitialState = async (u) => ({
+  cards: createShuffledCards(),
+  players: {
+    player1: { uid: u.uid, displayName: u.displayName, score: 0 },
+    player2: null,
+  },
+  currentPlayer: 'player1',
+  status: 'waiting',
+  winner: null,
+});
+
 function MemoryMultiplayer({ gameId, onEnd }) {
-  const { user } = useAuth();
-  const [gameState, setGameState] = useState(null);
-  const [playerSymbol, setPlayerSymbol] = useState(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const lastResultKeyRef = useRef(null);
-  const gameDocRef = useMemo(() => doc(db, 'games', gameId), [gameId]);
-
-  useEffect(() => {
-    if (!user) {
-      setError('You must be logged in to play.');
-      setLoading(false);
-      return;
-    }
-
-    const joinGame = async () => {
-      try {
-        const snap = await getDoc(gameDocRef);
-        if (!snap.exists()) {
-          await setDoc(gameDocRef, {
-            cards: createShuffledCards(),
-            players: {
-              player1: { uid: user.uid, displayName: user.displayName, score: 0 },
-              player2: null,
-            },
-            currentPlayer: 'player1',
-            status: 'waiting',
-            winner: null,
-          });
-          setPlayerSymbol('player1');
-        } else {
-          const data = snap.data();
-          if (!data.players.player2 && data.players.player1?.uid !== user.uid) {
-            await updateDoc(gameDocRef, {
-              'players.player2': { uid: user.uid, displayName: user.displayName, score: 0 },
-              status: 'playing',
-            });
-            setPlayerSymbol('player2');
-          } else if (data.players.player1?.uid === user.uid) {
-            setPlayerSymbol('player1');
-          } else if (data.players.player2?.uid === user.uid) {
-            setPlayerSymbol('player2');
-          } else {
-            setError('This game room is full. Please create a new game.');
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (e) {
-        setError('Failed to join game. The room may no longer exist.');
-        setLoading(false);
-      }
-    };
-
-    joinGame();
-  }, [gameId, user, gameDocRef]);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(gameDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setGameState(snapshot.data());
-        setLoading(false);
-      }
-    }, (e) => {
-      setError('Game sync error: ' + e.message);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, [gameDocRef]);
+  const { gameState, playerSymbol, error, loading, lastResultKeyRef, gameDocRef, user } = useMultiplayerGame(gameId, {
+    createInitialState: createMemoryInitialState,
+  });
 
   useEffect(() => {
     if (!gameState || gameState.status !== 'playing' || isProcessing) return;

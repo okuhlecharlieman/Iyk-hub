@@ -20,8 +20,9 @@ import {
   getDocs,
   addDoc,
 } from 'firebase/firestore';
-import Button from './ui/Button';
-import { FaSpinner, FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaUserPlus, FaClock, FaUser, FaExpand, FaCompress, FaStepForward } from 'react-icons/fa';
+import { FaUser, FaExpand, FaCompress } from 'react-icons/fa';
+import VideoChatControls from './video-chat/VideoChatControls';
+import { IdleView, SearchingView, MediaErrorBanner, TimerBar, ShareProfilePrompt } from './video-chat/VideoChatStatus';
 
 const STUN_SERVERS = {
   iceServers: [
@@ -36,14 +37,8 @@ const BONUS_TIME = 60;
 
 const createPeerConnection = (onTrack, onIceCandidate) => {
   const pc = new RTCPeerConnection(STUN_SERVERS);
-  pc.ontrack = (event) => {
-    onTrack(event.streams[0]);
-  };
-  pc.onicecandidate = (event) => {
-    if (event.candidate) {
-      onIceCandidate(event.candidate);
-    }
-  };
+  pc.ontrack = (event) => { onTrack(event.streams[0]); };
+  pc.onicecandidate = (event) => { if (event.candidate) onIceCandidate(event.candidate); };
   return pc;
 };
 
@@ -71,11 +66,8 @@ export default function VideoChat() {
   const [bonusAdded, setBonusAdded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Update timeLeft when boost loads (only while idle, before a call starts)
   useEffect(() => {
-    if (status === 'idle') {
-      setTimeLeft(initialTimeLimit);
-    }
+    if (status === 'idle') setTimeLeft(initialTimeLimit);
   }, [initialTimeLimit, status]);
 
   const localVideoRef = useRef(null);
@@ -96,23 +88,12 @@ export default function VideoChat() {
 
   const canShareProfile = partnerConsented && youConsented;
 
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
-
-  useEffect(() => {
-    videoEnabledRef.current = videoEnabled;
-  }, [videoEnabled]);
-
-  useEffect(() => {
-    timeLeftRef.current = timeLeft;
-  }, [timeLeft]);
+  useEffect(() => { statusRef.current = status; }, [status]);
+  useEffect(() => { videoEnabledRef.current = videoEnabled; }, [videoEnabled]);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
 
   const clearTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
   const startTimer = useCallback(() => {
@@ -120,9 +101,7 @@ export default function VideoChat() {
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         const next = prev - 1;
-        if (next === 10) {
-          toast('warning', '10 seconds remaining!');
-        }
+        if (next === 10) toast('warning', '10 seconds remaining!');
         if (next <= 0) {
           clearTimer();
           toast('info', 'Time is up! Looking for a new match...');
@@ -142,20 +121,13 @@ export default function VideoChat() {
     listenersRef.current = [];
 
     if (pcRef.current) {
-      try {
-        pcRef.current.getSenders().forEach(sender => {
-          try { pcRef.current.removeTrack(sender); } catch {}
-        });
-      } catch {}
+      try { pcRef.current.getSenders().forEach(sender => { try { pcRef.current.removeTrack(sender); } catch {} }); } catch {}
       pcRef.current.close();
       pcRef.current = null;
     }
 
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => {
-        t.enabled = false;
-        t.stop();
-      });
+      localStreamRef.current.getTracks().forEach(t => { t.enabled = false; t.stop(); });
       localStreamRef.current = null;
     }
 
@@ -169,16 +141,11 @@ export default function VideoChat() {
         if (roomDoc.exists()) {
           await updateDoc(roomRefRef.current, { status: 'ended' });
           if (isInitiator) {
-            setTimeout(async () => {
-              try { await deleteDoc(roomRefRef.current); } catch {}
-            }, 2000);
+            setTimeout(async () => { try { await deleteDoc(roomRefRef.current); } catch {} }, 2000);
           }
         }
-      } catch (error) {
-        console.error("Error cleaning up room", error);
-      }
+      } catch (error) { console.error("Error cleaning up room", error); }
     }
-
     roomRefRef.current = null;
   }, [clearTimer]);
 
@@ -187,9 +154,7 @@ export default function VideoChat() {
     if (roomRefRef.current && statusRef.current === 'connected') {
       try {
         const roomDoc = await getDoc(roomRefRef.current);
-        if (roomDoc.exists()) {
-          isInitiator = roomDoc.data().userA === user?.uid;
-        }
+        if (roomDoc.exists()) isInitiator = roomDoc.data().userA === user?.uid;
       } catch {}
     }
     await cleanup(isInitiator);
@@ -205,197 +170,6 @@ export default function VideoChat() {
     setVideoEnabled(true);
     setAudioEnabled(true);
   }, [user, cleanup, initialTimeLimit]);
-
-  const tryMatchOrCreateRoom = useCallback(async () => {
-    const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), limit(20));
-    const querySnapshot = await getDocs(q);
-
-    let roomToJoin = null;
-    let myExistingRoom = null;
-    const staleThreshold = Date.now() - 90000; // 90 seconds = stale
-
-    const sortedDocs = querySnapshot.docs.sort((a, b) => {
-      const aTime = a.data().createdAt?.toMillis?.() || 0;
-      const bTime = b.data().createdAt?.toMillis?.() || 0;
-      return aTime - bTime;
-    });
-
-    for (const d of sortedDocs) {
-      const data = d.data();
-      const roomAge = data.createdAt?.toMillis?.() || 0;
-
-      // Don't try to join stale rooms. A server function should clean them up.
-      if (roomAge > 0 && roomAge < staleThreshold) {
-        continue;
-      }
-
-      if (data.userA === user.uid) {
-        myExistingRoom = d;
-      } else if (!roomToJoin) {
-        roomToJoin = d;
-      }
-    }
-
-    if (myExistingRoom && roomToJoin) {
-      // Deterministic conflict resolution: the user with the smaller UID keeps their room.
-      if (user.uid > roomToJoin.data().userA) {
-        // My UID is larger, so I should delete my room and join the other.
-        await deleteDoc(myExistingRoom.ref);
-        myExistingRoom = null;
-      } else {
-        // My UID is smaller. The other user should be deleting their room.
-        // I will wait in my room for them to join. I should ignore their room.
-        roomToJoin = null;
-      }
-    }
-
-    if (roomToJoin) {
-      // Found a partner - stop retrying
-      if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
-      if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
-
-      const roomRef = roomToJoin.ref;
-      const roomData = roomToJoin.data();
-      setRoomId(roomToJoin.id);
-      setPartnerId(roomData.userA);
-      await updateDoc(roomRef, {
-        userB: user.uid,
-        status: 'connecting',
-        consent: { [roomData.userA]: false, [user.uid]: false },
-      });
-      await setupCall(roomToJoin.id, false);
-      return true;
-    }
-
-    return myExistingRoom || null;
-  }, [user]);
-
-  const findPartner = useCallback(async () => {
-    if (!user) return;
-    setStatus('searching');
-    setMediaError(null);
-    setTimeLeft(initialTimeLimit);
-    setBonusAdded(false);
-    setPartnerName(null);
-    setVideoEnabled(true);
-    setAudioEnabled(true);
-    toast('info', 'Looking for someone to chat with...');
-
-    // Clear any previous search intervals
-    if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
-    if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
-
-    try {
-      const result = await tryMatchOrCreateRoom();
-
-      if (result === true) {
-        // Matched immediately
-        return;
-      }
-
-      if (result) {
-        // We have an existing room, wait for partner
-        setRoomId(result.id);
-        setPartnerId(null);
-        await setupCall(result.id, true);
-      } else {
-        // Create a new room and wait
-        const roomRef = await addDoc(collection(db, 'videoRooms'), {
-          userA: user.uid,
-          status: 'waiting',
-          createdAt: serverTimestamp(),
-          consent: { [user.uid]: false },
-        });
-        setRoomId(roomRef.id);
-        setPartnerId(null);
-        await setupCall(roomRef.id, true);
-      }
-
-      // Actively poll for available partners every 3 seconds while waiting
-      searchRetryRef.current = setInterval(async () => {
-        if (statusRef.current !== 'searching') {
-          clearInterval(searchRetryRef.current);
-          searchRetryRef.current = null;
-          return;
-        }
-        try {
-          const matched = await tryMatchOrCreateRoom();
-          if (matched === true) {
-            // Found a match via retry
-          }
-        } catch {
-          // Retry silently
-        }
-      }, 3000);
-
-      // Auto-cancel search after 90 seconds if no match
-      searchTimeoutRef.current = setTimeout(() => {
-        if (statusRef.current === 'searching') {
-          if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
-          toast('info', 'No one available right now. Try again later!');
-          stopCall();
-        }
-      }, 90000);
-
-    } catch (err) {
-      console.error('Error finding partner:', err);
-      const msg = err?.code === 'failed-precondition'
-        ? 'Random chat requires a database index. Please contact the admin.'
-        : err?.code === 'permission-denied'
-          ? 'You do not have permission to use random chat. Please log in again.'
-          : `Failed to connect: ${err?.message || 'Unknown error'}. Please try again.`;
-      setMediaError(msg);
-      setStatus('idle');
-      toast('error', 'Failed to connect. Please try again.');
-    }
-  }, [user, toast, tryMatchOrCreateRoom, stopCall, initialTimeLimit]);
-
-  // Auto-rematch when timer expires
-  useEffect(() => {
-    if (timeLeft === 0 && status === 'connected') {
-      const doRematch = async () => {
-        await stopCall();
-        setTimeout(() => {
-          findPartner();
-        }, 500);
-      };
-      doRematch();
-    }
-  }, [timeLeft, status, stopCall, findPartner]);
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(t => {
-          t.enabled = false;
-          t.stop();
-        });
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (statusRef.current === 'idle' || !localStreamRef.current) return;
-      if (document.visibilityState === 'hidden') {
-        localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = false; });
-      } else if (document.visibilityState === 'visible') {
-        if (videoEnabledRef.current) {
-          localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = true; });
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearTimer();
-      if (statusRef.current !== 'idle') {
-        cleanup(false);
-      }
-    };
-  }, [cleanup, clearTimer]);
 
   const setupCall = async (currentRoomId, isCaller) => {
     const roomRef = doc(db, 'videoRooms', currentRoomId);
@@ -419,9 +193,7 @@ export default function VideoChat() {
       setMediaError(errorMsg);
       setStatus('idle');
       toast('error', errorMsg);
-      if (isCaller && roomRefRef.current) {
-        try { await deleteDoc(roomRefRef.current); } catch {}
-      }
+      if (isCaller && roomRefRef.current) { try { await deleteDoc(roomRefRef.current); } catch {} }
       roomRefRef.current = null;
       return;
     }
@@ -452,7 +224,7 @@ export default function VideoChat() {
       if (data.status === 'connected' && statusRef.current !== 'connected') {
         setStatus('connected');
         const mins = Math.floor(initialTimeLimit / 60);
-              toast('success', `Connected! You have ${mins} minute${mins !== 1 ? 's' : ''}.`);
+        toast('success', `Connected! You have ${mins} minute${mins !== 1 ? 's' : ''}.`);
         startTimer();
       }
       if (isCaller && data.userB && !partnerId) {
@@ -465,7 +237,6 @@ export default function VideoChat() {
       setYouConsented(Boolean(consentMap[user.uid]));
       if (currentPartnerId) setPartnerConsented(Boolean(consentMap[currentPartnerId]));
 
-      // Show partner name when both consent
       const profileMap = data.profiles || {};
       if (currentPartnerId && consentMap[user.uid] && consentMap[currentPartnerId]) {
         const pName = profileMap[currentPartnerId]?.displayName;
@@ -485,16 +256,10 @@ export default function VideoChat() {
               await pc.setLocalDescription(answer);
               await addDoc(collection(roomRef, 'signals'), { from: user.uid, type: 'answer', answer: pc.localDescription.toJSON() });
             }
-            if (data.type === 'answer' && isCaller) {
-              await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-            }
-            if (data.type === 'candidate') {
-              await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-            }
+            if (data.type === 'answer' && isCaller) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            if (data.type === 'candidate') await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
           } catch (err) {
-            if (err?.message?.includes('location information') || err?.name === 'InvalidStateError') {
-              // Ignore benign WebRTC state errors (e.g. adding ICE candidate before remote description)
-            } else {
+            if (!err?.message?.includes('location information') && err?.name !== 'InvalidStateError') {
               console.error('WebRTC signaling error:', err);
             }
           }
@@ -510,6 +275,151 @@ export default function VideoChat() {
     }
   };
 
+  const tryMatchOrCreateRoom = useCallback(async () => {
+    const q = query(collection(db, 'videoRooms'), where('status', '==', 'waiting'), limit(20));
+    const querySnapshot = await getDocs(q);
+
+    let roomToJoin = null;
+    let myExistingRoom = null;
+    const staleThreshold = Date.now() - 90000;
+
+    const sortedDocs = querySnapshot.docs.sort((a, b) => {
+      const aTime = a.data().createdAt?.toMillis?.() || 0;
+      const bTime = b.data().createdAt?.toMillis?.() || 0;
+      return aTime - bTime;
+    });
+
+    for (const d of sortedDocs) {
+      const data = d.data();
+      const roomAge = data.createdAt?.toMillis?.() || 0;
+      if (roomAge > 0 && roomAge < staleThreshold) continue;
+      if (data.userA === user.uid) myExistingRoom = d;
+      else if (!roomToJoin) roomToJoin = d;
+    }
+
+    if (myExistingRoom && roomToJoin) {
+      if (user.uid > roomToJoin.data().userA) {
+        await deleteDoc(myExistingRoom.ref);
+        myExistingRoom = null;
+      } else {
+        roomToJoin = null;
+      }
+    }
+
+    if (roomToJoin) {
+      if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+      if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
+
+      const roomRef = roomToJoin.ref;
+      const roomData = roomToJoin.data();
+      setRoomId(roomToJoin.id);
+      setPartnerId(roomData.userA);
+      await updateDoc(roomRef, {
+        userB: user.uid,
+        status: 'connecting',
+        consent: { [roomData.userA]: false, [user.uid]: false },
+      });
+      await setupCall(roomToJoin.id, false);
+      return true;
+    }
+
+    return myExistingRoom || null;
+  }, [user]);
+
+  const findPartner = useCallback(async () => {
+    if (!user) return;
+    setStatus('searching');
+    setMediaError(null);
+    setTimeLeft(initialTimeLimit);
+    setBonusAdded(false);
+    setPartnerName(null);
+    setVideoEnabled(true);
+    setAudioEnabled(true);
+    toast('info', 'Looking for someone to chat with...');
+
+    if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+    if (searchTimeoutRef.current) { clearTimeout(searchTimeoutRef.current); searchTimeoutRef.current = null; }
+
+    try {
+      const result = await tryMatchOrCreateRoom();
+      if (result === true) return;
+
+      if (result) {
+        setRoomId(result.id);
+        setPartnerId(null);
+        await setupCall(result.id, true);
+      } else {
+        const roomRef = await addDoc(collection(db, 'videoRooms'), {
+          userA: user.uid,
+          status: 'waiting',
+          createdAt: serverTimestamp(),
+          consent: { [user.uid]: false },
+        });
+        setRoomId(roomRef.id);
+        setPartnerId(null);
+        await setupCall(roomRef.id, true);
+      }
+
+      searchRetryRef.current = setInterval(async () => {
+        if (statusRef.current !== 'searching') {
+          clearInterval(searchRetryRef.current);
+          searchRetryRef.current = null;
+          return;
+        }
+        try { await tryMatchOrCreateRoom(); } catch {}
+      }, 3000);
+
+      searchTimeoutRef.current = setTimeout(() => {
+        if (statusRef.current === 'searching') {
+          if (searchRetryRef.current) { clearInterval(searchRetryRef.current); searchRetryRef.current = null; }
+          toast('info', 'No one available right now. Try again later!');
+          stopCall();
+        }
+      }, 90000);
+
+    } catch (err) {
+      console.error('Error finding partner:', err);
+      const msg = err?.code === 'failed-precondition'
+        ? 'Random chat requires a database index. Please contact the admin.'
+        : err?.code === 'permission-denied'
+          ? 'You do not have permission to use random chat. Please log in again.'
+          : `Failed to connect: ${err?.message || 'Unknown error'}. Please try again.`;
+      setMediaError(msg);
+      setStatus('idle');
+      toast('error', 'Failed to connect. Please try again.');
+    }
+  }, [user, toast, tryMatchOrCreateRoom, stopCall, initialTimeLimit]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && status === 'connected') {
+      const doRematch = async () => { await stopCall(); setTimeout(() => findPartner(), 500); };
+      doRematch();
+    }
+  }, [timeLeft, status, stopCall, findPartner]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => { t.enabled = false; t.stop(); });
+    };
+    const handleVisibilityChange = () => {
+      if (statusRef.current === 'idle' || !localStreamRef.current) return;
+      if (document.visibilityState === 'hidden') {
+        localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = false; });
+      } else if (document.visibilityState === 'visible' && videoEnabledRef.current) {
+        localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = true; });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearTimer();
+      if (statusRef.current !== 'idle') cleanup(false);
+    };
+  }, [cleanup, clearTimer]);
+
   const allowShare = async () => {
     if (!roomRefRef.current) return;
     const myName = userProfile?.displayName || user?.displayName || 'Anonymous';
@@ -520,19 +430,16 @@ export default function VideoChat() {
     setYouConsented(true);
     toast('info', 'Profile shared! Waiting for partner...');
 
-    // Add bonus time when both consent
     const snap = await getDoc(roomRefRef.current);
     if (snap.exists()) {
       const data = snap.data();
       const currentPartnerId = data.userA === user.uid ? data.userB : data.userA;
-      if (currentPartnerId && data.consent?.[currentPartnerId]) {
-        if (!bonusAdded) {
-          setTimeLeft(prev => prev + BONUS_TIME);
-          setBonusAdded(true);
-          toast('success', `Profiles revealed! +${BONUS_TIME}s added.`);
-          const pName = data.profiles?.[currentPartnerId]?.displayName;
-          if (pName) setPartnerName(pName);
-        }
+      if (currentPartnerId && data.consent?.[currentPartnerId] && !bonusAdded) {
+        setTimeLeft(prev => prev + BONUS_TIME);
+        setBonusAdded(true);
+        toast('success', `Profiles revealed! +${BONUS_TIME}s added.`);
+        const pName = data.profiles?.[currentPartnerId]?.displayName;
+        if (pName) setPartnerName(pName);
       }
     }
   };
@@ -540,12 +447,9 @@ export default function VideoChat() {
   const handleSkip = async () => {
     toast('info', 'Skipping to the next person...');
     await stopCall();
-    setTimeout(() => {
-      findPartner();
-    }, 500);
+    setTimeout(() => findPartner(), 500);
   };
 
-  // Listen for partner consent to add bonus time
   useEffect(() => {
     if (canShareProfile && !bonusAdded && status === 'connected') {
       setTimeLeft(prev => prev + BONUS_TIME);
@@ -555,25 +459,16 @@ export default function VideoChat() {
   }, [canShareProfile, bonusAdded, status, toast]);
 
   const toggleVideo = () => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setVideoEnabled(videoTrack.enabled);
-      }
-    }
+    if (!localStreamRef.current) return;
+    const videoTrack = localStreamRef.current.getVideoTracks()[0];
+    if (videoTrack) { videoTrack.enabled = !videoTrack.enabled; setVideoEnabled(videoTrack.enabled); }
   };
 
   const toggleAudio = () => {
-    if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      if (audioTracks.length > 0) {
-        setAudioEnabled(audioTracks[0].enabled);
-      }
-    }
+    if (!localStreamRef.current) return;
+    const audioTracks = localStreamRef.current.getAudioTracks();
+    audioTracks.forEach(track => { track.enabled = !track.enabled; });
+    if (audioTracks.length > 0) setAudioEnabled(audioTracks[0].enabled);
   };
 
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -581,49 +476,33 @@ export default function VideoChat() {
   const toggleFullscreen = async () => {
     try {
       if (isIOS) {
-        // iOS Safari: use webkitEnterFullscreen on the remote video element
         const vid = remoteVideoRef.current;
         if (vid && typeof vid.webkitEnterFullscreen === 'function') {
-          // Ensure video has playsinline attribute set for iOS
           vid.setAttribute('playsinline', '');
           vid.setAttribute('webkit-playsinline', '');
           vid.webkitEnterFullscreen();
           return;
         }
-        // Fallback: toggle CSS-based fullscreen for iOS
-        if (isFullscreen) {
-          setIsFullscreen(false);
-        } else {
-          setIsFullscreen(true);
-        }
+        setIsFullscreen(prev => !prev);
         return;
       }
-
       const el = videoContainerRef.current;
       if (!el) return;
       const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
       if (!fsEl) {
-        if (el.requestFullscreen) {
-          await el.requestFullscreen();
-        } else if (el.webkitRequestFullscreen) {
-          el.webkitRequestFullscreen();
-        }
+        if (el.requestFullscreen) await el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
         setIsFullscreen(true);
       } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
         setIsFullscreen(false);
       }
     } catch {}
   };
 
   useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
-    };
+    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
     return () => {
@@ -632,7 +511,6 @@ export default function VideoChat() {
     };
   }, []);
 
-  // Keep PiP video in sync with local stream when connected
   useEffect(() => {
     if (status === 'connected' && localStreamRef.current && pipVideoRef.current) {
       pipVideoRef.current.srcObject = localStreamRef.current;
@@ -641,104 +519,30 @@ export default function VideoChat() {
 
   return (
     <div className="space-y-6">
-      {mediaError && (
-        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-300 text-center">
-          <p className="font-medium">{mediaError}</p>
-          {mediaError.includes('denied') && (
-            <div className="mt-3 text-sm space-y-2">
-              <p className="text-gray-600 dark:text-gray-400">To re-enable camera/microphone access:</p>
-              <ol className="text-left max-w-sm mx-auto text-gray-600 dark:text-gray-400 space-y-1 list-decimal list-inside">
-                <li>Click the lock/camera icon in the address bar</li>
-                <li>Find Camera and Microphone permissions</li>
-                <li>Change both from &quot;Block&quot; to &quot;Allow&quot;</li>
-                <li>Refresh the page</li>
-              </ol>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-              >
-                Refresh Page
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <MediaErrorBanner mediaError={mediaError} />
 
       {status === 'idle' && (
-        <div className="flex flex-col items-center gap-4 py-8">
-          <div className="bg-gray-100 dark:bg-gray-800 rounded-full p-6 mb-2">
-            <FaVideo className="h-10 w-10 text-purple-500" />
-          </div>
-          <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
-            Press the button to find someone to chat with. Each call has a {Math.floor(initialTimeLimit / 60)}-minute time limit. Share your profile to get an extra minute!
-          </p>
-          <Button onClick={findPartner} variant="primary" className="px-10 py-3 text-lg">
-            Find someone
-          </Button>
-        </div>
+        <IdleView initialTimeLimit={initialTimeLimit} onFindPartner={findPartner} />
       )}
 
       {(status === 'searching' || status === 'connecting') && (
-        <div className="text-center py-8 space-y-4">
-          <FaSpinner className="h-10 w-10 text-purple-500 mx-auto animate-spin" />
-          <p className="text-gray-600 dark:text-gray-400 text-lg">Looking for a partner...</p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">This may take a few seconds.</p>
-
-          {localStreamRef.current && (
-            <div className="max-w-sm mx-auto mt-6">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-3">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your camera preview</p>
-                <video ref={localVideoRef} autoPlay muted playsInline className="w-full rounded-lg bg-black aspect-video" />
-              </div>
-            </div>
-          )}
-
-          <Button onClick={stopCall} variant="danger" className="px-8 py-2.5 mt-4">
-            Cancel
-          </Button>
-        </div>
+        <SearchingView localVideoRef={localVideoRef} localStream={localStreamRef.current} onStop={stopCall} />
       )}
 
       {status === 'connected' && (
         <div className="space-y-4">
-          {/* Timer bar */}
-          <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2.5">
-            <div className="flex items-center gap-2">
-              <FaClock className={`${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-gray-400'}`} />
-              <span className={`font-mono font-bold text-lg ${timeLeft <= 10 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
-                {formatTime(timeLeft)}
-              </span>
-            </div>
-            {partnerName && (
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <FaUser className="text-blue-500" />
-                <span className="font-medium">{partnerName}</span>
-              </div>
-            )}
-            {!canShareProfile && (
-              <Button onClick={allowShare} size="sm" variant="primary" disabled={youConsented}>
-                <FaUserPlus className="mr-1" />
-                {youConsented ? 'Waiting...' : 'Share Profile'}
-              </Button>
-            )}
-            {canShareProfile && !partnerName && (
-              <span className="text-sm text-green-600 dark:text-green-400 font-medium">Profiles shared!</span>
-            )}
-          </div>
+          <TimerBar
+            timeLeft={timeLeft}
+            formatTime={formatTime}
+            partnerName={partnerName}
+            canShareProfile={canShareProfile}
+            youConsented={youConsented}
+            onAllowShare={allowShare}
+          />
 
-          {/* Video area — PiP layout */}
           <div ref={videoContainerRef} className={`relative w-full bg-black rounded-2xl overflow-hidden shadow-lg ${isFullscreen && isIOS ? 'fixed inset-0 z-[9999] rounded-none' : isFullscreen ? '' : 'aspect-video'}`} style={isFullscreen && isIOS ? { paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}>
-            {/* Remote video (full size) */}
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              webkit-playsinline=""
-              className={`w-full h-full object-contain ${isFullscreen ? 'absolute inset-0' : ''}`}
-              style={isFullscreen && isIOS ? { objectFit: 'contain', width: '100%', height: '100%' } : undefined}
-            />
+            <video ref={remoteVideoRef} autoPlay playsInline webkit-playsinline="" className={`w-full h-full object-contain ${isFullscreen ? 'absolute inset-0' : ''}`} style={isFullscreen && isIOS ? { objectFit: 'contain', width: '100%', height: '100%' } : undefined} />
 
-            {/* Partner name overlay */}
             {partnerName && (
               <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-2 z-10">
                 <FaUser className="text-white text-xs" />
@@ -746,87 +550,31 @@ export default function VideoChat() {
               </div>
             )}
 
-            {/* Timer overlay */}
             <div className={`absolute top-4 right-16 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1.5 z-10 ${timeLeft <= 10 ? 'bg-red-600/70' : ''}`}>
               <span className="text-white text-sm font-mono font-bold">{formatTime(timeLeft)}</span>
             </div>
 
-            {/* Fullscreen button */}
-            <button
-              onClick={toggleFullscreen}
-              className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg p-2 text-white hover:bg-black/70 transition-colors z-10"
-              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-            >
+            <button onClick={toggleFullscreen} className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg p-2 text-white hover:bg-black/70 transition-colors z-10" title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
               {isFullscreen ? <FaCompress /> : <FaExpand />}
             </button>
 
-            {/* Self video (PiP — small overlay with separate ref) */}
             <div className="absolute bottom-16 right-4 w-28 sm:w-36 md:w-44 aspect-video rounded-xl overflow-hidden shadow-xl border-2 border-white/30 z-10">
-              <video
-                ref={pipVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover bg-gray-900"
-              />
+              <video ref={pipVideoRef} autoPlay muted playsInline className="w-full h-full object-cover bg-gray-900" />
             </div>
 
-            {/* Controls overlay */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">
-              <button
-                onClick={toggleVideo}
-                className={`p-3 rounded-full transition-colors shadow-lg ${videoEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white hover:bg-red-600'}`}
-                title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-              >
-                {videoEnabled ? <FaVideo /> : <FaVideoSlash />}
-              </button>
-              <button
-                onClick={toggleAudio}
-                className={`p-3 rounded-full transition-colors shadow-lg ${audioEnabled ? 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30' : 'bg-red-500 text-white hover:bg-red-600'}`}
-                title={audioEnabled ? 'Mute microphone' : 'Unmute microphone'}
-              >
-                {audioEnabled ? <FaMicrophone /> : <FaMicrophoneSlash />}
-              </button>
-              <button
-                onClick={stopCall}
-                className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors shadow-lg"
-                title="End call"
-              >
-                <FaPhoneSlash />
-              </button>
-              <button
-                onClick={handleSkip}
-                className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-lg"
-                title="Skip"
-              >
-                <FaStepForward />
-              </button>
-              <button
-                onClick={toggleFullscreen}
-                className="p-3 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors shadow-lg"
-                title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-              >
-                {isFullscreen ? <FaCompress /> : <FaExpand />}
-              </button>
-            </div>
+            <VideoChatControls
+              videoEnabled={videoEnabled}
+              audioEnabled={audioEnabled}
+              isFullscreen={isFullscreen}
+              onToggleVideo={toggleVideo}
+              onToggleAudio={toggleAudio}
+              onStop={stopCall}
+              onSkip={handleSkip}
+              onToggleFullscreen={toggleFullscreen}
+            />
           </div>
 
-          {/* Share profile prompt (below video if not yet shared) */}
-          {!canShareProfile && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 text-center">
-              <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
-                <FaUserPlus className="inline mr-1" />
-                {youConsented
-                  ? 'Waiting for your partner to share their profile...'
-                  : 'Share your profile to reveal names and get +1 minute!'}
-              </p>
-              {!youConsented && (
-                <Button onClick={allowShare} variant="primary" size="sm">
-                  Share My Profile
-                </Button>
-              )}
-            </div>
-          )}
+          <ShareProfilePrompt canShareProfile={canShareProfile} youConsented={youConsented} onAllowShare={allowShare} />
         </div>
       )}
     </div>

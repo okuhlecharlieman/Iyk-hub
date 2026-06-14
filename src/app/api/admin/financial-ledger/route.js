@@ -4,6 +4,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { buildFinancialSummary, queryLedger } from '../../../../lib/monetization/ledger';
+import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
@@ -52,10 +53,6 @@ export async function GET(request) {
 
     return NextResponse.json({ error: 'Invalid view parameter' }, { status: 400 });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error in financial-ledger:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in financial-ledger:');
   }
 }

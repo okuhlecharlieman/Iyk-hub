@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticateWithRoles, listAllUsers } from '../../../../lib/firebase/admin';
 import { TEAM_MANAGEMENT_ROLES, VALID_ROLE_KEYS } from '../../../../lib/roles';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit, enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
@@ -112,11 +112,7 @@ export async function GET(req) {
     const users = await listAllUsers();
     return NextResponse.json({ success: true, users });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error fetching users:', error);
-    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+    return handleApiError(error, 'Error fetching users');
   }
 }
 
@@ -201,15 +197,7 @@ export async function PUT(req) {
 
     return NextResponse.json({ message: `User ${uid} updated successfully`, authExists, authWasCreated });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    return handleApiError(error, 'Error updating user');
   }
 }
 
@@ -246,15 +234,7 @@ export async function DELETE(req) {
 
     return NextResponse.json({ message: `User ${uid} deleted successfully` });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-
-    console.error('Error deleting user:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    return handleApiError(error, 'Error deleting user');
   }
 }
 
@@ -324,13 +304,6 @@ export async function PATCH(req) {
       message: `User ${uid} ${isSuspend ? 'suspended' : 'unsuspended'} successfully`,
     });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error suspending/unsuspending user:', error);
-    return NextResponse.json({ error: 'Failed to update user status' }, { status: 500 });
+    return handleApiError(error, 'Error suspending/unsuspending user');
   }
 }

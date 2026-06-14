@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 const COOLING_OFF_DAYS = 30;
@@ -60,10 +61,6 @@ export async function DELETE(request) {
       coolingOffDays: COOLING_OFF_DAYS,
     });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error scheduling account deletion:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error scheduling account deletion:');
   }
 }

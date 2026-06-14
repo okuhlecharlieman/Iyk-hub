@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
@@ -67,72 +67,6 @@ export async function GET(request) {
 
     return NextResponse.json({ items });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error in /api/admin/creator-boosts GET:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-export async function PUT(request) {
-  const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:creator-boosts:put', limit: 40, windowMs: 60 * 1000 });
-  if (rateLimitResponse) return rateLimitResponse;
-
-  try {
-    const actor = await authenticate(request);
-    await initializeFirebaseAdmin();
-
-    const payload = await parseJsonBody(request);
-    const update = validateBoostUpdatePayload(payload);
-
-    const db = admin.firestore();
-    const ref = db.collection('creatorBoostOrders').doc(update.orderId);
-    const snap = await ref.get();
-
-    if (!snap.exists) {
-      return NextResponse.json({ error: 'Boost order not found.' }, { status: 404 });
-    }
-
-    const order = snap.data();
-    const patch = {
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      reviewedBy: actor.uid,
-    };
-
-    if (update.paymentStatus) patch.paymentStatus = update.paymentStatus;
-    if (update.activationStatus) patch.activationStatus = update.activationStatus;
-    if (update.note !== null) patch.note = update.note;
-
-    if ((update.paymentStatus === 'paid' || order.paymentStatus === 'paid') && update.activationStatus === 'active') {
-      patch.activatedAt = admin.firestore.FieldValue.serverTimestamp();
-      patch.expiresAt = new Date(Date.now() + (order.durationHours || 0) * 60 * 60 * 1000);
-    }
-
-    await ref.set(patch, { merge: true });
-
-    await logAdminAction({
-      request,
-      actor,
-      action: 'creator.boost.updated',
-      targetType: 'creatorBoostOrder',
-      targetId: update.orderId,
-      metadata: {
-        paymentStatus: update.paymentStatus,
-        activationStatus: update.activationStatus,
-      },
-    });
-
-    return NextResponse.json({ success: true, message: 'Creator boost order updated.' });
-  } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/admin/creator-boosts PUT:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/admin/creator-boosts PUT');
   }
 }

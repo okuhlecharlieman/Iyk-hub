@@ -1,7 +1,10 @@
+/**
+ * API route handler for /api/admin/operating-spend.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields, handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
@@ -18,6 +21,7 @@ const SPEND_CATEGORIES = [
   'other',
 ];
 
+/** Validates or checks — validateSpendPayload. */
 const validateSpendPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['amountCents', 'currency', 'category', 'vendor', 'description', 'invoiceRef', 'spendDate']);
@@ -51,6 +55,7 @@ const validateSpendPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/admin/operating-spend. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, {
     keyPrefix: 'admin:operating-spend:create',
@@ -103,17 +108,11 @@ export async function POST(request) {
       category: spend.category,
     });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error recording operating spend:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error recording operating spend');
   }
 }
 
+/** Handles GET requests to /api/admin/operating-spend. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, {
     keyPrefix: 'admin:operating-spend:list',
@@ -161,10 +160,6 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, entries, nextCursor, totalCount });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error listing operating spend:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error listing operating spend');
   }
 }

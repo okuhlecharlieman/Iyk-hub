@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /profile/[id].
+ */
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
@@ -10,6 +13,7 @@ import Link from 'next/link';
 import BoostBadge from '../../../components/BoostBadge';
 import { useToast } from '../../../components/ui/ToastProvider';
 
+/** ProfileByIdPage — main page component. */
 export default function ProfileByIdPage() {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
@@ -74,6 +78,7 @@ export default function ProfileByIdPage() {
     if (id) fetchProfileData();
   }, [id, fetchProfileData]);
 
+  /** Handles share profile action. */
   const handleShareProfile = async () => {
     const url = `${window.location.origin}/u/${id}`;
     try {

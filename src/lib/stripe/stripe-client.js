@@ -1,9 +1,13 @@
+/**
+ * stripe-client utilities (stripe).
+ */
 import Stripe from 'stripe';
 import { ORDER_CONFIG, LEDGER_ENTRY_TYPES } from '../monetization/constants';
 import { appendLedgerEntry, recordChargeWithFees } from '../monetization/ledger';
 
 let stripeInstance = null;
 
+/** Fetches/retrieves data — getStripeClient. */
 function getStripeClient() {
   if (!stripeInstance) {
     const apiKey = process.env.STRIPE_SECRET_KEY;
@@ -18,6 +22,7 @@ function getStripeClient() {
   return stripeInstance;
 }
 
+/** Creates/generates — createStripePaymentIntent. */
 export async function createStripePaymentIntent({
   amountCents,
   currency = 'USD',
@@ -53,6 +58,7 @@ export async function createStripePaymentIntent({
   }
 }
 
+/** Creates/generates — createOrGetStripeCustomer. */
 export async function createOrGetStripeCustomer({
   email,
   name,
@@ -79,6 +85,7 @@ export async function createOrGetStripeCustomer({
   }
 }
 
+/** verify Stripe Webhook Signature. */
 export function verifyStripeWebhookSignature(body, signature) {
   const stripe = getStripeClient();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -96,6 +103,7 @@ export function verifyStripeWebhookSignature(body, signature) {
   }
 }
 
+/** Handles payment intent succeeded action. */
 export async function handlePaymentIntentSucceeded(event, { db, logPayment }) {
   const paymentIntent = event.data.object;
   const { orderType, orderId } = paymentIntent.metadata;
@@ -152,6 +160,7 @@ export async function handlePaymentIntentSucceeded(event, { db, logPayment }) {
   return true;
 }
 
+/** Handles payment intent failed action. */
 export async function handlePaymentIntentFailed(event, { db, logPayment }) {
   const paymentIntent = event.data.object;
   const { orderType, orderId } = paymentIntent.metadata;

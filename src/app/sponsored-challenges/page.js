@@ -15,12 +15,14 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { FaPlus, FaCalendarAlt, FaTrophy, FaUser, FaRocket, FaUsers, FaAward, FaStar } from 'react-icons/fa';
 
+/** SponsoredChallenges React component. */
 export default function SponsoredChallenges() {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [nextCursor, setNextCursor] = useState(null);
 
+  /** Fetches/retrieves data — fetchChallenges. */
   const fetchChallenges = async (cursor = null) => {
     try {
       const url = cursor ? `/api/sponsored-challenges?cursor=${cursor}` : '/api/sponsored-challenges';
@@ -40,6 +42,7 @@ export default function SponsoredChallenges() {
     fetchChallenges();
   }, []);
 
+  /** Fetches/retrieves data — loadMore. */
   const loadMore = () => {
     if (nextCursor) {
       fetchChallenges(nextCursor);

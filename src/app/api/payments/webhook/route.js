@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/payments/webhook.
+ */
 import { NextResponse } from 'next/server';
 import { buffer } from 'stream/consumers';
 import admin from 'firebase-admin';
@@ -37,6 +40,7 @@ async function isEventAlreadyProcessed(db, eventId) {
   }
 }
 
+/** log Stripe Event. */
 async function logStripeEvent(db, event, success) {
   try {
     await db.collection('stripeWebhookLogs').add({
@@ -52,6 +56,7 @@ async function logStripeEvent(db, event, success) {
   }
 }
 
+/** Handles payment event action. */
 async function handlePaymentEvent(event, db) {
   const { type } = event;
 
@@ -102,6 +107,7 @@ async function handlePaymentEvent(event, db) {
   }
 }
 
+/** Handles POST requests to /api/payments/webhook. */
 export async function POST(request) {
   try {
     await initializeFirebaseAdmin();

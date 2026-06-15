@@ -1,34 +1,15 @@
+/**
+ * API route handler for /api/admin/monetization/export.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { AuthMiddleware } from '../../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
+import { getDateRange } from '../../../../../lib/api/date-range';
 export const dynamic = 'force-dynamic';
 
-function getDateRange(period) {
-  const now = new Date();
-  const startDate = new Date();
-
-  switch (period) {
-    case '7d':
-      startDate.setDate(now.getDate() - 7);
-      break;
-    case '30d':
-      startDate.setDate(now.getDate() - 30);
-      break;
-    case '90d':
-      startDate.setDate(now.getDate() - 90);
-      break;
-    case '1y':
-      startDate.setFullYear(now.getFullYear() - 1);
-      break;
-    default:
-      startDate.setDate(now.getDate() - 30);
-  }
-
-  return { startDate, endDate: now };
-}
-
+/** Formats/parses data — formatCSVRow. */
 function formatCSVRow(data) {
   return data.map(field => {
     if (field === null || field === undefined) return '';
@@ -41,6 +22,7 @@ function formatCSVRow(data) {
   }).join(',');
 }
 
+/** Handles GET requests to /api/admin/monetization/export. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:monetization:export', limit: 5, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

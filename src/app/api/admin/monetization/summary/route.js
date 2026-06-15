@@ -1,11 +1,16 @@
+/**
+ * API route handler for /api/admin/monetization/summary.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { buildCacheKey, getOrSetCache } from '../../../../../lib/api/cache';
 import { buildMonetizationSummary } from '../../../../../lib/monetization/summary';
+import { handleApiError } from '../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/monetization/summary. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:monetization:summary:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -28,11 +33,6 @@ export async function GET(request) {
       },
     });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/admin/monetization/summary:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/admin/monetization/summary:');
   }
 }

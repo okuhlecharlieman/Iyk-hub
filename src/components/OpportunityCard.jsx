@@ -15,6 +15,7 @@ function trackOppEvent(opportunityId, event) {
   }).catch(() => {});
 }
 
+/** OpportunityCard — card display component. */
 export default function OpportunityCard({ opportunity: o, isAdmin, user, onEdit, onDelete, onApprove, onReject }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const viewTracked = useRef(false);

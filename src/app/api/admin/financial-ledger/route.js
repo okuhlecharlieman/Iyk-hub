@@ -1,11 +1,16 @@
+/**
+ * API route handler for /api/admin/financial-ledger.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { buildFinancialSummary, queryLedger } from '../../../../lib/monetization/ledger';
+import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/financial-ledger. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:financial-ledger', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -52,10 +57,6 @@ export async function GET(request) {
 
     return NextResponse.json({ error: 'Invalid view parameter' }, { status: 400 });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error in financial-ledger:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in financial-ledger:');
   }
 }

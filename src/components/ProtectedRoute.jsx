@@ -1,4 +1,7 @@
 'use client';
+/**
+ * ProtectedRoutex component.
+ */
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -12,6 +15,7 @@ const ROLE_PAGE_DESCRIPTIONS = {
   default: { title: 'Restricted Area', icon: FaLock, description: 'You do not have the required permissions to access this page.', requiredRoles: [] },
 };
 
+/** ProtectedRoute React component. */
 export default function ProtectedRoute({ children, adminOnly = false, requiredRoles = [], pageType = 'default' }) {
   const { user, loading, userProfile } = useAuth();
   const router = useRouter();

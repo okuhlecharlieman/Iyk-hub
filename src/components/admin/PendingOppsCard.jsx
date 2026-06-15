@@ -1,7 +1,11 @@
 'use client';
+/**
+ * PendingOppsCardx component.
+ */
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 
+/** PendingOppsCard — card display component. */
 const PendingOppsCard = () => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 h-full flex flex-col justify-between">

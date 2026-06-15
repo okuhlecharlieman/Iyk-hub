@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /admin/payments.
+ */
 import { useEffect, useState, useCallback } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
@@ -7,11 +9,13 @@ import LoadingSpinner from '../../../components/LoadingSpinner';
 import Button from '../../../components/ui/Button';
 import { FaSyncAlt, FaDollarSign, FaFilter, FaCalendarAlt, FaSearch } from 'react-icons/fa';
 
+/** Formats/parses data — formatCurrency. */
 const formatCurrency = (cents) => {
   if (cents === undefined || cents === null) return 'R0.00';
   return `R${(cents / 100).toFixed(2)}`;
 };
 
+/** Formats/parses data — formatDate. */
 const formatDate = (value) => {
   if (!value) return '—';
   try {
@@ -121,6 +125,7 @@ const STREAM_FALLBACK_CONFIG = {
   },
 };
 
+/** Fetches/retrieves data — fetchStreamFallbackItems. */
 async function fetchStreamFallbackItems(streamType, token) {
   const config = STREAM_FALLBACK_CONFIG[streamType];
   if (!config) return [];
@@ -139,6 +144,7 @@ async function fetchStreamFallbackItems(streamType, token) {
   return paidItems.map(config.buildEntry);
 }
 
+/** Fetches/retrieves data — fetchStreamFallbackSummary. */
 async function fetchStreamFallbackSummary(streamType, token) {
   const config = STREAM_FALLBACK_CONFIG[streamType];
   if (!config) return null;
@@ -157,6 +163,7 @@ async function fetchStreamFallbackSummary(streamType, token) {
   return config.buildSummary(paidItems);
 }
 
+/** enrich Summary With Fallbacks. */
 async function enrichSummaryWithFallbacks(currentSummary, token) {
   if (!currentSummary) return currentSummary;
 
@@ -179,6 +186,7 @@ async function enrichSummaryWithFallbacks(currentSummary, token) {
   return updatedSummary;
 }
 
+/** AdminPaymentsPage — main page component. */
 export default function AdminPaymentsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -313,8 +321,11 @@ export default function AdminPaymentsPage() {
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
+      /** order Id. */
       const orderId = (entry.orderId || '').toLowerCase();
+      /** description. */
       const description = (entry.description || '').toLowerCase();
+      /** order Type. */
       const orderType = (entry.orderType || '').toLowerCase();
 
       return orderId.includes(term) ||
@@ -326,12 +337,14 @@ export default function AdminPaymentsPage() {
     return true;
   });
 
+  /** Fetches/retrieves data — getTotalRevenue. */
   const getTotalRevenue = () => {
     if (!summary) return 0;
     if (selectedStream === 'all') return summary.grossRevenueCents || 0;
     return summary.byOrderType[selectedStream]?.grossCents || 0;
   };
 
+  /** Fetches/retrieves data — getRevenueStreams. */
   const getRevenueStreams = () => {
     if (!summary || !summary.byOrderType) return [];
     return Object.entries(summary.byOrderType).map(([type, data]) => ({

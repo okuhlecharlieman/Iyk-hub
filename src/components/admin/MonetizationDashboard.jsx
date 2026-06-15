@@ -1,8 +1,12 @@
+/**
+ * MonetizationDashboardx component.
+ */
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { FaDollarSign, FaCreditCard, FaUsers, FaChartLine, FaDownload, FaEye, FaHeart } from 'react-icons/fa';
 import { useToast } from '../ui/ToastProvider';
 
+/** MonetizationDashboard React component. */
 export default function MonetizationDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
@@ -17,6 +21,7 @@ export default function MonetizationDashboard() {
     fetchMonetizationData();
   }, [selectedPeriod, user]);
 
+  /** Fetches/retrieves data — fetchMonetizationData. */
   const fetchMonetizationData = async () => {
     try {
       setLoading(true);
@@ -42,6 +47,7 @@ export default function MonetizationDashboard() {
     }
   };
 
+  /** process Payout. */
   const processPayout = async (challengeId) => {
     setProcessingPayout(challengeId);
     try {
@@ -68,6 +74,7 @@ export default function MonetizationDashboard() {
     }
   };
 
+  /** export Data. */
   const exportData = async () => {
     try {
       const response = await fetch(`/api/admin/monetization/export?period=${selectedPeriod}`);

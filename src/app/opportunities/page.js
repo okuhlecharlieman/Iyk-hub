@@ -36,6 +36,7 @@ import PaystackCheckout from '../../components/PaystackCheckout';
 const TABS = { ALL: 'All', PENDING: 'Pending' };
 const PAGE_SIZE = 12;
 
+/** OpportunitiesContent React component. */
 function OpportunitiesContent() {
   const { user, userProfile } = useAuth();
   const { boost: activeBoost } = useActiveBoost();
@@ -91,6 +92,7 @@ function OpportunitiesContent() {
       setEarlyAccessOpps([]);
       return;
     }
+    /** Fetches/retrieves data — fetchEarlyAccess. */
     const fetchEarlyAccess = async () => {
       try {
         const token = await user.getIdToken();
@@ -105,6 +107,7 @@ function OpportunitiesContent() {
     fetchEarlyAccess();
   }, [user, isUltra]);
 
+  /** Handles form submit action. */
   const handleFormSubmit = async (data) => {
     setIsFormModalOpen(false);
     
@@ -142,6 +145,7 @@ function OpportunitiesContent() {
     }
   };
 
+  /** Handles edit action. */
   const handleEdit = (opp) => {
     const expiresAtValue = opp.expiresAt
       ? new Date(opp.expiresAt?.toDate ? opp.expiresAt.toDate() : opp.expiresAt).toISOString().slice(0, 16)
@@ -151,6 +155,7 @@ function OpportunitiesContent() {
     setIsFormModalOpen(true);
   };
 
+  /** Handles delete action. */
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this opportunity?')) {
       try {
@@ -164,6 +169,7 @@ function OpportunitiesContent() {
     }
   };
 
+  /** Handles approve action. */
   const handleApprove = async (id) => {
     try {
       await approveOpportunity(id);
@@ -175,6 +181,7 @@ function OpportunitiesContent() {
     }
   };
 
+  /** Handles reject action. */
   const handleReject = async (id) => {
     try {
       await rejectOpportunity(id);
@@ -403,6 +410,7 @@ function OpportunitiesContent() {
   );
 }
 
+/** OpportunitiesPage — main page component. */
 export default function OpportunitiesPage() {
   return (
     <ErrorBoundary>

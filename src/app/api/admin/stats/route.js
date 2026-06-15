@@ -1,9 +1,13 @@
+/**
+ * API route handler for /api/admin/stats.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/stats. */
 export async function GET(request) {
   const auth = await AuthMiddleware.requireAdmin(request);
   if (auth instanceof NextResponse) return auth;

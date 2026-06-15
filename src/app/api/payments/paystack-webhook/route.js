@@ -28,6 +28,7 @@ const PAYSTACK_FEE_RATE = 0.015;
 const PAYSTACK_FEE_FIXED_CENTS = 100;
 const PAYSTACK_FEE_CAP_CENTS = 200000;
 
+/** calculate Paystack Fee. */
 function calculatePaystackFee(amountCents) {
   const calculated = Math.round(amountCents * PAYSTACK_FEE_RATE) + PAYSTACK_FEE_FIXED_CENTS;
   return Math.min(calculated, PAYSTACK_FEE_CAP_CENTS);
@@ -35,10 +36,12 @@ function calculatePaystackFee(amountCents) {
 
 const SA_VAT_RATE = 0.15;
 
+/** calculate V A T. */
 function calculateVAT(amountCents) {
   return Math.round(amountCents * SA_VAT_RATE / (1 + SA_VAT_RATE));
 }
 
+/** extract Metadata Field. */
 const extractMetadataField = (metadata, field) => {
   if (!metadata) return undefined;
   if (metadata[field] !== undefined) return metadata[field];
@@ -51,6 +54,7 @@ const extractMetadataField = (metadata, field) => {
   return undefined;
 };
 
+/** Handles POST requests to /api/payments/paystack-webhook. */
 export async function POST(request) {
   try {
     await initializeFirebaseAdmin();

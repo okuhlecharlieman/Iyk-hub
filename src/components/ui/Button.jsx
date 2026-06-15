@@ -1,6 +1,10 @@
+/**
+ * Buttonx component.
+ */
 import React from 'react';
 import clsx from 'clsx';
 
+/** Button — button component. */
 export default function Button({
   children,
   variant = 'primary',

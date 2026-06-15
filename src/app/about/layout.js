@@ -1,3 +1,6 @@
+/**
+ * Layout wrapper for /app/about.
+ */
 export const metadata = {
   title: 'About Intwana Hub — South Africa\'s Youth Innovation Platform',
   description: 'Learn about Intwana Hub, South Africa\'s premier youth innovation platform. Our mission, features, creator boost tiers, and how to showcase your talent.',
@@ -7,6 +10,7 @@ export const metadata = {
   },
 };
 
+/** AboutLayout — layout wrapper component. */
 export default function AboutLayout({ children }) {
   return children;
 }

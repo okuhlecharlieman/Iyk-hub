@@ -17,6 +17,7 @@ import { FaGamepad, FaSearch } from 'react-icons/fa';
 /** Game IDs rendered on the games listing page. Order determines display order. */
 const GAMES = ['scratchcard', 'rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
 
+/** GamesPage — main page component. */
 export default function GamesPage() {
   const [search, setSearch] = useState('');
 

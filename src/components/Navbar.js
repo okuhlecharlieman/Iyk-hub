@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Navbar component.
+ */
 import { useState, Fragment } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -10,6 +13,7 @@ import InstallButton from './InstallButton';
 import { FaBars, FaTimes, FaUserCircle, FaShieldAlt } from 'react-icons/fa';
 import { Menu, Transition } from '@headlessui/react';
 
+/** NavLink React component. */
 const NavLink = ({ href, children }) => {
   const pathname = usePathname();
   const isActive = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
@@ -21,6 +25,7 @@ const NavLink = ({ href, children }) => {
   );
 };
 
+/** MobileNavLink React component. */
 const MobileNavLink = ({ href, children, onClick }) => {
     const pathname = usePathname();
     const isActive = pathname === href || (href !== '/' && pathname.startsWith(`${href}/`));
@@ -32,6 +37,7 @@ const MobileNavLink = ({ href, children, onClick }) => {
     );
   };
 
+/** Navbar React component. */
 export default function Navbar() {
   const { user, isAdmin, loading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

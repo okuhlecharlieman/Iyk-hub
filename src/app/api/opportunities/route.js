@@ -1,7 +1,11 @@
+/**
+ * API route handler for /api/opportunities.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
+import { handleApiError } from 'lib/api/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,6 +19,7 @@ const EXTERNAL_JOBS_API_URL =
   'https://multi-tenant-smart-job-application.vercel.app/api/jobs/public';
 const EXTERNAL_OPPORTUNITIES_SOURCE_LABEL = 'Smart Job Portal';
 
+/** to Millis. */
 const toMillis = (value) => {
   if (!value) return 0;
   if (typeof value === 'number') return value;
@@ -27,6 +32,7 @@ const toMillis = (value) => {
   return 0;
 };
 
+/** normalize External Opportunity. */
 const normalizeExternalOpportunity = (opportunity) => {
   if (!opportunity || typeof opportunity !== 'object' || !opportunity.id) return null;
 
@@ -66,6 +72,7 @@ const normalizeExternalOpportunity = (opportunity) => {
   };
 };
 
+/** normalize External Job. */
 const normalizeExternalJob = (job) => {
   if (!job || typeof job !== 'object' || !job.id) return null;
 
@@ -108,6 +115,7 @@ const normalizeExternalJob = (job) => {
   };
 };
 
+/** Fetches/retrieves data — fetchExternalOpportunities. */
 const fetchExternalOpportunities = async ({ limit, search = '' } = {}) => {
   const url = new URL(EXTERNAL_OPPORTUNITIES_API_URL);
   url.searchParams.set('status', 'approved');
@@ -140,6 +148,7 @@ const fetchExternalOpportunities = async ({ limit, search = '' } = {}) => {
   }
 };
 
+/** Fetches/retrieves data — fetchExternalJobs. */
 const fetchExternalJobs = async ({ limit, search = '' } = {}) => {
   const url = new URL(EXTERNAL_JOBS_API_URL);
   url.searchParams.set('limit', String(Math.min(Math.max(limit || 12, 1), 100)));
@@ -171,14 +180,17 @@ const fetchExternalJobs = async ({ limit, search = '' } = {}) => {
   }
 };
 
+/** sort Opportunities By Created At. */
 const sortOpportunitiesByCreatedAt = (items) => [...items].sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
 
+/** Fetches/retrieves data — getRoleForUid. */
 const getRoleForUid = async (uid) => {
   const userDoc = await admin.firestore().collection('users').doc(uid).get();
   if (!userDoc.exists) return 'user';
   return userDoc.data()?.role || 'user';
 };
 
+/** Handles GET requests to /api/opportunities. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:get', limit: 90, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -192,6 +204,7 @@ export async function GET(request) {
     const rawLimit = Number.parseInt(searchParams.get('limit') || '12', 10);
     const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 12 : rawLimit, 1), MAX_LIMIT);
     let cursor = searchParams.get('cursor');
+    /** search. */
     const search = (searchParams.get('search') || '').trim();
     const includeExternal = !cursor && searchParams.get('includeExternal') !== 'false';
 
@@ -208,6 +221,7 @@ export async function GET(request) {
       }
 
       const snap = await queryRef.get();
+      /** Formats/parses data — serializeTs. */
       const serializeTs = (val) => {
         if (!val) return null;
         if (typeof val === 'string') return val;
@@ -255,6 +269,7 @@ export async function GET(request) {
     }
 
     const approvedSnap = await queryRef.get();
+    /** Formats/parses data — serializeTimestamp. */
     const serializeTimestamp = (val) => {
       if (!val) return null;
       if (typeof val === 'string') return val;
@@ -262,6 +277,7 @@ export async function GET(request) {
       if (typeof val.toMillis === 'function') return new Date(val.toMillis()).toISOString();
       return null;
     };
+    /** Formats/parses data — serializeOpportunity. */
     const serializeOpportunity = (doc) => {
       const data = doc.data();
       return {
@@ -324,11 +340,6 @@ export async function GET(request) {
 
     return NextResponse.json({ opportunities: mergedOpportunities, nextCursor });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/opportunities:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/opportunities:');
   }
 }

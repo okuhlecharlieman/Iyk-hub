@@ -1,8 +1,12 @@
+/**
+ * SponsoredChallengesCardx component.
+ */
 import { useState, useEffect } from 'react';
 import { FaTrophy, FaCheck, FaTimes } from 'react-icons/fa';
 import { useToast } from '../ui/ToastProvider';
 import { useAuth } from '../../context/AuthContext';
 
+/** SponsoredChallengesCard — card display component. */
 export default function SponsoredChallengesCard() {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,6 +17,7 @@ export default function SponsoredChallengesCard() {
     if (user) fetchChallenges();
   }, [user]);
 
+  /** Fetches/retrieves data — fetchChallenges. */
   const fetchChallenges = async () => {
     try {
       const token = user ? await user.getIdToken() : null;
@@ -30,6 +35,7 @@ export default function SponsoredChallengesCard() {
     }
   };
 
+  /** approve Challenge. */
   const approveChallenge = async (id) => {
     try {
       const token = user ? await user.getIdToken() : null;

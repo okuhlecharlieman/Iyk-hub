@@ -1,3 +1,6 @@
+/**
+ * Layout wrapper for /app/opportunities.
+ */
 export const metadata = {
   title: 'Opportunities — Jobs, Internships & Grants for Youth',
   description: 'Discover real opportunities for South African youth. Jobs, internships, grants, competitions and sponsored challenges. Free to browse and apply.',
@@ -7,6 +10,7 @@ export const metadata = {
   },
 };
 
+/** OpportunitiesLayout — layout wrapper component. */
 export default function OpportunitiesLayout({ children }) {
   return children;
 }

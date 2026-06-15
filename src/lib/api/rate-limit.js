@@ -1,6 +1,19 @@
+/**
+ * Rate-limiting middleware for API routes.
+ *
+ * Provides both in-memory (fast, per-instance) and Firestore-backed
+ * (distributed, cross-instance) rate limiting.  Use `enforceRateLimit`
+ * for standard endpoints and `enforceDistributedRateLimit` for
+ * critical ones (payments, auth) where cross-instance consistency matters.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
+/**
+ * Extracts the client's real IP address from proxy headers.
+ * @param {Request} request
+ * @returns {string} The client IP or 'unknown'.
+ */
 const getClientIp = (request) => {
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
@@ -10,6 +23,12 @@ const getClientIp = (request) => {
   return request.headers.get('x-real-ip') || 'unknown';
 };
 
+/**
+ * Builds a unique rate-limit bucket key from the endpoint prefix + client IP.
+ * @param {Request} request
+ * @param {string}  keyPrefix - Identifies the endpoint (e.g. 'showcase-submit').
+ * @returns {string}
+ */
 const getBucketKey = (request, keyPrefix = 'default') => {
   const ip = getClientIp(request);
   return `${keyPrefix}:${ip}`;
@@ -58,6 +77,18 @@ async function checkFirestoreRateLimit(bucketKey, limit, windowMs) {
   }
 }
 
+/**
+ * In-memory rate limiter (per serverless instance).
+ * Returns a 429 NextResponse if the caller exceeds the limit,
+ * or null if the request is allowed through.
+ *
+ * @param {Request} request
+ * @param {Object}  options
+ * @param {string}  options.keyPrefix - Endpoint identifier.
+ * @param {number}  options.limit     - Max requests per window.
+ * @param {number}  options.windowMs  - Window duration in milliseconds.
+ * @returns {NextResponse|null} 429 response or null (allowed).
+ */
 export function enforceRateLimit(request, {
   keyPrefix,
   limit,

@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /sponsored-challenges/[id].
+ */
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../../context/AuthContext';
@@ -16,11 +18,13 @@ const typeLabels = {
   general: 'General / Open',
 };
 
+/** Formats/parses data — formatRand. */
 const formatRand = (cents) => {
   const value = Number(cents || 0) / 100;
   return `R${value.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+/** SponsoredChallengeDetail React component. */
 export default function SponsoredChallengeDetail({ params }) {
   const { user, loading, isAdmin } = useAuth();
   const [challenge, setChallenge] = useState(null);
@@ -42,6 +46,7 @@ export default function SponsoredChallengeDetail({ params }) {
   }, [challenge]);
 
   useEffect(() => {
+    /** Fetches/retrieves data — loadChallenge. */
     async function loadChallenge() {
       setErrorMessage('');
       try {
@@ -63,6 +68,7 @@ export default function SponsoredChallengeDetail({ params }) {
   useEffect(() => {
     if (!challenge || loading || !user) return;
 
+    /** Fetches/retrieves data — loadSubmissions. */
     async function loadSubmissions() {
       try {
         const token = await user.getIdToken();
@@ -88,11 +94,13 @@ export default function SponsoredChallengeDetail({ params }) {
     loadSubmissions();
   }, [challenge, loading, params.id, user]);
 
+  /** Handles input change action. */
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  /** Handles submission action. */
   const handleSubmission = async (event) => {
     event.preventDefault();
     if (!user) return;
@@ -129,6 +137,7 @@ export default function SponsoredChallengeDetail({ params }) {
     }
   };
 
+  /** Handles moderation action. */
   const handleModeration = async (submissionId, newStatus) => {
     if (!user) return;
     setIsModerating(true);

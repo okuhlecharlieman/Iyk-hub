@@ -22,6 +22,7 @@ const typeMetadata = {
   other: { icon: <FaEllipsisH />, color: 'text-gray-400' },
 };
 
+/** Fetches/retrieves data — getMediaType. */
 function getMediaType(url) {
   if (!url) return null;
   const lower = url.toLowerCase().split('?')[0];
@@ -30,6 +31,7 @@ function getMediaType(url) {
   return 'image';
 }
 
+/** PostCardSkeleton — card display component. */
 export const PostCardSkeleton = () => (
     <div className="bg-white/50 dark:bg-gray-800/50 shadow-lg rounded-2xl overflow-hidden animate-pulse border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
         <div className="h-48 bg-gray-200 dark:bg-gray-700/80"></div>
@@ -53,6 +55,7 @@ export const PostCardSkeleton = () => (
 );
 
 
+/** PostCard — card display component. */
 export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onVote }) {
   const { user: currentUser } = useAuth();
   const { type, title, description, mediaUrl, link, createdAt, votes, voters, fireCount, fireVoters, heartCount, heartVoters, authorName, authorPhoto, author } = post;
@@ -103,6 +106,7 @@ export default function PostCard({ post, isOwner, isAdmin, onEdit, onDelete, onV
     return () => unsubscribe();
   }, [post.id]);
 
+  /** Handles reaction action. */
   const handleReaction = async (reactionType) => {
     if (!userId || busyReaction) return;
     setBusyReaction(reactionType);

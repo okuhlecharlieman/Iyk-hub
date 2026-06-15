@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/payments/verify-donation.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -10,6 +13,7 @@ const PAYSTACK_FEE_RATE = 0.015;
 const PAYSTACK_FEE_FIXED_CENTS = 100;
 const PAYSTACK_FEE_CAP_CENTS = 200000;
 
+/** calculate Paystack Fee. */
 function calculatePaystackFee(amountCents) {
   const calculated = Math.round(amountCents * PAYSTACK_FEE_RATE) + PAYSTACK_FEE_FIXED_CENTS;
   return Math.min(calculated, PAYSTACK_FEE_CAP_CENTS);
@@ -17,10 +21,12 @@ function calculatePaystackFee(amountCents) {
 
 const SA_VAT_RATE = 0.15;
 
+/** calculate V A T. */
 function calculateVAT(amountCents) {
   return Math.round(amountCents * SA_VAT_RATE / (1 + SA_VAT_RATE));
 }
 
+/** Handles POST requests to /api/payments/verify-donation. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'payments:verify-donation', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

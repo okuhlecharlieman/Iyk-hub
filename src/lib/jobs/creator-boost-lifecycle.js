@@ -1,7 +1,11 @@
+/**
+ * creator-boost-lifecycle utilities (jobs).
+ */
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../firebase/admin';
 import { getCreatorBoostPlan } from '../monetization/creator-boosts';
 
+/** to Millis. */
 const toMillis = (value) => {
   if (!value) return null;
   if (typeof value?.toMillis === 'function') return value.toMillis();
@@ -10,6 +14,7 @@ const toMillis = (value) => {
   return null;
 };
 
+/** run Creator Boost Lifecycle Job. */
 export async function runCreatorBoostLifecycleJob() {
   await initializeFirebaseAdmin();
   const db = admin.firestore();
@@ -35,6 +40,7 @@ export async function runCreatorBoostLifecycleJob() {
   let expired = 0;
   const userBoostUpdates = [];
 
+  /** commit If Needed. */
   const commitIfNeeded = async () => {
     if (opCount >= 400) {
       await batch.commit();

@@ -1,10 +1,13 @@
 'use client';
-
+/**
+ * Page component for /video.
+ */
 import ProtectedRoute from '../../components/ProtectedRoute';
 import VideoChat from '../../components/VideoChat';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { FaVideo } from 'react-icons/fa';
 
+/** VideoPage — main page component. */
 export default function VideoPage() {
   return (
     <ProtectedRoute>

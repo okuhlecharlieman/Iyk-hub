@@ -1,3 +1,6 @@
+/**
+ * institution-plans utilities (monetization).
+ */
 const INSTITUTION_PLANS = {
   starter: {
     feeCentsMonthly: 19900,
@@ -16,4 +19,5 @@ const INSTITUTION_PLANS = {
   },
 };
 
+/** Fetches/retrieves data — getInstitutionPlanConfig. */
 export const getInstitutionPlanConfig = (plan) => INSTITUTION_PLANS[plan] || null;

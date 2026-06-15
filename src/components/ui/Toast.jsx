@@ -1,3 +1,6 @@
+/**
+ * Toastx component.
+ */
 import React, { useEffect, useState } from 'react';
 import { FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaTimesCircle, FaTimes } from 'react-icons/fa';
 
@@ -20,6 +23,7 @@ const TOAST_CONFIG = {
   },
 };
 
+/** Toast React component. */
 export default function Toast({ type = 'success', message, onClose, duration = 3500 }) {
   const [visible, setVisible] = useState(false);
   const config = TOAST_CONFIG[type] || TOAST_CONFIG.info;
@@ -28,6 +32,7 @@ export default function Toast({ type = 'success', message, onClose, duration = 3
     requestAnimationFrame(() => setVisible(true));
   }, []);
 
+  /** Handles close action. */
   const handleClose = () => {
     setVisible(false);
     setTimeout(onClose, 200);

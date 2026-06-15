@@ -1,8 +1,12 @@
 'use client';
+/**
+ * ThemeSwitcherx component.
+ */
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { FaMoon, FaSun } from 'react-icons/fa';
 
+/** ThemeSwitcher React component. */
 const ThemeSwitcher = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();

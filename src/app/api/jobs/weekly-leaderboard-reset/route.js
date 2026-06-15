@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/jobs/weekly-leaderboard-reset.
+ */
 import { NextResponse } from 'next/server';
 import { resetWeeklyLeaderboardPoints } from '../../../../lib/jobs/leaderboard-reset';
 import { logAdminAction } from '../../../../lib/api/audit-log';
@@ -6,6 +9,7 @@ import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/jobs/weekly-leaderboard-reset. */
 export async function GET(request) {
   console.log('[Cron: Leaderboard] Job triggered at:', new Date().toISOString());
   

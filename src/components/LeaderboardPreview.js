@@ -1,10 +1,14 @@
 'use client';
+/**
+ * LeaderboardPreview component.
+ */
 import { useEffect, useState } from 'react';
 import { listTopUsers } from '../lib/firebase/helpers';
 import Link from 'next/link';
 import { FaTrophy } from 'react-icons/fa';
 import BoostBadge from './BoostBadge';
 
+/** LeaderboardPreview React component. */
 export default function LeaderboardPreview({ weekly = true }) {
   const [top, setTop] = useState([]);
   const [error, setError] = useState("");
@@ -12,6 +16,7 @@ export default function LeaderboardPreview({ weekly = true }) {
   useEffect(() => {
     let mounted = true;
     setError("");
+    /** Fetches/retrieves data — load. */
     const load = async () => {
       try {
         const topUsers = await listTopUsers(5, weekly ? 'weekly' : 'lifetime');

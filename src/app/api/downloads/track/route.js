@@ -1,8 +1,12 @@
+/**
+ * API route handler for /api/downloads/track.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/downloads/track. */
 export async function POST(request) {
   try {
     await initializeFirebaseAdmin();

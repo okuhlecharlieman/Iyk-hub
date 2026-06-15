@@ -1,22 +1,27 @@
 'use client';
+/**
+ * Page component for /profile.
+ */
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserDoc, getDailyViews } from '../../lib/firebase/user';
 import { listUserShowcasePosts, updateUserDoc, uploadToStorage } from '../../lib/firebase/helpers';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import { SkeletonProfile, SkeletonGrid } from '../../components/loaders/SkeletonLoader';
+import { SkeletonProfile } from '../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { updateProfile } from 'firebase/auth';
-import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser, FaCamera, FaPalette, FaEye, FaExternalLinkAlt, FaChartLine, FaShareAlt, FaCheck, FaRocket, FaClock, FaHistory, FaDownload, FaTrash, FaUndo, FaExclamationTriangle } from 'react-icons/fa';
-import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser, FaCamera, FaPalette, FaEye, FaExternalLinkAlt, FaShareAlt, FaCheck, FaGift } from 'react-icons/fa';
 import Link from 'next/link';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import { useActiveBoost } from '../../hooks/useActiveBoost';
 import BoostBadge from '../../components/BoostBadge';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import ProfileAnalytics from '../../components/profile/ProfileAnalytics';
+import { ActivePlanCard, BoostHistoryList } from '../../components/profile/ProfileBoostSection';
+import AccountManagement from '../../components/profile/AccountManagement';
 
+/** ProfilePage — main page component. */
 export default function ProfilePage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -33,6 +38,8 @@ export default function ProfilePage() {
   const [analytics, setAnalytics] = useState([]);
   const [copied, setCopied] = useState(false);
   const [boostHistory, setBoostHistory] = useState([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [redeemingPromo, setRedeemingPromo] = useState(false);
 
   const accentColor = doc?.accentColor || null;
 
@@ -48,13 +55,11 @@ export default function ProfilePage() {
       setDoc(userDoc);
       setPosts(userPosts);
 
-      // Fetch daily views separately to avoid breaking profile load
       try {
         const dailyViews = await getDailyViews(user.uid);
         setAnalytics(dailyViews);
-      } catch {
-        setAnalytics([]);
-      }
+      } catch { setAnalytics([]); }
+
       setForm({
         displayName: userDoc?.displayName || user?.displayName || '',
         bio: userDoc?.bio || '',
@@ -63,7 +68,6 @@ export default function ProfilePage() {
       });
       setProfilePicturePreview(userDoc?.photoURL || user?.photoURL || null);
 
-      // Fetch boost history
       try {
         const token = await user.getIdToken();
         const histRes = await fetch('/api/creator-boosts/history', {
@@ -82,33 +86,29 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
-  const handleFormChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  /** Handles form change action. */
+  const handleFormChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  /** Handles file change action. */
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setProfilePictureFile(file);
       const reader = new FileReader();
-      reader.onload = (e) => setProfilePicturePreview(e.target.result);
+      reader.onload = (ev) => setProfilePicturePreview(ev.target.result);
       reader.readAsDataURL(file);
     }
   };
 
+  /** Handles save action. */
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const skillsArray = form.skills.split(',').map(s => s.trim()).filter(Boolean);
       const updateData = { ...form, skills: skillsArray };
-
-      if (activeBoost?.tier !== 'ULTRA') {
-        delete updateData.accentColor;
-      }
+      if (activeBoost?.tier !== 'ULTRA') delete updateData.accentColor;
 
       if (profilePictureFile) {
         const photoURL = await uploadToStorage(profilePictureFile, `profiles/${user.uid}`);
@@ -121,18 +121,25 @@ export default function ProfilePage() {
       setProfilePictureFile(null);
       await loadProfile();
       toast('success', 'Profile updated successfully!');
-    } catch (error) {
-      console.error("Error saving profile:", error);
+    } catch (err) {
+      console.error("Error saving profile:", err);
       toast('error', 'Failed to save profile. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
+
+  /** Handles copy link action. */
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/u/${user.uid}`;
+    try { await navigator.clipboard.writeText(url); } catch {
+      const inp = document.createElement('input'); inp.value = url;
+      document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
+    }
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
+  };
   
-  const dynamicStyles = accentColor ? {
-    '--accent-color': accentColor,
-    '--accent-color--hover': `${accentColor}E6`,
-  } : {};
+  const dynamicStyles = accentColor ? { '--accent-color': accentColor, '--accent-color--hover': `${accentColor}E6` } : {};
 
   return (
     <ProtectedRoute>
@@ -142,11 +149,7 @@ export default function ProfilePage() {
             {loading ? (
               <SkeletonProfile />
             ) : error ? (
-              <ErrorEmptyState 
-                title="Profile Error" 
-                message={error}
-                onRetry={loadProfile}
-              />
+              <ErrorEmptyState title="Profile Error" message={error} onRetry={loadProfile} />
             ) : (
             <div className="bg-gradient-to-br from-white to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-xl p-8 border-t-4 border-blue-100 dark:border-gray-600" style={{ borderTopColor: 'var(--accent-color)'}}>
               <div className="flex flex-col items-center text-center">
@@ -195,7 +198,6 @@ export default function ProfilePage() {
                        </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">{user?.email}</p>
 
-                      {/* Points */}
                       <div className="flex justify-center items-center gap-6 mt-3">
                         <div className="text-center">
                           <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{doc?.points?.lifetime ?? doc?.points ?? 0}</p>
@@ -218,17 +220,7 @@ export default function ProfilePage() {
                         <Link href={`/u/${user.uid}`} className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline">
                           <FaExternalLinkAlt /> View Public Profile
                         </Link>
-                        <button
-                          onClick={async () => {
-                            const url = `${window.location.origin}/u/${user.uid}`;
-                            try { await navigator.clipboard.writeText(url); } catch {
-                              const inp = document.createElement('input'); inp.value = url;
-                              document.body.appendChild(inp); inp.select(); document.execCommand('copy'); document.body.removeChild(inp);
-                            }
-                            setCopied(true); setTimeout(() => setCopied(false), 2000);
-                          }}
-                          className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline"
-                        >
+                        <button onClick={handleCopyLink} className="inline-flex items-center gap-1 text-sm text-purple-600 hover:underline">
                           {copied ? <><FaCheck /> Copied!</> : <><FaShareAlt /> Share Link</>}
                         </button>
                       </div>
@@ -253,72 +245,48 @@ export default function ProfilePage() {
 
               <hr className="my-8 border-gray-200 dark:border-gray-600" />
 
-              {activeBoost && (
-                <div className="mt-8">
-                  <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 mb-6" style={{ color: 'var(--accent-color)' }}><FaChartLine className="inline-block mr-2"/>Portfolio Analytics</h3>
-                  <div style={{ width: '100%', height: 300 }}>
-                    <ResponsiveContainer>
-                      <LineChart data={analytics} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="count" stroke={accentColor || '#8884d8'} strokeWidth={2} name="Views" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
+              {activeBoost && <ProfileAnalytics analytics={analytics} accentColor={accentColor} />}
+              <ActivePlanCard activeBoost={activeBoost} />
+              <BoostHistoryList boostHistory={boostHistory} />
 
-              {/* Active Plan Status */}
-              {activeBoost && (
-                <div className="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-700/50">
-                  <div className="flex items-center gap-3 mb-3">
-                    <FaRocket className="text-purple-500 text-lg" />
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Active Plan</h3>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <span className="bg-purple-100 dark:bg-purple-800/40 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-full font-semibold">{activeBoost.label || activeBoost.tier}</span>
-                    {activeBoost.expiresAt && (
-                      <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                        <FaClock className="text-xs" />
-                        Expires: {new Date(activeBoost.expiresAt).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  <Link href="/creator-boosts" className="mt-3 inline-block text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium">
-                    Renew or Upgrade
-                  </Link>
-                </div>
-              )}
-
-              {/* Boost History */}
-              {boostHistory.length > 0 && (
-                <div className="mt-8">
-                  <div className="flex items-center gap-2 mb-4">
-                    <FaHistory className="text-gray-500" />
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Boost History</h3>
-                  </div>
-                  <div className="space-y-2">
-                    {boostHistory.slice(0, 5).map((order) => (
-                      <div key={order.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700/30 rounded-lg px-4 py-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 dark:text-white">{order.label}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            order.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-800/40 dark:text-green-300' :
-                            order.status === 'expired' ? 'bg-gray-100 text-gray-500 dark:bg-gray-600/40 dark:text-gray-400' :
-                            'bg-yellow-100 text-yellow-700 dark:bg-yellow-800/40 dark:text-yellow-300'
-                          }`}>{order.status}</span>
-                        </div>
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Promo Code Redemption */}
+              <div className="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl border border-purple-200 dark:border-gray-700 p-5">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                  <FaGift className="text-purple-500" /> Redeem Promo Code
+                </h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!promoCode.trim()) { toast('error', 'Enter a promo code'); return; }
+                  try {
+                    setRedeemingPromo(true);
+                    const token = await user.getIdToken();
+                    const res = await fetch('/api/admin/promos/redeem', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ code: promoCode.trim() }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to redeem');
+                    toast('success', data.message || `Redeemed ${data.points} points!`);
+                    setPromoCode('');
+                    loadProfile();
+                  } catch (err) {
+                    toast('error', err.message);
+                  } finally {
+                    setRedeemingPromo(false);
+                  }
+                }} className="flex gap-2">
+                  <input
+                    type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter promo code (e.g. IYK-ABCD1234)"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    maxLength={20}
+                  />
+                  <Button type="submit" variant="primary" disabled={redeemingPromo}>
+                    {redeemingPromo ? 'Redeeming...' : 'Redeem'}
+                  </Button>
+                </form>
+              </div>
 
               <div className="mt-8">
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 mb-6" style={{ color: 'var(--accent-color)' }}>My Showcase</h3>
@@ -347,140 +315,7 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Account Management */}
-              <hr className="my-8 border-gray-200 dark:border-gray-600" />
-              <div className="mt-4 space-y-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <FaShieldAlt className="text-gray-400" /> Account &amp; Privacy
-                </h3>
-
-                {doc?.accountStatus === 'pending_deletion' && (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                      <FaExclamationTriangle className="text-amber-500 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">Account scheduled for deletion</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                          Your account will be permanently removed on {doc?.scheduledPurgeAt ? new Date(doc.scheduledPurgeAt?.toDate ? doc.scheduledPurgeAt.toDate() : doc.scheduledPurgeAt).toLocaleDateString() : '—'}.
-                          You can restore your account before then.
-                        </p>
-                        <button
-                          onClick={async () => {
-                            try {
-                              const token = await user.getIdToken();
-                              const res = await fetch('/api/account/restore', {
-                                method: 'POST',
-                                headers: { Authorization: `Bearer ${token}` },
-                              });
-                              const json = await res.json();
-                              if (res.ok) {
-                                toast('success', 'Account restored successfully!');
-                                window.location.reload();
-                              } else {
-                                toast('error', json.error || 'Failed to restore account');
-                              }
-                            } catch {
-                              toast('error', 'Failed to restore account');
-                            }
-                          }}
-                          className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
-                        >
-                          <FaUndo className="text-xs" /> Restore Account
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const token = await user.getIdToken();
-                        const res = await fetch('/api/account/export', {
-                          headers: { Authorization: `Bearer ${token}` },
-                        });
-                        if (!res.ok) { toast('error', 'Failed to export data'); return; }
-                        const blob = await res.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `iyk-hub-data-export.json`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        toast('success', 'Data exported successfully');
-                      } catch {
-                        toast('error', 'Failed to export data');
-                      }
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <FaDownload className="text-xs" /> Export My Data
-                  </button>
-
-                  {doc?.accountStatus !== 'pending_deletion' && (
-                    <button
-                      onClick={async () => {
-                        const password = window.prompt('Please enter your password to confirm account deletion:');
-                        if (!password) return;
-
-                        try {
-                          if (user.providerData?.some(p => p.providerId === 'password')) {
-                            const credential = EmailAuthProvider.credential(user.email, password);
-                            await reauthenticateWithCredential(user, credential);
-                          }
-                        } catch {
-                          toast('error', 'Incorrect password. Please try again.');
-                          return;
-                        }
-
-                        if (!window.confirm('Your account will be hidden for 30 days before permanent deletion. You can restore it by logging back in during that period. Continue?')) return;
-
-                        const wantsExport = window.confirm('Would you like to download a copy of your data before proceeding?');
-                        if (wantsExport) {
-                          try {
-                            const token = await user.getIdToken();
-                            const res = await fetch('/api/account/export', {
-                              headers: { Authorization: `Bearer ${token}` },
-                            });
-                            if (res.ok) {
-                              const blob = await res.blob();
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `iyk-hub-data-export.json`;
-                              a.click();
-                              URL.revokeObjectURL(url);
-                            }
-                          } catch {
-                            // continue with deletion even if export fails
-                          }
-                        }
-
-                        try {
-                          const token = await user.getIdToken();
-                          const res = await fetch('/api/account/delete', {
-                            method: 'DELETE',
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          const json = await res.json();
-                          if (res.ok) {
-                            toast('success', json.message || 'Account scheduled for deletion');
-                            window.location.reload();
-                          } else {
-                            toast('error', json.error || 'Failed to schedule deletion');
-                          }
-                        } catch {
-                          toast('error', 'Failed to schedule account deletion');
-                        }
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-                    >
-                      <FaTrash className="text-xs" /> Remove Account
-                    </button>
-                  )}
-                </div>
-              </div>
+              <AccountManagement user={user} doc={doc} toast={toast} />
             </div>
           )}
         </div>

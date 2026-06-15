@@ -1,3 +1,6 @@
+/**
+ * ledger utilities (monetization).
+ */
 import admin from 'firebase-admin';
 import {
   LEDGER_ENTRY_TYPES,

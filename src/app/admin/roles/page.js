@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /admin/roles.
+ */
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
 import { canManageTeam, PERMISSIONS, ROLE_DEFINITIONS, TEAM_MANAGEMENT_ROLES, formatRoleLabel } from '../../../lib/roles';
@@ -35,6 +37,7 @@ const colorClasses = {
   slate: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-700',
 };
 
+/** AdminRolesPage — main page component. */
 export default function AdminRolesPage() {
   const { userProfile } = useAuth();
   const currentRole = userProfile?.role;

@@ -13,6 +13,7 @@ import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
+/** require Admin. */
 async function requireAdmin(request) {
   await initializeFirebaseAdmin();
   const uid = await authenticateAndGetUid(request);
@@ -23,6 +24,7 @@ async function requireAdmin(request) {
   return uid;
 }
 
+/** Handles GET requests to /api/admin/game-content. */
 export async function GET(request) {
   try {
     await requireAdmin(request);
@@ -49,6 +51,7 @@ export async function GET(request) {
   }
 }
 
+/** Handles POST requests to /api/admin/game-content. */
 export async function POST(request) {
   try {
     const uid = await requireAdmin(request);
@@ -103,6 +106,7 @@ export async function POST(request) {
   }
 }
 
+/** Handles DELETE requests to /api/admin/game-content. */
 export async function DELETE(request) {
   try {
     await requireAdmin(request);

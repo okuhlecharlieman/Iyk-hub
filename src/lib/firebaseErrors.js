@@ -1,3 +1,6 @@
+/**
+ * firebaseErrors utility module.
+ */
 const FIREBASE_ERROR_MAP = {
   'auth/invalid-email': 'Please enter a valid email address.',
   'auth/user-disabled': 'This account has been disabled. Please contact support.',
@@ -15,6 +18,7 @@ const FIREBASE_ERROR_MAP = {
   'auth/missing-email': 'Please enter your email address.',
 };
 
+/** Fetches/retrieves data — getFriendlyError. */
 export function getFriendlyError(error) {
   if (!error) return 'An unknown error occurred.';
 

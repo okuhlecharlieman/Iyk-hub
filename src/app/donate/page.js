@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /donate.
+ */
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import PaystackCheckout from '../../components/PaystackCheckout';
@@ -8,6 +10,7 @@ import { FaHeart } from 'react-icons/fa';
 
 const PRESET_AMOUNTS = [1000, 2500, 5000, 10000, 25000];
 
+/** DonatePage — main page component. */
 export default function DonatePage() {
   const { user } = useAuth();
   const [selectedAmount, setSelectedAmount] = useState(null);
@@ -18,6 +21,7 @@ export default function DonatePage() {
 
   const amountCents = selectedAmount || (Number(customAmount) * 100) || 0;
 
+  /** Handles proceed action. */
   const handleProceed = () => {
     if (amountCents < 500) {
       setError('Minimum donation is R5.00');

@@ -1,8 +1,12 @@
+/**
+ * leaderboard-reset utilities (jobs).
+ */
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../firebase/admin';
 
 const BATCH_LIMIT = 400;
 
+/** reset Weekly Leaderboard Points. */
 export async function resetWeeklyLeaderboardPoints() {
   await initializeFirebaseAdmin();
 

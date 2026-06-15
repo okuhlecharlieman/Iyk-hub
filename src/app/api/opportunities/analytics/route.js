@@ -14,6 +14,7 @@ import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/opportunities/analytics. */
 export async function POST(request) {
   try {
     await initializeFirebaseAdmin();
@@ -38,6 +39,7 @@ export async function POST(request) {
   }
 }
 
+/** Handles GET requests to /api/opportunities/analytics. */
 export async function GET(request) {
   try {
     await initializeFirebaseAdmin();

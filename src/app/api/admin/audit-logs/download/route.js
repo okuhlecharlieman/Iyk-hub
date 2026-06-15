@@ -1,11 +1,16 @@
+/**
+ * API route handler for /api/admin/audit-logs/download.
+ */
 import { NextResponse } from 'next/server';
 import { authenticate, initializeFirebaseAdmin } from 'src/lib/firebase/admin.js';
+import { handleApiError } from '../../lib/api/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_LIMIT = 500;
 
+/** Handles GET requests to /api/admin/audit-logs/download. */
 export async function GET(request) {
   try {
     await initializeFirebaseAdmin();
@@ -16,6 +21,7 @@ export async function GET(request) {
     const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 200 : rawLimit, 1), MAX_LIMIT);
     const cursor = searchParams.get('cursor');
 
+    /** db. */
     const db = (await import('firebase-admin')).firestore();
 
     let query = db.collection('adminAuditLogs').orderBy('createdAt', 'desc').limit(limitN);

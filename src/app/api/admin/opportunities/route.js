@@ -1,13 +1,17 @@
+/**
+ * API route handler for /api/admin/opportunities.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, listAllOpportunities } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
 const allowedOpportunityStatuses = new Set(['pending', 'approved', 'rejected']);
 
+/** Validates or checks — validateOpportunityUpdatePayload. */
 const validateOpportunityUpdatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['id', 'status']);
@@ -23,6 +27,7 @@ const validateOpportunityUpdatePayload = (payload) => {
   return { id: payload.id.trim(), status: payload.status };
 };
 
+/** Handles GET requests to /api/admin/opportunities. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -30,6 +35,7 @@ export async function GET(request) {
   try {
     await authenticate(request);
     const { searchParams } = new URL(request.url);
+    /** search. */
     const search = (searchParams.get('search') || '').trim().toLowerCase();
     const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
     const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
@@ -46,6 +52,7 @@ export async function GET(request) {
     }
 
     const snap = await queryRef.get();
+    /** to I S O. */
     const toISO = (val) => {
       if (!val) return null;
       if (val.toDate && typeof val.toDate === 'function') return val.toDate().toISOString();
@@ -85,14 +92,11 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, opportunities: filtered, nextCursor });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error in GET /api/admin/opportunities:', error?.message || error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in GET /api/admin/opportunities');
   }
 }
 
+/** Handles PUT requests to /api/admin/opportunities. */
 export async function PUT(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:update', limit: 40, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -146,13 +150,6 @@ export async function PUT(request) {
 
     return NextResponse.json({ success: true, message: 'Opportunity updated successfully', id, title });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error in PUT /api/admin/opportunities:', error?.message || error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in PUT /api/admin/opportunities');
   }
 }

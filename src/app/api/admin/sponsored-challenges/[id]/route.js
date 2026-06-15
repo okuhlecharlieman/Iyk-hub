@@ -1,14 +1,18 @@
+/**
+ * API route handler for /api/admin/sponsored-challenges/[id].
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { AuthMiddleware } from '../../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../../lib/api/logging';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 const allowedStatuses = new Set(['pending', 'approved', 'rejected']);
 
+/** Validates or checks — validateStatusPayload. */
 const validateStatusPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['status']);
@@ -20,6 +24,7 @@ const validateStatusPayload = (payload) => {
   return { status: payload.status };
 };
 
+/** Handles PUT requests to /api/admin/sponsored-challenges/[id]. */
 export async function PUT(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:sponsored-challenges:update', limit: 40, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -53,6 +58,7 @@ export async function PUT(request, { params }) {
     if (status === 'approved') {
       const challenge = challengeSnap.data();
       const platformFeeCents = challenge.platformFeeWaived ? 0 : Math.round((challenge.budgetCents || 0) * 0.2);
+      /** sponsor Amount Cents. */
       const sponsorAmountCents = (challenge.budgetCents || 0) - platformFeeCents;
       updatePayload.approvedBy = uid;
       updatePayload.approvedAt = admin.firestore.FieldValue.serverTimestamp();
@@ -80,13 +86,6 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json({ success: true, status });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error updating sponsored challenge status:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error updating sponsored challenge status:');
   }
 }

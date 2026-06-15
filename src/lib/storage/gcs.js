@@ -1,3 +1,6 @@
+/**
+ * gcs utilities (storage).
+ */
 import { Storage } from '@google-cloud/storage';
 
 const DEFAULT_BUCKET_NAME = 'okuhlesbucket';
@@ -5,6 +8,7 @@ const DEFAULT_PROJECT_ID = 'southern-africa-buildathon';
 
 let storageClient;
 
+/** Formats/parses data — parseServiceAccount. */
 const parseServiceAccount = () => {
   const raw = process.env.GCS_SERVICE_ACCOUNT_KEY
     || process.env.GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY
@@ -25,11 +29,13 @@ const parseServiceAccount = () => {
   }
 };
 
+/** Fetches/retrieves data — getGcsConfig. */
 export const getGcsConfig = () => ({
   bucketName: process.env.GCS_BUCKET_NAME || DEFAULT_BUCKET_NAME,
   projectId: process.env.GCS_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || DEFAULT_PROJECT_ID,
 });
 
+/** Fetches/retrieves data — getStorageClient. */
 export const getStorageClient = () => {
   if (storageClient) return storageClient;
 
@@ -44,6 +50,7 @@ export const getStorageClient = () => {
   return storageClient;
 };
 
+/** Fetches/retrieves data — getPublicGcsUrl. */
 export const getPublicGcsUrl = (bucketName, objectName) => (
   `https://storage.googleapis.com/${bucketName}/${encodeURIComponent(objectName).replace(/%2F/g, '/')}`
 );

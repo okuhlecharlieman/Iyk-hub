@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /sponsored-challenges/[id]/edit.
+ */
 import { useState, useEffect, use } from 'react';
 import { useAuth } from '../../../../context/AuthContext';
 import ProtectedRoute from '../../../../components/ProtectedRoute';
@@ -10,6 +13,7 @@ import FileUploadField from '../../../../components/ui/FileUploadField';
 import { uploadToStorage } from '../../../../lib/firebase/helpers';
 import { useToast } from '../../../../components/ui/ToastProvider';
 
+/** EditSponsoredChallenge React component. */
 export default function EditSponsoredChallenge({ params }) {
   const { id } = use(params);
   const { user } = useAuth();
@@ -31,6 +35,7 @@ export default function EditSponsoredChallenge({ params }) {
 
   useEffect(() => {
     if (!id || !user) return;
+    /** Fetches/retrieves data — fetchChallenge. */
     const fetchChallenge = async () => {
       try {
         const docRef = doc(db, 'sponsoredChallenges', id);
@@ -63,11 +68,13 @@ export default function EditSponsoredChallenge({ params }) {
     fetchChallenge();
   }, [id, user]);
 
+  /** Handles change action. */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  /** Handles submit action. */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);

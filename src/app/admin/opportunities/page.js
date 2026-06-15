@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /admin/opportunities.
+ */
 import { useState, useEffect } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { useAuth } from '../../../context/AuthContext';
@@ -31,6 +34,7 @@ const STATUS_STYLES = {
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
 };
 
+/** Formats/parses data — parseFlexibleDate. */
 const parseFlexibleDate = (value) => {
   if (!value) return null;
   if (value?.toDate && typeof value.toDate === 'function') return value.toDate();
@@ -51,6 +55,7 @@ const parseFlexibleDate = (value) => {
   return Number.isNaN(fallback.getTime()) ? null : fallback;
 };
 
+/** Formats/parses data — formatExpiryCountdown. */
 const formatExpiryCountdown = (expiresAt) => {
   if (!expiresAt) return null;
   const target = parseFlexibleDate(expiresAt);
@@ -67,6 +72,7 @@ const formatExpiryCountdown = (expiresAt) => {
   return `${hours} hour${hours === 1 ? '' : 's'} left`;
 };
 
+/** ManageOpportunities React component. */
 export default function ManageOpportunities() {
     const { user, userProfile } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -83,6 +89,7 @@ export default function ManageOpportunities() {
         }
     }, [user, userProfile]);
 
+    /** Fetches/retrieves data — loadOpps. */
     const loadOpps = async () => {
         setLoading(true);
         try {
@@ -117,6 +124,7 @@ export default function ManageOpportunities() {
         setLoading(false);
     };
 
+    /** Handles status update action. */
     const handleStatusUpdate = async (id, status) => {
         try {
             const firebaseUser = user || auth.currentUser;
@@ -153,6 +161,7 @@ export default function ManageOpportunities() {
         }
     };
     
+    /** Handles delete action. */
     const handleDelete = async (id, title) => {
         if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
         try {

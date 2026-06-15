@@ -1,7 +1,11 @@
 'use client';
+/**
+ * usePresence custom React hook.
+ */
 import { useEffect } from 'react';
 import { subscribeOnlineCount } from '../lib/presence';
 
+/** usePresence — custom React hook. */
 export function usePresence(setOnlineCount, asMap = false) {
   useEffect(() => {
     if (!setOnlineCount) return undefined;

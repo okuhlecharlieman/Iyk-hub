@@ -1,5 +1,9 @@
+/**
+ * Skeletonx component.
+ */
 import React from 'react';
 
+/** Skeleton React component. */
 export default function Skeleton({ count = 6, variant = 'table' }) {
   if (variant === 'card') {
     return (

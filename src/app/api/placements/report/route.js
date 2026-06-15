@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/placements/report.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getPlacementFeeRule } from '../../../../lib/monetization/placement-fees';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validatePlacementPayload. */
 const validatePlacementPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['opportunityId', 'candidateUid', 'companyName', 'placementType', 'hiredAt']);
@@ -33,6 +37,7 @@ const validatePlacementPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/placements/report. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'placements:report', limit: 15, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

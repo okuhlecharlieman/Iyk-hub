@@ -1,30 +1,37 @@
 'use client';
-
+/**
+ * InstallButtonx component.
+ */
 import { useState, useEffect } from 'react';
 import { FaDownload } from 'react-icons/fa';
 
+/** Validates or checks — isIosBrowser. */
 const isIosBrowser = () => {
   if (typeof navigator === 'undefined') return false;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 };
 
+/** Validates or checks — isStandaloneMode. */
 const isStandaloneMode = () => {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 };
 
+/** InstallButton — button component. */
 const InstallButton = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
+    /** Handles before install prompt action. */
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setIsInstallable(true);
     };
 
+    /** Handles app installed action. */
     const handleAppInstalled = () => {
       setIsInstallable(false);
       setDeferredPrompt(null);
@@ -51,6 +58,7 @@ const InstallButton = () => {
     };
   }, []);
 
+  /** track Download. */
   const trackDownload = async () => {
     try {
       await fetch('/api/downloads/track', {
@@ -68,6 +76,7 @@ const InstallButton = () => {
     }
   };
 
+  /** Handles install click action. */
   const handleInstallClick = async () => {
     trackDownload();
 

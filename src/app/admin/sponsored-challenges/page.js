@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /admin/sponsored-challenges.
+ */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '../../../components/ProtectedRoute';
@@ -20,6 +22,7 @@ const TAB_LABELS = {
   rejected: 'Rejected',
 };
 
+/** ManageSponsoredChallenges React component. */
 export default function ManageSponsoredChallenges() {
   const { user } = useAuth();
   const [challenges, setChallenges] = useState([]);
@@ -33,6 +36,7 @@ export default function ManageSponsoredChallenges() {
     loadChallenges();
   }, [user]);
 
+  /** Fetches/retrieves data — loadChallenges. */
   const loadChallenges = async () => {
     setLoading(true);
     try {
@@ -53,6 +57,7 @@ export default function ManageSponsoredChallenges() {
     setLoading(false);
   };
 
+  /** Handles status change action. */
   const handleStatusChange = async (id, status) => {
     setProcessingId(id);
     try {

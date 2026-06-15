@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/set-user-role.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateWithRoles, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ import { enforceRateLimit } from '../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateSetRolePayload. */
 const validateSetRolePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['uid', 'role']);
@@ -23,6 +27,7 @@ const validateSetRolePayload = (payload) => {
   return { uid: payload.uid.trim(), role: normalizedRole };
 };
 
+/** Handles POST requests to /api/set-user-role. */
 export async function POST(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:set-role', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -78,6 +83,7 @@ export async function POST(req) {
     }
 
     console.error('Error setting user role:', error?.message || error);
+    /** msg. */
     const msg = (error && String(error.message || error)).slice(0, 1000);
     if (msg.includes('FIREBASE_SERVICE_ACCOUNT_KEY') || msg.toLowerCase().includes('failed to initialize')) {
       return NextResponse.json({ error: msg }, { status: 500 });

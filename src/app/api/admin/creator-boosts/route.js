@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/creator-boosts.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateBoostUpdatePayload. */
 const validateBoostUpdatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['orderId', 'paymentStatus', 'activationStatus', 'note']);
@@ -33,6 +37,7 @@ const validateBoostUpdatePayload = (payload) => {
   };
 };
 
+/** Handles GET requests to /api/admin/creator-boosts. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:creator-boosts:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -44,6 +49,7 @@ export async function GET(request) {
     const snap = await admin.firestore().collection('creatorBoostOrders').orderBy('createdAt', 'desc').limit(200).get();
     const items = snap.docs.map((doc) => {
       const data = doc.data();
+      /** to I S O. */
       const toISO = (val) => {
         if (!val) return null;
         if (val.toDate && typeof val.toDate === 'function') return val.toDate().toISOString();

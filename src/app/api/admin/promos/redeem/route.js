@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/promos/redeem.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, verifyIdTokenFromRequest } from '../../../../../lib/firebase/admin';
@@ -5,6 +8,7 @@ import { ensurePlainObject, parseJsonBody, RequestValidationError, handleApiErro
 
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/admin/promos/redeem. */
 export async function POST(request) {
   try {
     initializeFirebaseAdmin();

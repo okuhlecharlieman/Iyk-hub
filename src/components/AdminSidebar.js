@@ -1,4 +1,7 @@
 'use client';
+/**
+ * AdminSidebar component.
+ */
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 /**
@@ -13,6 +16,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { canManageTeam, formatRoleLabel } from '../lib/roles';
 
+/** AdminSidebar React component. */
 const AdminSidebar = () => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -36,6 +40,7 @@ const AdminSidebar = () => {
     { href: '/admin/logs', label: 'System Logs', icon: <FaHistory /> },
   ];
 
+  /** nav Content. */
   const navContent = (
     <>
       <div className="p-5 border-b border-gray-200 dark:border-gray-700">

@@ -1,4 +1,7 @@
 'use client';
+/**
+ * ErrorBoundaryx component.
+ */
 import React from 'react';
 import { FaExclamationTriangle } from 'react-icons/fa';
 

@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /sponsored-challenges/manage.
+ */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '../../../components/ProtectedRoute';
@@ -16,6 +18,7 @@ const STATUS_STYLES = {
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
+/** ManageUserSponsoredChallenges React component. */
 export default function ManageUserSponsoredChallenges() {
   const { user } = useAuth();
   const [challenges, setChallenges] = useState([]);
@@ -51,6 +54,7 @@ export default function ManageUserSponsoredChallenges() {
     return () => unsubscribe();
   }, [user, toast]);
 
+  /** Handles delete action. */
   const handleDelete = async (challenge) => {
     if (!window.confirm(`Delete challenge "${challenge.title}"? This cannot be undone.`)) {
       return;

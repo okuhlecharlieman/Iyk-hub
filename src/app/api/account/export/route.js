@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/account/export.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -5,6 +8,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Formats/parses data — serializeValue. */
 function serializeValue(val) {
   if (!val) return val;
   if (val.toDate && typeof val.toDate === 'function') return val.toDate().toISOString();
@@ -16,6 +20,7 @@ function serializeValue(val) {
   return val;
 }
 
+/** Formats/parses data — serializeDoc. */
 function serializeDoc(doc) {
   const data = doc.data();
   const result = { id: doc.id };
@@ -25,6 +30,7 @@ function serializeDoc(doc) {
   return result;
 }
 
+/** Handles GET requests to /api/account/export. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'account:export', limit: 3, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

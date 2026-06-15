@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /creator-boosts.
+ */
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getCreatorBoostPlan } from '../../lib/monetization/creator-boosts';
@@ -65,6 +67,7 @@ const PLAN_DETAILS = {
   },
 };
 
+/** Creates/generates — buildPlanList. */
 function buildPlanList() {
   return Object.entries({
     lite: getCreatorBoostPlan('lite'),
@@ -73,6 +76,7 @@ function buildPlanList() {
   });
 }
 
+/** CreatorBoostsPage — main page component. */
 export default function CreatorBoostsPage() {
   const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -90,6 +94,7 @@ export default function CreatorBoostsPage() {
     }
   }, [paymentInfo]);
 
+  /** Handles boost action. */
   const handleBoost = async (planKey) => {
     if (!user) return;
     setError(null);
@@ -127,6 +132,7 @@ export default function CreatorBoostsPage() {
     }
   };
 
+  /** verify And Activate Boost. */
   const verifyAndActivateBoost = async (orderId) => {
     const maxAttempts = 6;
     const delayMs = 2000;

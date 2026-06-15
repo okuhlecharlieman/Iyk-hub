@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/promos/send-email.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import nodemailer from 'nodemailer';
@@ -8,6 +11,7 @@ import { TEAM_MANAGEMENT_ROLES } from '../../../../../lib/roles';
 
 export const dynamic = 'force-dynamic';
 
+/** Creates/generates — createTransporter. */
 const createTransporter = () => {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 587);
@@ -26,6 +30,7 @@ const createTransporter = () => {
   });
 };
 
+/** Creates/generates — buildPromoEmail. */
 const buildPromoEmail = (displayName, promoCode, points, message) => {
   const name = displayName || 'Iyk Hub User';
   return {
@@ -54,6 +59,7 @@ const buildPromoEmail = (displayName, promoCode, points, message) => {
   };
 };
 
+/** Handles POST requests to /api/admin/promos/send-email. */
 export async function POST(request) {
   try {
     initializeFirebaseAdmin();

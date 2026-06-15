@@ -1,4 +1,7 @@
 'use client';
+/**
+ * RPSGamex component.
+ */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
@@ -12,6 +15,7 @@ const choices = [
   { id: 'scissors', icon: <FaHandScissors size={40} /> },
 ];
 
+/** RPSSinglePlayer React component. */
 function RPSSinglePlayer({ onEnd }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -22,6 +26,7 @@ function RPSSinglePlayer({ onEnd }) {
   const [roundResult, setRoundResult] = useState('');
   const hasEnded = useRef(false);
 
+  /** resolve Single Round. */
   const resolveSingleRound = (choiceId) => {
     const opponent = choices[Math.floor(Math.random() * choices.length)].id;
     setPlayerChoice(choiceId);
@@ -47,6 +52,7 @@ function RPSSinglePlayer({ onEnd }) {
     return 0;
   };
 
+  /** Handles choice action. */
   const handleChoice = (choiceId) => {
     if (!user) {
       setError('You must be logged in to play.');
@@ -55,6 +61,7 @@ function RPSSinglePlayer({ onEnd }) {
     resolveSingleRound(choiceId);
   };
 
+  /** Handles end game action. */
   const handleEndGame = () => {
     if (onEnd && !hasEnded.current) {
       hasEnded.current = true;
@@ -99,6 +106,7 @@ function RPSSinglePlayer({ onEnd }) {
   );
 }
 
+/** RPSMultiplayer React component. */
 function RPSMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -116,6 +124,7 @@ function RPSMultiplayer({ gameId, onEnd }) {
       return;
     }
 
+    /** join Game. */
     async function joinGame() {
       try {
         const snap = await getDoc(gameDocRef);
@@ -219,6 +228,7 @@ function RPSMultiplayer({ gameId, onEnd }) {
     return () => unsubscribe();
   }, [gameId, gameDocRef, resolveRound]);
 
+  /** Handles user choice action. */
   const handleUserChoice = async (choiceId) => {
     if (!playerSymbol || !gameState || gameState.status !== 'playing') return;
 
@@ -234,6 +244,7 @@ function RPSMultiplayer({ gameId, onEnd }) {
     }
   };
 
+  /** Handles next round action. */
   const handleNextRound = async () => {
     if (gameState.status !== 'result') return;
     try {
@@ -248,6 +259,7 @@ function RPSMultiplayer({ gameId, onEnd }) {
     }
   };
 
+  /** Handles end game action. */
   const handleEndGame = () => {
     if (onEnd && !hasEnded.current) {
       hasEnded.current = true;
@@ -321,6 +333,7 @@ function RPSMultiplayer({ gameId, onEnd }) {
   );
 }
 
+/** RPSGame React component. */
 export default function RPSGame({ gameId, onEnd, singlePlayer = false }) {
   if (singlePlayer) {
     return <RPSSinglePlayer onEnd={onEnd} />;

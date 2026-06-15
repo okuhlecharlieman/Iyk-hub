@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/monetization/export.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getDateRange } from '../../../../../lib/api/date-range';
 export const dynamic = 'force-dynamic';
 
+/** Formats/parses data — formatCSVRow. */
 function formatCSVRow(data) {
   return data.map(field => {
     if (field === null || field === undefined) return '';
@@ -18,6 +22,7 @@ function formatCSVRow(data) {
   }).join(',');
 }
 
+/** Handles GET requests to /api/admin/monetization/export. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:monetization:export', limit: 5, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

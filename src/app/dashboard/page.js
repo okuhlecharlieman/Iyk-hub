@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /dashboard.
+ */
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
@@ -29,6 +32,7 @@ const GAME_COLORS = {
   hangman: 'from-purple-500 to-pink-500',
 };
 
+/** DashboardPage — main page component. */
 export default function DashboardPage() {
   const { user, userProfile, isAdmin } = useAuth();
   const router = useRouter();
@@ -41,6 +45,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user) {
+      /** Fetches/retrieves data — load. */
       async function load() {
         const [q, streakData] = await Promise.all([
           fetchLatestQuote(),

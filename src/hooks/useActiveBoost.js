@@ -1,7 +1,11 @@
 'use client';
+/**
+ * useActiveBoost custom React hook.
+ */
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
+/** useActiveBoost — custom React hook. */
 export function useActiveBoost() {
   const { user } = useAuth();
   const [boost, setBoost] = useState(null);
@@ -16,6 +20,7 @@ export function useActiveBoost() {
 
     let cancelled = false;
 
+    /** Fetches/retrieves data — fetchBoost. */
     async function fetchBoost() {
       try {
         const token = await user.getIdToken();

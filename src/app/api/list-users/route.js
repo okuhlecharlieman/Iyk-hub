@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/list-users.
+ */
 import { NextResponse } from 'next/server';
 import { authenticateWithRoles, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { TEAM_MANAGEMENT_ROLES } from '../../../lib/roles';
@@ -17,10 +20,12 @@ if (rawServiceAccount) {
   }
 }
 
+/** normalize Email. */
 function normalizeEmail(value) {
   return typeof value === 'string' ? value.trim().toLowerCase() : null;
 }
 
+/** Formats/parses data — serializeTimestamp. */
 function serializeTimestamp(value) {
   if (value && typeof value.toDate === 'function') {
     return value.toDate().toISOString();
@@ -28,6 +33,7 @@ function serializeTimestamp(value) {
   return value || null;
 }
 
+/** to Auth User Record. */
 function toAuthUserRecord(userRecord) {
   return {
     uid: userRecord.uid,
@@ -37,6 +43,7 @@ function toAuthUserRecord(userRecord) {
   };
 }
 
+/** Handles GET requests to /api/list-users. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'list-users:get', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

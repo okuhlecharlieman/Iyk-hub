@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/opportunities/sponsored/submit.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getSponsoredTierConfig } from '../../../../../lib/monetization/sponsored-opportunities';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateSponsoredPayload. */
 const validateSponsoredPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags', 'billingEmail', 'tier']);
@@ -35,6 +39,7 @@ const validateSponsoredPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/opportunities/sponsored/submit. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:sponsored:submit', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

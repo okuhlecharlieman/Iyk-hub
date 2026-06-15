@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/profile/update.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateProfileUpdatePayload. */
 const validateProfileUpdatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['updates']);
@@ -51,6 +55,7 @@ const validateProfileUpdatePayload = (payload) => {
   return { updates };
 };
 
+/** Handles POST requests to /api/profile/update. */
 export async function POST(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'profile:update', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

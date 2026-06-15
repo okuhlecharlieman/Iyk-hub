@@ -1,10 +1,15 @@
+/**
+ * post-validation utilities (api).
+ */
 import { ensurePlainObject, RequestValidationError, validateNoExtraFields } from './validation';
 
 const allowedPostFields = ['title', 'description', 'link', 'mediaUrl', 'type'];
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
 
+/** normalize Post Type. */
 const normalizePostType = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : value);
 
+/** Validates or checks — validateUpdatePostPayload. */
 export function validateUpdatePostPayload(payload, { allowNullMedia = false } = {}) {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['postId', 'updates']);

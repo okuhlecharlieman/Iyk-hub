@@ -1,7 +1,11 @@
 'use client';
+/**
+ * PasswordInputx component.
+ */
 import { useState } from 'react';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
+/** PasswordInput React component. */
 export default function PasswordInput({ value, onChange, placeholder = 'Password', ...props }) {
   const [showPassword, setShowPassword] = useState(false);
 

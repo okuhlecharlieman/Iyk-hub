@@ -1,3 +1,6 @@
+/**
+ * auth-middleware utilities (api).
+ */
 import { verifyIdTokenFromRequest, requireRole } from '../firebase/admin.js';
 import { UnauthorizedError, ForbiddenError } from './error-handler.js';
 import { logSecurityEvent } from './logging.js';

@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /admin/promotions.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import LoadingSpinner from '../../../components/LoadingSpinner';
@@ -16,6 +19,7 @@ const TABS = [
   { id: 'history', label: 'History', icon: <FaHistory /> },
 ];
 
+/** PromotionsPage — main page component. */
 export default function PromotionsPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -87,11 +91,13 @@ export default function PromotionsPage() {
   );
 }
 
+/** AllocatePointsTab — tab panel component. */
 function AllocatePointsTab({ user, toast, loading, setLoading, onDone }) {
   const [points, setPoints] = useState('');
   const [target, setTarget] = useState('all');
   const [filterValue, setFilterValue] = useState('');
 
+  /** Handles submit action. */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!points || Number(points) <= 0) { toast('error', 'Enter a valid points amount'); return; }
@@ -175,6 +181,7 @@ function AllocatePointsTab({ user, toast, loading, setLoading, onDone }) {
   );
 }
 
+/** PromoCodesTab — tab panel component. */
 function PromoCodesTab({ user, toast, codes, loading, setLoading, onDone, dataLoading }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [points, setPoints] = useState('');
@@ -183,6 +190,7 @@ function PromoCodesTab({ user, toast, codes, loading, setLoading, onDone, dataLo
   const [maxRedemptions, setMaxRedemptions] = useState('');
   const [expiresInDays, setExpiresInDays] = useState('');
 
+  /** Handles create action. */
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!points || Number(points) <= 0) { toast('error', 'Enter a valid points amount'); return; }
@@ -215,6 +223,7 @@ function PromoCodesTab({ user, toast, codes, loading, setLoading, onDone, dataLo
     }
   };
 
+  /** Handles deactivate action. */
   const handleDeactivate = async (codeId) => {
     try {
       const token = await user.getIdToken();
@@ -232,6 +241,7 @@ function PromoCodesTab({ user, toast, codes, loading, setLoading, onDone, dataLo
     }
   };
 
+  /** copy Code. */
   const copyCode = (code) => {
     navigator.clipboard.writeText(code);
     toast('success', `Copied: ${code}`);
@@ -353,6 +363,7 @@ function PromoCodesTab({ user, toast, codes, loading, setLoading, onDone, dataLo
   );
 }
 
+/** SendEmailTab — tab panel component. */
 function SendEmailTab({ user, toast, codes, loading, setLoading, onDone }) {
   const [selectedCode, setSelectedCode] = useState('');
   const [emailTarget, setEmailTarget] = useState('all');
@@ -362,6 +373,7 @@ function SendEmailTab({ user, toast, codes, loading, setLoading, onDone }) {
 
   const activeCodes = codes.filter((c) => c.active && (!c.expiresAt || new Date(c.expiresAt) > new Date()));
 
+  /** Handles send action. */
   const handleSend = async (e) => {
     e.preventDefault();
     if (!selectedCode) { toast('error', 'Select a promo code'); return; }
@@ -469,6 +481,7 @@ function SendEmailTab({ user, toast, codes, loading, setLoading, onDone }) {
   );
 }
 
+/** HistoryTab — tab panel component. */
 function HistoryTab({ history, dataLoading }) {
   if (dataLoading) return <div className="flex justify-center py-12"><LoadingSpinner /></div>;
 

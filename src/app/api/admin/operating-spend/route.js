@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/operating-spend.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -18,6 +21,7 @@ const SPEND_CATEGORIES = [
   'other',
 ];
 
+/** Validates or checks — validateSpendPayload. */
 const validateSpendPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['amountCents', 'currency', 'category', 'vendor', 'description', 'invoiceRef', 'spendDate']);
@@ -51,6 +55,7 @@ const validateSpendPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/admin/operating-spend. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, {
     keyPrefix: 'admin:operating-spend:create',
@@ -107,6 +112,7 @@ export async function POST(request) {
   }
 }
 
+/** Handles GET requests to /api/admin/operating-spend. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, {
     keyPrefix: 'admin:operating-spend:list',

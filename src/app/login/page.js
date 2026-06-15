@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /login.
+ */
 import { useMemo, useState } from 'react';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail, fetchSignInMethodsForEmail, linkWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
@@ -10,6 +13,7 @@ import PasswordInput from '../../components/ui/PasswordInput';
 import { useToast } from '../../components/ui/ToastProvider';
 import { getFriendlyError } from '../../lib/firebaseErrors';
 
+/** LoginPage — main page component. */
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -20,10 +24,12 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  /** Validates or checks — validateEmail. */
   const validateEmail = (value) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
+  /** Validates or checks — validatePassword. */
   const validatePassword = (value) => {
     // at least 8 chars, one number, one symbol
     return /^(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(value);
@@ -37,6 +43,7 @@ export default function LoginPage() {
     return '';
   }, [password]);
 
+  /** on Submit. */
   async function onSubmit(e) {
     e.preventDefault();
     setErr('');
@@ -66,6 +73,7 @@ export default function LoginPage() {
     }
   }
 
+  /** sign Google. */
   async function signGoogle() {
     setErr('');
     setLoading(true);
@@ -81,6 +89,7 @@ export default function LoginPage() {
     }
   }
 
+  /** Handles forgot password action. */
   async function handleForgotPassword() {
     setErr('');
     setResetSent(false);

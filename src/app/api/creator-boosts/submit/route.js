@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/creator-boosts/submit.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateBoostPayload. */
 const validateBoostPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['plan', 'targetType', 'targetId']);
@@ -36,6 +40,7 @@ const validateBoostPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/creator-boosts/submit. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'creator-boosts:submit', limit: 12, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

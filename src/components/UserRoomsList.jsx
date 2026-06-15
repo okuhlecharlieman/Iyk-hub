@@ -1,4 +1,7 @@
 'use client';
+/**
+ * UserRoomsListx component.
+ */
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
@@ -14,6 +17,7 @@ const GAME_NAMES = {
   quiz: 'Quiz',
 };
 
+/** UserRoomsList — list display component. */
 export default function UserRoomsList() {
   const { user } = useAuth();
   const [rooms, setRooms] = useState([]);
@@ -27,6 +31,7 @@ export default function UserRoomsList() {
       return;
     }
 
+    /** Fetches/retrieves data — fetchRooms. */
     const fetchRooms = async () => {
       setLoading(true);
       try {
@@ -63,6 +68,7 @@ export default function UserRoomsList() {
     fetchRooms();
   }, [user]);
 
+  /** leave Room. */
   const leaveRoom = async (gameId) => {
     if (!user) return;
     setLeavingId(gameId);

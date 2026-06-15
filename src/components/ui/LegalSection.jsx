@@ -1,3 +1,6 @@
+/**
+ * LegalSectionx component.
+ */
 export function LegalPageLayout({ title, effectiveDate, lastUpdated, children }) {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 20px' }}>
@@ -10,6 +13,7 @@ export function LegalPageLayout({ title, effectiveDate, lastUpdated, children })
   );
 }
 
+/** LegalSection React component. */
 export function LegalSection({ heading, children }) {
   return (
     <section style={{ marginBottom: '24px' }}>
@@ -19,10 +23,12 @@ export function LegalSection({ heading, children }) {
   );
 }
 
+/** LegalParagraph React component. */
 export function LegalParagraph({ children }) {
   return <p style={{ lineHeight: '1.8' }}>{children}</p>;
 }
 
+/** LegalList — list display component. */
 export function LegalList({ children }) {
   return <ul style={{ paddingLeft: '20px', lineHeight: '1.8' }}>{children}</ul>;
 }

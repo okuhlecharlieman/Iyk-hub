@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/opportunities/public.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/opportunities/public. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:public', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -25,6 +29,7 @@ export async function GET(request) {
         .orderBy('createdAt', 'desc')
         .limit(limitN);
       const snap = await queryRef.get();
+      /** Formats/parses data — serializeTs. */
       const serializeTs = (val) => {
         if (!val) return null;
         if (typeof val === 'string') return val;

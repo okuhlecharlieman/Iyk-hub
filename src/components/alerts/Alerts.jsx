@@ -1,5 +1,9 @@
+/**
+ * Alertsx component.
+ */
 import { FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 
+/** ErrorAlert React component. */
 export const ErrorAlert = ({ message, onClose = null, details = null }) => {
   return (
     <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-4">
@@ -19,6 +23,7 @@ export const ErrorAlert = ({ message, onClose = null, details = null }) => {
   );
 };
 
+/** ErrorEmptyState React component. */
 export const ErrorEmptyState = ({ 
   title = "Error Loading Content", 
   message = "We encountered an issue loading this page.",
@@ -42,6 +47,7 @@ export const ErrorEmptyState = ({
   );
 };
 
+/** EmptyState React component. */
 export const EmptyState = ({ 
   icon: Icon, 
   title, 

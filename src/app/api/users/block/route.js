@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/users/block.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -5,6 +8,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/users/block. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'users:block', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -34,6 +38,7 @@ export async function POST(request) {
   }
 }
 
+/** Handles DELETE requests to /api/users/block. */
 export async function DELETE(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'users:unblock', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

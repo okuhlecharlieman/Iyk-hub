@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * BoostBadgex component.
+ */
 import { FaBolt, FaStar, FaCrown } from 'react-icons/fa';
 
 const BADGE_STYLES = {
@@ -23,6 +25,7 @@ const BADGE_STYLES = {
   },
 };
 
+/** BoostBadge React component. */
 export default function BoostBadge({ badge, label, size = 'md', inline = false, iconOnly = false }) {
   if (!badge || !BADGE_STYLES[badge]) return null;
 

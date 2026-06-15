@@ -1,7 +1,11 @@
 'use client';
+/**
+ * VideoChatStatusx component.
+ */
 import { FaVideo, FaSpinner, FaUserPlus, FaClock, FaUser } from 'react-icons/fa';
 import Button from '../ui/Button';
 
+/** IdleView React component. */
 export function IdleView({ initialTimeLimit, onFindPartner }) {
   return (
     <div className="flex flex-col items-center gap-4 py-8">
@@ -18,6 +22,7 @@ export function IdleView({ initialTimeLimit, onFindPartner }) {
   );
 }
 
+/** SearchingView React component. */
 export function SearchingView({ localVideoRef, localStream, onStop }) {
   return (
     <div className="text-center py-8 space-y-4">
@@ -41,6 +46,7 @@ export function SearchingView({ localVideoRef, localStream, onStop }) {
   );
 }
 
+/** MediaErrorBanner React component. */
 export function MediaErrorBanner({ mediaError }) {
   if (!mediaError) return null;
   return (
@@ -67,6 +73,7 @@ export function MediaErrorBanner({ mediaError }) {
   );
 }
 
+/** TimerBar React component. */
 export function TimerBar({ timeLeft, formatTime, partnerName, canShareProfile, youConsented, onAllowShare }) {
   return (
     <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-2.5">
@@ -95,6 +102,7 @@ export function TimerBar({ timeLeft, formatTime, partnerName, canShareProfile, y
   );
 }
 
+/** ShareProfilePrompt React component. */
 export function ShareProfilePrompt({ canShareProfile, youConsented, onAllowShare }) {
   if (canShareProfile) return null;
   return (

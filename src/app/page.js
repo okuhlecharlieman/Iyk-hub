@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /app.
+ */
 import Link from 'next/link';
 import ContentCard from '../components/ContentCard';
 import InstallButton from '../components/InstallButton';
@@ -13,6 +16,7 @@ import 'swiper/css/pagination';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import BoostBadge from '../components/BoostBadge';
 
+/** FeatureCard — card display component. */
 const FeatureCard = ({ icon, title, description, href, color = "blue" }) => {
   const colorClasses = {
     blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
@@ -41,6 +45,7 @@ const FeatureCard = ({ icon, title, description, href, color = "blue" }) => {
   );
 };
 
+/** StatCard — card display component. */
 const StatCard = ({ number, label, icon }) => (
   <div className="text-center">
     <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl text-white mb-3">
@@ -51,6 +56,7 @@ const StatCard = ({ number, label, icon }) => (
   </div>
 );
 
+/** TestimonialCard — card display component. */
 const TestimonialCard = ({ quote, author, role, company }) => (
   <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
     <div className="flex items-center mb-4">
@@ -71,6 +77,7 @@ const TestimonialCard = ({ quote, author, role, company }) => (
   </div>
 );
 
+/** Home React component. */
 export default function Home() {
   const { user } = useAuth();
   const [opps, setOpps] = useState([]);
@@ -80,6 +87,7 @@ export default function Home() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    /** Fetches/retrieves data — fetchData. */
     async function fetchData() {
       setLoading(true);
       try {

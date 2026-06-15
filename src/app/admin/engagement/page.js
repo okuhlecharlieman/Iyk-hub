@@ -20,6 +20,7 @@ import {
   FaChartPie, FaRoute, FaRocket,
 } from 'react-icons/fa';
 
+/** EngagementPage — main page component. */
 export default function EngagementPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,7 @@ export default function EngagementPage() {
     fetchEngagementData();
   }, [fetchEngagementData]);
 
+  /** Formats/parses data — formatDuration. */
   const formatDuration = (seconds) => {
     if (!seconds) return '0s';
     if (seconds < 60) return `${seconds}s`;
@@ -55,6 +57,7 @@ export default function EngagementPage() {
     return `${mins}m ${secs}s`;
   };
 
+  /** TrendBadge React component. */
   const TrendBadge = ({ value }) => {
     if (value === null || value === undefined) return null;
     const isUp = value >= 0;
@@ -66,6 +69,7 @@ export default function EngagementPage() {
     );
   };
 
+  /** InsightIcon React component. */
   const InsightIcon = ({ type }) => {
     switch (type) {
       case 'critical': return <FaExclamationTriangle className="text-red-500 text-lg flex-shrink-0" />;
@@ -75,6 +79,7 @@ export default function EngagementPage() {
     }
   };
 
+  /** insight Border. */
   const insightBorder = (type) => {
     switch (type) {
       case 'critical': return 'border-l-4 border-l-red-500';

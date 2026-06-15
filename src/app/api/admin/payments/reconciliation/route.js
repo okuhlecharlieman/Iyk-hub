@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/payments/reconciliation.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { getOrderConfig, LEDGER_ENTRY_TYPES } from '../../../../../lib/monetizat
 import { handleApiError } from '../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/payments/reconciliation. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payments:reconciliation:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

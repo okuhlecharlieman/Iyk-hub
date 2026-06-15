@@ -17,6 +17,7 @@ import { ChallengeBenefitsSidebar, ChallengeProcessSteps } from '../../../compon
 
 const inputClass = "w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors duration-200";
 
+/** CreateSponsoredChallenge React component. */
 export default function CreateSponsoredChallenge() {
   const { user, userProfile } = useAuth();
   const router = useRouter();
@@ -36,8 +37,10 @@ export default function CreateSponsoredChallenge() {
   const platformFee = isAdmin ? 0 : Number((budgetValue * 0.2).toFixed(2));
   const sponsorReceives = Number((budgetValue - platformFee).toFixed(2));
 
+  /** Handles change action. */
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
+  /** Handles submit action. */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);

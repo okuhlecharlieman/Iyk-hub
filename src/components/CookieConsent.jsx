@@ -1,8 +1,12 @@
 'use client';
+/**
+ * CookieConsentx component.
+ */
 import { useState, useEffect } from 'react';
 
 const CONSENT_KEY = 'iyk_cookie_consent';
 
+/** CookieConsent React component. */
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
@@ -13,11 +17,13 @@ export default function CookieConsent() {
     }
   }, []);
 
+  /** Handles accept action. */
   const handleAccept = () => {
     localStorage.setItem(CONSENT_KEY, JSON.stringify({ accepted: true, timestamp: Date.now() }));
     setVisible(false);
   };
 
+  /** Handles decline action. */
   const handleDecline = () => {
     localStorage.setItem(CONSENT_KEY, JSON.stringify({ accepted: false, timestamp: Date.now() }));
     setVisible(false);

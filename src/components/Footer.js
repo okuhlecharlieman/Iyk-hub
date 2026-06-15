@@ -1,3 +1,6 @@
+/**
+ * Footer component.
+ */
 import Link from 'next/link';
 import { FaGithub, FaBookOpen, FaUsers, FaCode, FaLinkedin, FaInstagram, FaTiktok, FaGlobe, FaFacebook } from 'react-icons/fa';
 import InstallButton from './InstallButton';
@@ -30,6 +33,7 @@ const socialLinks = [
   { label: 'Odysee', href: 'https://odysee.com/@intwanayasekasi:2', icon: FaGlobe },
 ];
 
+/** Footer React component. */
 export default function Footer() {
   return (
     <footer className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">

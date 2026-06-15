@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /signup.
+ */
 import { useMemo, useState } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -16,6 +19,7 @@ import PasswordInput from '../../components/ui/PasswordInput';
 import { useToast } from '../../components/ui/ToastProvider';
 import { getFriendlyError } from '../../lib/firebaseErrors';
 
+/** SignupPage — main page component. */
 export default function SignupPage() {
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
@@ -27,10 +31,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
+  /** Validates or checks — validateEmail. */
   const validateEmail = (value) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
+  /** Validates or checks — validatePassword. */
   const validatePassword = (value) => {
     // at least 8 chars, one number, one symbol
     return /^(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/.test(value);
@@ -44,6 +50,7 @@ export default function SignupPage() {
     return '';
   }, [password]);
 
+  /** Handles signup action. */
   const handleSignup = async (e) => {
     e.preventDefault();
     setError(null);
@@ -80,6 +87,7 @@ export default function SignupPage() {
     }
   };
 
+  /** Handles google sign in action. */
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);

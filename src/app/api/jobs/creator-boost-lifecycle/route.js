@@ -1,9 +1,13 @@
+/**
+ * API route handler for /api/jobs/creator-boost-lifecycle.
+ */
 import { NextResponse } from 'next/server';
 import { runCreatorBoostLifecycleJob } from '../../../../lib/jobs/creator-boost-lifecycle';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 import { isAuthorizedCron } from '../../../../lib/api/cron-auth';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/jobs/creator-boost-lifecycle. */
 export async function GET(request) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/payouts.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -8,6 +11,7 @@ import { PAYOUT_STATUSES, LEDGER_ENTRY_TYPES } from '../../../../lib/monetizatio
 import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/payouts. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payouts:list', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -86,6 +90,7 @@ export async function GET(request) {
   }
 }
 
+/** Handles POST requests to /api/admin/payouts. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payouts:process', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/opportunities.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, listAllOpportunities } from '../../../../lib/firebase/admin';
@@ -8,6 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const allowedOpportunityStatuses = new Set(['pending', 'approved', 'rejected']);
 
+/** Validates or checks — validateOpportunityUpdatePayload. */
 const validateOpportunityUpdatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['id', 'status']);
@@ -23,6 +27,7 @@ const validateOpportunityUpdatePayload = (payload) => {
   return { id: payload.id.trim(), status: payload.status };
 };
 
+/** Handles GET requests to /api/admin/opportunities. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -30,6 +35,7 @@ export async function GET(request) {
   try {
     await authenticate(request);
     const { searchParams } = new URL(request.url);
+    /** search. */
     const search = (searchParams.get('search') || '').trim().toLowerCase();
     const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
     const limitN = Math.min(Math.max(Number.isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
@@ -46,6 +52,7 @@ export async function GET(request) {
     }
 
     const snap = await queryRef.get();
+    /** to I S O. */
     const toISO = (val) => {
       if (!val) return null;
       if (val.toDate && typeof val.toDate === 'function') return val.toDate().toISOString();
@@ -89,6 +96,7 @@ export async function GET(request) {
   }
 }
 
+/** Handles PUT requests to /api/admin/opportunities. */
 export async function PUT(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:opportunities:update', limit: 40, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

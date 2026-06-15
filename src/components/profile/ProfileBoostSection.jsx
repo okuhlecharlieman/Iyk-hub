@@ -1,7 +1,11 @@
 'use client';
+/**
+ * ProfileBoostSectionx component.
+ */
 import { FaRocket, FaClock, FaHistory } from 'react-icons/fa';
 import Link from 'next/link';
 
+/** ActivePlanCard — card display component. */
 export function ActivePlanCard({ activeBoost }) {
   if (!activeBoost) return null;
   return (
@@ -26,6 +30,7 @@ export function ActivePlanCard({ activeBoost }) {
   );
 }
 
+/** BoostHistoryList — list display component. */
 export function BoostHistoryList({ boostHistory }) {
   if (!boostHistory || boostHistory.length === 0) return null;
   return (

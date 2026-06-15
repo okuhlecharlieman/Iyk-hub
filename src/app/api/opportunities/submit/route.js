@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/opportunities/submit.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/moderation';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateOpportunityPayload. */
 const validateOpportunityPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags', 'expiresAt', 'mediaUrl']);
@@ -44,6 +48,7 @@ const validateOpportunityPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/opportunities/submit. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:submit', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

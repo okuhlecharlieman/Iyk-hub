@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /profile.
+ */
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getUserDoc, getDailyViews } from '../../lib/firebase/user';
@@ -18,6 +21,7 @@ import ProfileAnalytics from '../../components/profile/ProfileAnalytics';
 import { ActivePlanCard, BoostHistoryList } from '../../components/profile/ProfileBoostSection';
 import AccountManagement from '../../components/profile/AccountManagement';
 
+/** ProfilePage — main page component. */
 export default function ProfilePage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -84,8 +88,10 @@ export default function ProfilePage() {
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
 
+  /** Handles form change action. */
   const handleFormChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+  /** Handles file change action. */
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -96,6 +102,7 @@ export default function ProfilePage() {
     }
   };
 
+  /** Handles save action. */
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -122,6 +129,7 @@ export default function ProfilePage() {
     }
   };
 
+  /** Handles copy link action. */
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/u/${user.uid}`;
     try { await navigator.clipboard.writeText(url); } catch {

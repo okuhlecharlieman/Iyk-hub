@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /admin/users.
+ */
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '../../../components/ProtectedRoute';
@@ -22,6 +25,7 @@ const roleBadgeClasses = {
   user: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 };
 
+/** RoleBadge React component. */
 const RoleBadge = ({ role }) => (
   <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${roleBadgeClasses[role] || roleBadgeClasses.user}`}>
     {canManageTeam(role) ? <FaUserShield className="mr-1" /> : null}
@@ -29,6 +33,7 @@ const RoleBadge = ({ role }) => (
   </span>
 );
 
+/** Formats/parses data — parseDateValue. */
 const parseDateValue = (value) => {
   if (!value) return null;
   if (value?.toDate && typeof value.toDate === 'function') return value.toDate();
@@ -42,6 +47,7 @@ const parseDateValue = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+/** Fetches/retrieves data — getTimeRemaining. */
 const getTimeRemaining = (value) => {
   const target = parseDateValue(value);
   if (!target) return null;
@@ -55,12 +61,14 @@ const getTimeRemaining = (value) => {
   return `${minutes}m left`;
 };
 
+/** UserRow React component. */
 const UserRow = ({ user, onRequestUpdate, onRequestDelete, onRequestSuspend, isProcessing, isOnline }) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const isSuspended = user.accountStatus === 'suspended';
+  /** role. */
   const role = (user.role || 'user').toLowerCase();
   const roleDefinition = getRoleDefinition(role);
   const canManageClaims = user.authExists || Boolean(user.email);
@@ -279,6 +287,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, onRequestSuspend, isP
   );
 };
 
+/** AdminUsersPage — main page component. */
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Map());
@@ -343,6 +352,7 @@ export default function AdminUsersPage() {
   const [processingUid, setProcessingUid] = useState(null);
   const toast = useToast();
 
+  /** Handles sort action. */
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -352,6 +362,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  /** SortIcon React component. */
   const SortIcon = ({ field }) => {
     if (sortField !== field) return <FaSort className="text-gray-300 dark:text-gray-600" size={10} />;
     return sortDir === 'asc' ? <FaSortUp className="text-blue-500" size={10} /> : <FaSortDown className="text-blue-500" size={10} />;
@@ -415,6 +426,7 @@ export default function AdminUsersPage() {
   const onlineCount = onlineUsers.size;
   const adminCount = users.filter(u => ['business_owner', 'admin'].includes((u.role || '').toLowerCase())).length;
 
+  /** Handles update user action. */
   const handleUpdateUser = async (uid, updateData) => {
     if (!user) { toast('error', 'Not authenticated'); return; }
     if (!uid) { toast('error', 'Unable to determine user id'); return; }
@@ -441,6 +453,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  /** Handles suspend user action. */
   const handleSuspendUser = async (uid, action, reason) => {
     if (!user) { toast('error', 'Not authenticated'); return; }
     if (!uid) { toast('error', 'Unable to determine user id'); return; }
@@ -463,6 +476,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  /** Handles delete user action. */
   const handleDeleteUser = async (uid) => {
     if (!user) { toast('error', 'Not authenticated'); return; }
     if (!uid) { toast('error', 'Unable to determine user id'); return; }

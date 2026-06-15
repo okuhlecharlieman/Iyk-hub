@@ -1,3 +1,6 @@
+/**
+ * date-range utilities (api).
+ */
 export function getDateRange(period) {
   const now = new Date();
   const startDate = new Date();

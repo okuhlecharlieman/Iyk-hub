@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/opportunities/early-access.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts
 import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/opportunities/early-access. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:early-access', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

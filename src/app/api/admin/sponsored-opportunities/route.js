@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/sponsored-opportunities.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateUpdatePayload. */
 const validateUpdatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['orderId', 'paymentStatus', 'reviewStatus', 'note']);
@@ -33,6 +37,7 @@ const validateUpdatePayload = (payload) => {
   };
 };
 
+/** Handles GET requests to /api/admin/sponsored-opportunities. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:sponsored:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

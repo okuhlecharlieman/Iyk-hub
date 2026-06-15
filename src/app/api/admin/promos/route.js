@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/promos.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticateWithRoles } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { TEAM_MANAGEMENT_ROLES } from '../../../../lib/roles';
 
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/promos. */
 export async function GET(request) {
   try {
     initializeFirebaseAdmin();

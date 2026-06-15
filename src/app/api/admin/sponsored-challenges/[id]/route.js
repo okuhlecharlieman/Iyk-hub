@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/sponsored-challenges/[id].
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
@@ -9,6 +12,7 @@ export const dynamic = 'force-dynamic';
 
 const allowedStatuses = new Set(['pending', 'approved', 'rejected']);
 
+/** Validates or checks — validateStatusPayload. */
 const validateStatusPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['status']);
@@ -20,6 +24,7 @@ const validateStatusPayload = (payload) => {
   return { status: payload.status };
 };
 
+/** Handles PUT requests to /api/admin/sponsored-challenges/[id]. */
 export async function PUT(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:sponsored-challenges:update', limit: 40, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -53,6 +58,7 @@ export async function PUT(request, { params }) {
     if (status === 'approved') {
       const challenge = challengeSnap.data();
       const platformFeeCents = challenge.platformFeeWaived ? 0 : Math.round((challenge.budgetCents || 0) * 0.2);
+      /** sponsor Amount Cents. */
       const sponsorAmountCents = (challenge.budgetCents || 0) - platformFeeCents;
       updatePayload.approvedBy = uid;
       updatePayload.approvedAt = admin.firestore.FieldValue.serverTimestamp();

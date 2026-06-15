@@ -12,6 +12,7 @@
 import { db } from './firebase';
 import { serverTimestamp, collection, addDoc } from 'firebase/firestore';
 
+/** track Page View. */
 export async function trackPageView(userId, page) {
   if (!userId || !page) return;
   try {
@@ -26,6 +27,7 @@ export async function trackPageView(userId, page) {
   }
 }
 
+/** track Event. */
 export async function trackEvent(userId, eventType, metadata = {}) {
   if (!userId || !eventType) return;
   try {
@@ -40,6 +42,7 @@ export async function trackEvent(userId, eventType, metadata = {}) {
   }
 }
 
+/** track Session Duration. */
 export async function trackSessionDuration(userId, durationSeconds) {
   if (!userId || !durationSeconds) return;
   try {

@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /about.
+ */
 import { FaRocket, FaPalette, FaVideo, FaTrophy, FaBriefcase, FaGamepad, FaUsers, FaStar, FaBolt, FaCode, FaMusic, FaPencilRuler, FaEllipsisH, FaPaintBrush, FaCrown, FaCoins, FaPoll, FaUserShield } from 'react-icons/fa';
 import Link from 'next/link';
 
@@ -74,6 +77,7 @@ const showcaseIcons = [
   { icon: <FaEllipsisH className="text-xl" />, label: 'Other', description: 'Photography, writing, crafts, anything creative', color: 'text-gray-400' },
 ];
 
+/** AboutPage — main page component. */
 export default function AboutPage() {
   return (
     <div className="min-h-screen pt-20 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">

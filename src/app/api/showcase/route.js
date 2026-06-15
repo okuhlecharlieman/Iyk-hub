@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/showcase.
+ */
 import { NextResponse } from 'next/server';
 import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import admin from 'firebase-admin';
@@ -20,6 +23,7 @@ if (rawServiceAccount) {
   }
 }
 
+/** chunk Array. */
 function chunkArray(values, size) {
   const chunks = [];
   for (let i = 0; i < values.length; i += size) {
@@ -28,6 +32,7 @@ function chunkArray(values, size) {
   return chunks;
 }
 
+/** Handles GET requests to /api/showcase. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'showcase:get', limit: 90, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

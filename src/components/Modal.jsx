@@ -1,9 +1,14 @@
+/**
+ * Modalx component.
+ */
 import { useEffect, useRef } from 'react';
 
+/** Modal — modal dialog component. */
 export default function Modal({ open, onClose, title, children }) {
   const modalRef = useRef(null);
 
   useEffect(() => {
+    /** Handles esc action. */
     const handleEsc = (event) => {
       if (event.keyCode === 27) onClose();
     };

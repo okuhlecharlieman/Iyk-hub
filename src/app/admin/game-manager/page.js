@@ -14,6 +14,7 @@ import { FaGamepad, FaPlus, FaTrash, FaUpload, FaQuestionCircle, FaFont } from '
 
 const TABS = { QUIZ: 'quiz', HANGMAN: 'hangman' };
 
+/** GameManagerPage — main page component. */
 export default function GameManagerPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(TABS.QUIZ);
@@ -51,6 +52,7 @@ export default function GameManagerPage() {
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
+  /** Handles add single action. */
   const handleAddSingle = async () => {
     setError('');
     setSuccess('');
@@ -77,6 +79,7 @@ export default function GameManagerPage() {
     }
   };
 
+  /** Handles batch import action. */
   const handleBatchImport = async () => {
     setError('');
     setSuccess('');
@@ -104,6 +107,7 @@ export default function GameManagerPage() {
     }
   };
 
+  /** Handles delete action. */
   const handleDelete = async (id) => {
     if (!confirm('Delete this item?')) return;
     try {

@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/payments/create-intent.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -8,6 +11,7 @@ import { createStripePaymentIntent, createOrGetStripeCustomer } from '../../../.
 import { getOrderConfig } from '../../../../lib/monetization/constants';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validatePayload. */
 const validatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['orderType', 'orderId']);
@@ -26,6 +30,7 @@ const validatePayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/payments/create-intent. */
 export async function POST(request) {
   const rateLimitResponse = await enforceDistributedRateLimit(request, { keyPrefix: 'payments:create-intent', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

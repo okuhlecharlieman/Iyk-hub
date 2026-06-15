@@ -1,3 +1,6 @@
+/**
+ * logging utilities (api).
+ */
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../firebase/admin.js';
 

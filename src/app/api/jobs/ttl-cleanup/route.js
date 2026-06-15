@@ -23,6 +23,7 @@ export const dynamic = 'force-dynamic';
 
 const BATCH_DELETE_LIMIT = 400;
 
+/** batch Delete. */
 async function batchDelete(firestore, query, results, collectionName) {
   let deletedCount = 0;
   let snapshot;
@@ -42,6 +43,7 @@ async function batchDelete(firestore, query, results, collectionName) {
   }
 }
 
+/** Handles GET requests to /api/jobs/ttl-cleanup. */
 export async function GET(request) {
   if (!isAuthorizedCron(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

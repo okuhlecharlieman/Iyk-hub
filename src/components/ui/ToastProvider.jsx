@@ -1,8 +1,12 @@
+/**
+ * ToastProviderx component.
+ */
 import React, { createContext, useCallback, useContext, useState } from 'react';
 import Toast from './Toast';
 
 const ToastContext = createContext(() => {});
 
+/** ToastProvider — context provider component. */
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
@@ -28,4 +32,5 @@ export function ToastProvider({ children }) {
   );
 }
 
+/** useToast — custom React hook. */
 export const useToast = () => useContext(ToastContext);

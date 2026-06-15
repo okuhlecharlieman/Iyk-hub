@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/users.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticateWithRoles, listAllUsers } from '../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ import { enforceRateLimit, enforceDistributedRateLimit } from '../../../../lib/a
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateUidPayload. */
 const validateUidPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['uid']);
@@ -18,8 +22,10 @@ const validateUidPayload = (payload) => {
   return { uid: payload.uid.trim() };
 };
 
+/** normalize Email. */
 const normalizeEmail = (value) => (typeof value === 'string' ? value.trim().toLowerCase() : null);
 
+/** Validates or checks — validateUpdatePayload. */
 const validateUpdatePayload = (payload) => {
   ensurePlainObject(payload);
 
@@ -103,6 +109,7 @@ const validateUpdatePayload = (payload) => {
   return { uid, updateData };
 };
 
+/** Handles GET requests to /api/admin/users. */
 export async function GET(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:users:get', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -116,6 +123,7 @@ export async function GET(req) {
   }
 }
 
+/** Handles PUT requests to /api/admin/users. */
 export async function PUT(req) {
   const rateLimitResponse = await enforceDistributedRateLimit(req, { keyPrefix: 'admin:users:update', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -201,6 +209,7 @@ export async function PUT(req) {
   }
 }
 
+/** Handles DELETE requests to /api/admin/users. */
 export async function DELETE(req) {
   const rateLimitResponse = await enforceDistributedRateLimit(req, { keyPrefix: 'admin:users:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -238,6 +247,7 @@ export async function DELETE(req) {
   }
 }
 
+/** Handles PATCH requests to /api/admin/users. */
 export async function PATCH(req) {
   const rateLimitResponse = await enforceDistributedRateLimit(req, { keyPrefix: 'admin:users:suspend', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

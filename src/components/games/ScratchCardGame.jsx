@@ -36,6 +36,7 @@ function getBestMatch(grid) {
   return Math.max(...Object.values(counts));
 }
 
+/** ScratchCardGame — card display component. */
 export default function ScratchCardGame() {
   const { user } = useAuth();
   const [grid, setGrid] = useState(() => generateGrid());
@@ -59,6 +60,7 @@ export default function ScratchCardGame() {
       if (snap.exists()) {
         const data = snap.data();
         const lastPlayed = data.lastSpinAt?.toDate?.() || new Date(0);
+        /** hours Since. */
         const hoursSince = (Date.now() - lastPlayed.getTime()) / (1000 * 60 * 60);
         setExtraSpins(data.extraSpins || 0);
         setCanPlay(hoursSince >= 24 || (data.extraSpins || 0) > 0);
@@ -108,6 +110,7 @@ export default function ScratchCardGame() {
       const snap = await getDoc(spinRef);
       const data = snap.exists() ? snap.data() : {};
       const lastPlayed = data.lastSpinAt?.toDate?.() || new Date(0);
+      /** hours Since. */
       const hoursSince = (Date.now() - lastPlayed.getTime()) / (1000 * 60 * 60);
 
       if (hoursSince >= 24) {

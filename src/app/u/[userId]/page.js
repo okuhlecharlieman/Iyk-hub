@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /u/[userId].
+ */
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { SkeletonProfile } from '../../../components/loaders/SkeletonLoader';
@@ -8,6 +11,7 @@ import Link from 'next/link';
 import BoostBadge from '../../../components/BoostBadge';
 import { useToast } from '../../../components/ui/ToastProvider';
 
+/** PublicProfilePage — main page component. */
 const PublicProfilePage = ({ params }) => {
   const { userId } = params;
   const { user: currentUser } = useAuth();
@@ -25,6 +29,7 @@ const PublicProfilePage = ({ params }) => {
   const accentColor = doc?.accentColor || null;
 
   useEffect(() => {
+    /** Fetches/retrieves data — fetchProfile. */
     const fetchProfile = async () => {
       setLoading(true);
       setError(null);
@@ -73,6 +78,7 @@ const PublicProfilePage = ({ params }) => {
     '--accent-color': accentColor,
   } : {};
 
+  /** Handles share profile action. */
   const handleShareProfile = async () => {
     const url = `${window.location.origin}/u/${userId}`;
     try {

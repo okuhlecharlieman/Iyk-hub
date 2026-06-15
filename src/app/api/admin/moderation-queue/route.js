@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/moderation-queue.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateModerationDecisionPayload. */
 const validateModerationDecisionPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['queueId', 'decision', 'note']);
@@ -29,6 +33,7 @@ const validateModerationDecisionPayload = (payload) => {
   };
 };
 
+/** Handles GET requests to /api/admin/moderation-queue. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:moderation-queue:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

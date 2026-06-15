@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/promos/codes.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticateWithRoles } from '../../../../../lib/firebase/admin';
@@ -7,6 +10,13 @@ import { TEAM_MANAGEMENT_ROLES } from '../../../../../lib/roles';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Generates a random promo code in the format PREFIX-XXXXXXXX.
+ * Excludes easily confused characters (I, O, 0, 1).
+ *
+ * @param {string} prefix - Code prefix (default 'IYK').
+ * @returns {string} e.g. 'IYK-4KRN7WBX'
+ */
 const generateCode = (prefix = 'IYK') => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -16,6 +26,7 @@ const generateCode = (prefix = 'IYK') => {
   return `${prefix}-${code}`;
 };
 
+/** Handles GET requests to /api/admin/promos/codes. */
 export async function GET(request) {
   try {
     initializeFirebaseAdmin();
@@ -39,6 +50,7 @@ export async function GET(request) {
   }
 }
 
+/** Handles POST requests to /api/admin/promos/codes. */
 export async function POST(request) {
   try {
     initializeFirebaseAdmin();
@@ -113,6 +125,7 @@ export async function POST(request) {
   }
 }
 
+/** Handles DELETE requests to /api/admin/promos/codes. */
 export async function DELETE(request) {
   try {
     initializeFirebaseAdmin();

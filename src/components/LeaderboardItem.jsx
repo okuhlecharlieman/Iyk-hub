@@ -7,7 +7,9 @@ import Link from 'next/link';
 import { FaCrown } from 'react-icons/fa';
 import BoostBadge from './BoostBadge';
 
+/** LeaderboardItem React component. */
 export default function LeaderboardItem({ user, rank, filter }) {
+  /** Fetches/retrieves data — getRankIndicator. */
   const getRankIndicator = () => {
     if (rank <= 3) {
       const colors = {

@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/survey.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -5,6 +8,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/survey. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:survey:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

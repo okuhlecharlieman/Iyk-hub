@@ -1,3 +1,13 @@
+/**
+ * Role-Based Access Control (RBAC) definitions.
+ *
+ * Defines all user roles, their permissions, and helper functions
+ * for checking access levels throughout the app.  The hierarchy from
+ * most to least privileged is:
+ *   Business Owner > Admin > Operations > Dev Support > Customer Support > Client > User
+ */
+
+/** Internal enum of all role keys used in Firestore and custom claims. */
 const ROLE_KEYS = {
   BUSINESS_OWNER: 'business_owner',
   ADMIN: 'admin',
@@ -96,8 +106,13 @@ export const ROLE_DEFINITIONS = [
   },
 ];
 
+/** Dropdown-friendly array: [{ value: 'admin', label: 'Admin' }, …]. */
 export const ROLE_OPTIONS = ROLE_DEFINITIONS.map(({ key, label }) => ({ value: key, label }));
+
+/** Flat array of every valid role key string. */
 export const VALID_ROLE_KEYS = ROLE_DEFINITIONS.map((role) => role.key);
+
+/** Roles that can manage other users' roles and accounts. */
 export const TEAM_MANAGEMENT_ROLES = [ROLE_KEYS.BUSINESS_OWNER, ROLE_KEYS.ADMIN, ROLE_KEYS.OPERATIONS];
 const ADMIN_DASHBOARD_ROLES = [
   ROLE_KEYS.BUSINESS_OWNER,
@@ -107,12 +122,37 @@ const ADMIN_DASHBOARD_ROLES = [
   ROLE_KEYS.CUSTOMER_SUPPORT,
 ];
 
+/**
+ * Returns the full role definition object for a given role key.
+ * Falls back to the 'user' definition if the key is unknown.
+ *
+ * @param {string} roleKey - One of the ROLE_KEYS values.
+ * @returns {Object} The matching role definition.
+ */
 export const getRoleDefinition = (roleKey) => (
   ROLE_DEFINITIONS.find((role) => role.key === roleKey) || ROLE_DEFINITIONS.find((role) => role.key === ROLE_KEYS.USER)
 );
 
+/**
+ * Returns the human-readable label for a role key (e.g. 'admin' → 'Admin').
+ * @param {string} roleKey
+ * @returns {string}
+ */
 export const formatRoleLabel = (roleKey) => getRoleDefinition(roleKey)?.label || 'User';
 
+/**
+ * Returns true if the role has team-management permissions
+ * (Business Owner, Admin, or Operations).
+ * @param {string} roleKey
+ * @returns {boolean}
+ */
 export const canManageTeam = (roleKey) => TEAM_MANAGEMENT_ROLES.includes((roleKey || '').toLowerCase());
+
+/**
+ * Returns true if the role has access to the admin dashboard
+ * (includes support roles in addition to management roles).
+ * @param {string} roleKey
+ * @returns {boolean}
+ */
 export const hasAdminDashboardAccess = (roleKey) => ADMIN_DASHBOARD_ROLES.includes((roleKey || '').toLowerCase());
 

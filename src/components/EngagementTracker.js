@@ -13,6 +13,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { trackPageView, trackSessionDuration } from '../lib/engagement';
 
+/** EngagementTracker React component. */
 export default function EngagementTracker() {
   const { user } = useAuth();
   const pathname = usePathname();
@@ -32,7 +33,9 @@ export default function EngagementTracker() {
     if (!user) return;
     sessionStart.current = Date.now();
 
+    /** Handles before unload action. */
     const handleBeforeUnload = () => {
+      /** duration. */
       const duration = (Date.now() - sessionStart.current) / 1000;
       if (duration > 5) {
         trackSessionDuration(user.uid, duration);
@@ -42,6 +45,7 @@ export default function EngagementTracker() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      /** duration. */
       const duration = (Date.now() - sessionStart.current) / 1000;
       if (duration > 5) {
         trackSessionDuration(user.uid, duration);

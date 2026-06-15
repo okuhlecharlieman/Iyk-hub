@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /survey.
+ */
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { FaStar, FaPaperPlane } from 'react-icons/fa';
@@ -28,6 +31,7 @@ const SURVEY_QUESTIONS = [
   },
 ];
 
+/** SurveyPage — main page component. */
 export default function SurveyPage() {
   const { user } = useAuth();
   const [answers, setAnswers] = useState({});
@@ -35,10 +39,12 @@ export default function SurveyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  /** Handles answer action. */
   const handleAnswer = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  /** Handles submit action. */
   const handleSubmit = async () => {
     if (!user) {
       setError('You must be logged in to submit feedback.');
@@ -78,6 +84,7 @@ export default function SurveyPage() {
     }
   };
 
+  /** Handles retake action. */
   const handleRetake = () => {
     setAnswers({});
     setSubmitted(false);

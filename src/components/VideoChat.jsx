@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * VideoChatx component.
+ */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +37,7 @@ const STUN_SERVERS = {
 const DEFAULT_TIME_LIMIT = 60;
 const BONUS_TIME = 60;
 
+/** Creates/generates — createPeerConnection. */
 const createPeerConnection = (onTrack, onIceCandidate) => {
   const pc = new RTCPeerConnection(STUN_SERVERS);
   pc.ontrack = (event) => { onTrack(event.streams[0]); };
@@ -42,12 +45,14 @@ const createPeerConnection = (onTrack, onIceCandidate) => {
   return pc;
 };
 
+/** Formats/parses data — formatTime. */
 const formatTime = (seconds) => {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+/** VideoChat React component. */
 export default function VideoChat() {
   const { user, userProfile } = useAuth();
   const toast = useToast();
@@ -171,6 +176,7 @@ export default function VideoChat() {
     setAudioEnabled(true);
   }, [user, cleanup, initialTimeLimit]);
 
+  /** setup Call. */
   const setupCall = async (currentRoomId, isCaller) => {
     const roomRef = doc(db, 'videoRooms', currentRoomId);
     roomRefRef.current = roomRef;
@@ -392,15 +398,18 @@ export default function VideoChat() {
 
   useEffect(() => {
     if (timeLeft === 0 && status === 'connected') {
+      /** do Rematch. */
       const doRematch = async () => { await stopCall(); setTimeout(() => findPartner(), 500); };
       doRematch();
     }
   }, [timeLeft, status, stopCall, findPartner]);
 
   useEffect(() => {
+    /** Handles before unload action. */
     const handleBeforeUnload = () => {
       if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => { t.enabled = false; t.stop(); });
     };
+    /** Handles visibility change action. */
     const handleVisibilityChange = () => {
       if (statusRef.current === 'idle' || !localStreamRef.current) return;
       if (document.visibilityState === 'hidden') {
@@ -420,6 +429,7 @@ export default function VideoChat() {
     };
   }, [cleanup, clearTimer]);
 
+  /** allow Share. */
   const allowShare = async () => {
     if (!roomRefRef.current) return;
     const myName = userProfile?.displayName || user?.displayName || 'Anonymous';
@@ -444,6 +454,7 @@ export default function VideoChat() {
     }
   };
 
+  /** Handles skip action. */
   const handleSkip = async () => {
     toast('info', 'Skipping to the next person...');
     await stopCall();
@@ -458,12 +469,14 @@ export default function VideoChat() {
     }
   }, [canShareProfile, bonusAdded, status, toast]);
 
+  /** toggle Video. */
   const toggleVideo = () => {
     if (!localStreamRef.current) return;
     const videoTrack = localStreamRef.current.getVideoTracks()[0];
     if (videoTrack) { videoTrack.enabled = !videoTrack.enabled; setVideoEnabled(videoTrack.enabled); }
   };
 
+  /** toggle Audio. */
   const toggleAudio = () => {
     if (!localStreamRef.current) return;
     const audioTracks = localStreamRef.current.getAudioTracks();
@@ -473,6 +486,7 @@ export default function VideoChat() {
 
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
+  /** toggle Fullscreen. */
   const toggleFullscreen = async () => {
     try {
       if (isIOS) {
@@ -502,6 +516,7 @@ export default function VideoChat() {
   };
 
   useEffect(() => {
+    /** Handles fs change action. */
     const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement || document.webkitFullscreenElement));
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);

@@ -1,8 +1,12 @@
+/**
+ * API route handler for /api/health.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/health. */
 export async function GET() {
   const checks = {
     status: 'ok',

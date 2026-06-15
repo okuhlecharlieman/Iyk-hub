@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/uploads/images.
+ */
 import { randomUUID } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -24,12 +27,14 @@ const contextAliases = {
   posts: 'showcase',
 };
 
+/** normalize Context. */
 const normalizeContext = (value) => {
   const raw = String(value || 'uploads').toLowerCase().replace(/[^a-z0-9-]/g, '-');
   const context = contextAliases[raw] || raw;
   return ALLOWED_CONTEXTS.has(context) ? context : 'uploads';
 };
 
+/** sanitize Base Name. */
 const sanitizeBaseName = (name) => {
   const withoutExtension = String(name || 'image')
     .replace(/\.[^.]+$/, '')
@@ -41,6 +46,7 @@ const sanitizeBaseName = (name) => {
   return withoutExtension || 'image';
 };
 
+/** Creates/generates — createObjectName. */
 const createObjectName = ({ context, uid, file }) => {
   const extension = IMAGE_EXTENSIONS[file.type] || 'bin';
   const baseName = sanitizeBaseName(file.name);
@@ -49,6 +55,7 @@ const createObjectName = ({ context, uid, file }) => {
   return `IYK-HUB/${context}/${uid}/${uniqueSuffix}-${baseName}.${extension}`;
 };
 
+/** Handles POST requests to /api/uploads/images. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'uploads:images', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/monetization/summary.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ import { buildMonetizationSummary } from '../../../../../lib/monetization/summar
 import { handleApiError } from '../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/monetization/summary. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:monetization:summary:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

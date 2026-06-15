@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/showcase/delete.
+ */
 import { NextResponse } from 'next/server';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
@@ -7,6 +10,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateDeleteShowcasePostPayload. */
 const validateDeleteShowcasePostPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['postId']);
@@ -18,6 +22,7 @@ const validateDeleteShowcasePostPayload = (payload) => {
   return { postId: payload.postId.trim() };
 };
 
+/** Handles POST requests to /api/showcase/delete. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'showcase:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/promos/allocate-points.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticateWithRoles } from '../../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ import { TEAM_MANAGEMENT_ROLES } from '../../../../../lib/roles';
 
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/admin/promos/allocate-points. */
 export async function POST(request) {
   try {
     initializeFirebaseAdmin();

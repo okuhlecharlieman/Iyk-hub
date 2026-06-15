@@ -1,9 +1,13 @@
 'use client';
+/**
+ * useMultiplayerGame custom React hook.
+ */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
+/** useMultiplayerGame — custom React hook. */
 export default function useMultiplayerGame(gameId, { createInitialState, playerDataFactory, onSnapshot: onSnapshotCb }) {
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
@@ -20,6 +24,7 @@ export default function useMultiplayerGame(gameId, { createInitialState, playerD
       return;
     }
 
+    /** join Game. */
     const joinGame = async () => {
       try {
         const snap = await getDoc(gameDocRef);

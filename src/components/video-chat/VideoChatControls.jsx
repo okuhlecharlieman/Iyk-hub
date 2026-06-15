@@ -1,6 +1,10 @@
 'use client';
+/**
+ * VideoChatControlsx component.
+ */
 import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaPhoneSlash, FaStepForward, FaExpand, FaCompress } from 'react-icons/fa';
 
+/** VideoChatControls React component. */
 export default function VideoChatControls({ videoEnabled, audioEnabled, isFullscreen, onToggleVideo, onToggleAudio, onStop, onSkip, onToggleFullscreen }) {
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 z-10">

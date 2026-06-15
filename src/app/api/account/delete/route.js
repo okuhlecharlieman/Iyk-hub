@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/account/delete.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ export const dynamic = 'force-dynamic';
 
 const COOLING_OFF_DAYS = 30;
 
+/** Handles DELETE requests to /api/account/delete. */
 export async function DELETE(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'account:delete', limit: 5, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

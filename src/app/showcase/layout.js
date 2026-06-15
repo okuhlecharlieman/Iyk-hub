@@ -1,3 +1,6 @@
+/**
+ * Layout wrapper for /app/showcase.
+ */
 export const metadata = {
   title: 'Community Showcase — Creative Projects by South African Youth',
   description: 'Browse amazing creative projects from South African youth. Art, code, games, design, music and more. Share your own work and get discovered by the community.',
@@ -7,6 +10,7 @@ export const metadata = {
   },
 };
 
+/** ShowcaseLayout — layout wrapper component. */
 export default function ShowcaseLayout({ children }) {
   return children;
 }

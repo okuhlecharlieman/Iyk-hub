@@ -1,6 +1,10 @@
+/**
+ * boost-query utilities (api).
+ */
 import admin from 'firebase-admin';
 import { getCreatorBoostPlan } from '../monetization/creator-boosts';
 
+/** query Active Boost. */
 export async function queryActiveBoost(uid) {
   const now = new Date();
   let snap;

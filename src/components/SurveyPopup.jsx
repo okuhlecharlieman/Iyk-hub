@@ -1,4 +1,7 @@
 'use client';
+/**
+ * SurveyPopupx component.
+ */
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { FaTimes, FaPaperPlane } from 'react-icons/fa';
@@ -29,6 +32,7 @@ const SURVEY_QUESTIONS = [
 
 const STORAGE_KEY = 'iyk_survey_state';
 
+/** Fetches/retrieves data — getSurveyState. */
 function getSurveyState() {
   if (typeof window === 'undefined') return null;
   try {
@@ -38,11 +42,13 @@ function getSurveyState() {
   }
 }
 
+/** set Survey State. */
 function setSurveyState(state) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+/** SurveyPopup React component. */
 export default function SurveyPopup() {
   const { user } = useAuth();
   const [visible, setVisible] = useState(false);
@@ -59,6 +65,7 @@ export default function SurveyPopup() {
 
     const showCount = state?.showCount || 0;
     const lastShown = state?.lastShown || 0;
+    /** hours Since Last. */
     const hoursSinceLast = (Date.now() - lastShown) / (1000 * 60 * 60);
 
     if (showCount > 0 && hoursSinceLast < 24) return;
@@ -72,22 +79,26 @@ export default function SurveyPopup() {
     return () => clearTimeout(timer);
   }, [user]);
 
+  /** Handles dismiss action. */
   const handleDismiss = () => {
     const state = getSurveyState() || {};
     setSurveyState({ ...state, dismissed: (state.dismissed || 0) + 1 });
     setVisible(false);
   };
 
+  /** Handles answer action. */
   const handleAnswer = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  /** Handles next action. */
   const handleNext = () => {
     if (currentQ < SURVEY_QUESTIONS.length - 1) {
       setCurrentQ(currentQ + 1);
     }
   };
 
+  /** Handles submit action. */
   const handleSubmit = async () => {
     setSubmitting(true);
     try {

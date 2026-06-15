@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/refunds.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -8,6 +11,7 @@ import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
 import { LEDGER_ENTRY_TYPES } from '../../../../lib/monetization/constants';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateRefundPayload. */
 const validateRefundPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['paystackReference', 'amountCents', 'reason']);
@@ -31,6 +35,7 @@ const validateRefundPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/admin/refunds. */
 export async function POST(request) {
   const rateLimitResponse = await enforceDistributedRateLimit(request, {
     keyPrefix: 'admin:refunds:create',
@@ -144,6 +149,7 @@ export async function POST(request) {
   }
 }
 
+/** Handles GET requests to /api/admin/refunds. */
 export async function GET(request) {
   const rateLimitResponse = await enforceDistributedRateLimit(request, {
     keyPrefix: 'admin:refunds:list',

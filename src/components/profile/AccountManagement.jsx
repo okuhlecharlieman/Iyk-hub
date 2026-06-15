@@ -1,8 +1,13 @@
 'use client';
+/**
+ * AccountManagementx component.
+ */
 import { FaShieldAlt, FaDownload, FaTrash, FaUndo, FaExclamationTriangle } from 'react-icons/fa';
 import { EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 
+/** AccountManagement React component. */
 export default function AccountManagement({ user, doc, toast }) {
+  /** Handles export action. */
   const handleExport = async () => {
     try {
       const token = await user.getIdToken();
@@ -23,6 +28,7 @@ export default function AccountManagement({ user, doc, toast }) {
     }
   };
 
+  /** Handles restore action. */
   const handleRestore = async () => {
     try {
       const token = await user.getIdToken();
@@ -42,6 +48,7 @@ export default function AccountManagement({ user, doc, toast }) {
     }
   };
 
+  /** Handles delete action. */
   const handleDelete = async () => {
     const password = window.prompt('Please enter your password to confirm account deletion:');
     if (!password) return;

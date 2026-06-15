@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/institutions/subscribe.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getInstitutionPlanConfig } from '../../../../lib/monetization/institution-plans';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateSubscriptionPayload. */
 const validateSubscriptionPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['institutionName', 'institutionType', 'billingEmail', 'plan']);
@@ -32,6 +36,7 @@ const validateSubscriptionPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/institutions/subscribe. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'institutions:subscribe', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

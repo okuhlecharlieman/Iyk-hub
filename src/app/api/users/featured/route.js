@@ -1,9 +1,13 @@
+/**
+ * API route handler for /api/users/featured.
+ */
 
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/users/featured. */
 export async function GET() {
   try {
     await initializeFirebaseAdmin();

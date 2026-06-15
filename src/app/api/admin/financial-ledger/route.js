@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/financial-ledger.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ import { buildFinancialSummary, queryLedger } from '../../../../lib/monetization
 import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/financial-ledger. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:financial-ledger', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

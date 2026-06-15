@@ -1,10 +1,14 @@
 'use client';
+/**
+ * PointsCard component.
+ */
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { FaStar, FaCrown } from 'react-icons/fa';
 
+/** PointsCard — card display component. */
 export default function PointsCard() {
   const [points, setPoints] = useState({ weekly: 0, lifetime: 0 });
 

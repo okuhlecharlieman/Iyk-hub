@@ -1,4 +1,7 @@
 'use client';
+/**
+ * MemoryGamex component.
+ */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
@@ -7,11 +10,13 @@ import useMultiplayerGame from '../../hooks/useMultiplayerGame';
 
 const cardEmojis = ['🍎', '🍌', '🍇', '🍒', '🍓', '🍍', '🥝', '🍊'];
 
+/** Creates/generates — createShuffledCards. */
 const createShuffledCards = () =>
   [...cardEmojis, ...cardEmojis]
     .sort(() => Math.random() - 0.5)
     .map((content, i) => ({ id: i, content, isFlipped: false, isMatched: false }));
 
+/** MemorySinglePlayer React component. */
 function MemorySinglePlayer({ onEnd }) {
   const [cards, setCards] = useState(createShuffledCards);
   const [moves, setMoves] = useState(0);
@@ -61,6 +66,7 @@ function MemorySinglePlayer({ onEnd }) {
     }
   }, [matchedPairs, moves, onEnd]);
 
+  /** reset. */
   const reset = () => {
     setCards(createShuffledCards());
     setMoves(0);
@@ -113,6 +119,7 @@ function MemorySinglePlayer({ onEnd }) {
   );
 }
 
+/** Creates/generates — createMemoryInitialState. */
 const createMemoryInitialState = async (u) => ({
   cards: createShuffledCards(),
   players: {
@@ -124,6 +131,7 @@ const createMemoryInitialState = async (u) => ({
   winner: null,
 });
 
+/** MemoryMultiplayer React component. */
 function MemoryMultiplayer({ gameId, onEnd }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { gameState, playerSymbol, error, loading, lastResultKeyRef, gameDocRef, user } = useMultiplayerGame(gameId, {
@@ -210,6 +218,7 @@ function MemoryMultiplayer({ gameId, onEnd }) {
     }
   }, [gameState, gameDocRef, onEnd, playerSymbol, isProcessing, gameId]);
 
+  /** Handles card click action. */
   const handleCardClick = async (card) => {
     if (
       !playerSymbol ||
@@ -228,6 +237,7 @@ function MemoryMultiplayer({ gameId, onEnd }) {
     await updateDoc(gameDocRef, { cards: newCards });
   };
 
+  /** Handles reset game action. */
   const handleResetGame = async () => {
     await updateDoc(gameDocRef, {
       cards: createShuffledCards(),
@@ -250,6 +260,7 @@ function MemoryMultiplayer({ gameId, onEnd }) {
   const you = players?.[playerSymbol];
   const opponent = playerSymbol === 'player1' ? players?.player2 : players?.player1;
 
+  /** Fetches/retrieves data — getStatusMessage. */
   const getStatusMessage = () => {
     if (status === 'waiting') return 'Waiting for an opponent to join...';
     if (status === 'playing') return currentPlayer === playerSymbol ? 'Your turn' : `${players[currentPlayer]?.displayName}'s turn`;
@@ -302,6 +313,7 @@ function MemoryMultiplayer({ gameId, onEnd }) {
   );
 }
 
+/** MemoryGame React component. */
 export default function MemoryGame({ gameId, onEnd, singlePlayer = false }) {
   if (singlePlayer) {
     return <MemorySinglePlayer onEnd={onEnd} />;

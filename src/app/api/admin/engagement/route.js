@@ -1,9 +1,13 @@
+/**
+ * API route handler for /api/admin/engagement.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/engagement. */
 export async function GET(request) {
   const auth = await AuthMiddleware.requireAdmin(request);
   if (auth instanceof NextResponse) return auth;
@@ -263,7 +267,9 @@ export async function GET(request) {
     }
 
     if (eventCounts['spin_wheel'] || eventCounts['buy_spin']) {
+      /** spins. */
       const spins = (eventCounts['spin_wheel'] || 0);
+      /** buys. */
       const buys = (eventCounts['buy_spin'] || 0);
       if (buys > 0) {
         insights.push({

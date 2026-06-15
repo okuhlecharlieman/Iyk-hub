@@ -1,5 +1,9 @@
+/**
+ * ChallengeBenefitsSidebarx component.
+ */
 import { FaUsers, FaTrophy, FaLightbulb } from 'react-icons/fa';
 
+/** ChallengeBenefitsSidebar React component. */
 export function ChallengeBenefitsSidebar({ formData, isAdmin, platformFee, sponsorReceives }) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sticky top-8">
@@ -44,6 +48,7 @@ export function ChallengeBenefitsSidebar({ formData, isAdmin, platformFee, spons
   );
 }
 
+/** BenefitItem React component. */
 function BenefitItem({ icon: Icon, color, title, desc }) {
   const bgColors = { blue: 'bg-blue-100 dark:bg-blue-900', purple: 'bg-purple-100 dark:bg-purple-900', green: 'bg-green-100 dark:bg-green-900' };
   const textColors = { blue: 'text-blue-600 dark:text-blue-400', purple: 'text-purple-600 dark:text-purple-400', green: 'text-green-600 dark:text-green-400' };
@@ -60,6 +65,7 @@ function BenefitItem({ icon: Icon, color, title, desc }) {
   );
 }
 
+/** ChallengeProcessSteps React component. */
 export function ChallengeProcessSteps() {
   const steps = [
     { num: 1, color: 'blue', title: 'Review', desc: 'Our team reviews your challenge within 24 hours' },

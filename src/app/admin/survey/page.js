@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /admin/survey.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import LoadingSpinner from '../../../components/LoadingSpinner';
@@ -13,6 +16,7 @@ const QUESTION_LABELS = {
   recommend: 'Recommend to Friend',
 };
 
+/** AdminSurveyPage — main page component. */
 export default function AdminSurveyPage() {
   const { user } = useAuth();
   const [responses, setResponses] = useState([]);
@@ -43,12 +47,14 @@ export default function AdminSurveyPage() {
     fetchResponses();
   }, [fetchResponses]);
 
+  /** average Rating. */
   const averageRating = (questionId) => {
     const ratings = responses.map((r) => r.answers?.[questionId]).filter((v) => typeof v === 'number');
     if (ratings.length === 0) return null;
     return (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1);
   };
 
+  /** feature Breakdown. */
   const featureBreakdown = () => {
     const counts = {};
     responses.forEach((r) => {

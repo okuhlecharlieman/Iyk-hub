@@ -1,7 +1,11 @@
 'use client';
+/**
+ * OnlineCount component.
+ */
 import { useState } from 'react';
 import { usePresence } from '../hooks/usePresence';
 
+/** OnlineCount React component. */
 export default function OnlineCount() {
   const [onlineCount, setOnlineCount] = useState(0);
   usePresence(setOnlineCount, false);

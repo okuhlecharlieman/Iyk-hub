@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /admin/boost-management.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import LoadingSpinner from '../../../components/LoadingSpinner';
@@ -20,6 +23,7 @@ const STATUS_COLORS = {
 const PAYMENT_STATUS_OPTIONS = ['pending_payment', 'paid', 'failed', 'refunded'];
 const ACTIVATION_STATUS_OPTIONS = ['pending_activation', 'active', 'expired', 'cancelled'];
 
+/** BoostManagementPage — main page component. */
 export default function BoostManagementPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -69,6 +73,7 @@ export default function BoostManagementPage() {
     fetchBoosts();
   }, [fetchBoosts]);
 
+  /** update Boost Status. */
   const updateBoostStatus = async (orderId, updates) => {
     if (!user) {
       setError('You must be signed in to update boost orders.');
@@ -116,6 +121,7 @@ export default function BoostManagementPage() {
     return matchesSearch && matchesPayment && matchesActivation;
   });
 
+  /** Formats/parses data — formatDate. */
   const formatDate = (timestamp) => {
     if (!timestamp) return 'N/A';
 
@@ -138,6 +144,7 @@ export default function BoostManagementPage() {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   };
 
+  /** Fetches/retrieves data — getTimeRemaining. */
   const getTimeRemaining = (timestamp) => {
     const target = timestamp ? new Date(timestamp?.toDate ? timestamp.toDate() : timestamp) : null;
     if (!target || Number.isNaN(target.getTime())) return 'N/A';

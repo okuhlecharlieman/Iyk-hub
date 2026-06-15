@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/placements-fees.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validatePlacementFeeUpdate. */
 const validatePlacementFeeUpdate = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['placementReportId', 'feeStatus', 'note']);
@@ -26,6 +30,7 @@ const validatePlacementFeeUpdate = (payload) => {
   };
 };
 
+/** Handles GET requests to /api/admin/placements-fees. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:placements-fees:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

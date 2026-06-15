@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/admin/updatePost.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticate } from '../../../../lib/firebase/admin';
@@ -5,6 +8,7 @@ import { parseJsonBody, RequestValidationError } from '../../../../lib/api/valid
 import { validateUpdatePostPayload } from '../../../../lib/api/post-validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/admin/updatePost. */
 export async function POST(req) {
   try {
     await authenticate(req);

@@ -1,7 +1,11 @@
 'use client';
+/**
+ * ProfileAnalyticsx component.
+ */
 import { FaChartLine } from 'react-icons/fa';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+/** ProfileAnalytics React component. */
 export default function ProfileAnalytics({ analytics, accentColor }) {
   return (
     <div className="mt-8">

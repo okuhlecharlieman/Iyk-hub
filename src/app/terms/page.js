@@ -1,7 +1,11 @@
+/**
+ * Page component for /terms.
+ */
 import { LegalPageLayout, LegalSection, LegalParagraph, LegalList } from '../../components/ui/LegalSection';
 
 export const metadata = { title: 'Terms of Service' };
 
+/** TermsPage — main page component. */
 export default function TermsPage() {
   return (
     <LegalPageLayout title="Terms of Service" effectiveDate="1 May 2026" lastUpdated="9 May 2026">

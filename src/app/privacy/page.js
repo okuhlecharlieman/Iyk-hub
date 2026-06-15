@@ -1,7 +1,11 @@
+/**
+ * Page component for /privacy.
+ */
 import { LegalPageLayout, LegalSection, LegalParagraph, LegalList } from '../../components/ui/LegalSection';
 
 export const metadata = { title: 'Privacy Policy' };
 
+/** PrivacyPage — main page component. */
 export default function PrivacyPage() {
   return (
     <LegalPageLayout title="Privacy Policy" effectiveDate="1 May 2026" lastUpdated="9 May 2026">

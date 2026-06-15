@@ -8,7 +8,7 @@ import { SkeletonProfile } from '../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../components/alerts/Alerts';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
 import { updateProfile } from 'firebase/auth';
-import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser, FaCamera, FaPalette, FaEye, FaExternalLinkAlt, FaShareAlt, FaCheck } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaShieldAlt, FaUser, FaCamera, FaPalette, FaEye, FaExternalLinkAlt, FaShareAlt, FaCheck, FaGift } from 'react-icons/fa';
 import Link from 'next/link';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
@@ -34,6 +34,8 @@ export default function ProfilePage() {
   const [analytics, setAnalytics] = useState([]);
   const [copied, setCopied] = useState(false);
   const [boostHistory, setBoostHistory] = useState([]);
+  const [promoCode, setPromoCode] = useState('');
+  const [redeemingPromo, setRedeemingPromo] = useState(false);
 
   const accentColor = doc?.accentColor || null;
 
@@ -238,6 +240,45 @@ export default function ProfilePage() {
               {activeBoost && <ProfileAnalytics analytics={analytics} accentColor={accentColor} />}
               <ActivePlanCard activeBoost={activeBoost} />
               <BoostHistoryList boostHistory={boostHistory} />
+
+              {/* Promo Code Redemption */}
+              <div className="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl border border-purple-200 dark:border-gray-700 p-5">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                  <FaGift className="text-purple-500" /> Redeem Promo Code
+                </h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!promoCode.trim()) { toast('error', 'Enter a promo code'); return; }
+                  try {
+                    setRedeemingPromo(true);
+                    const token = await user.getIdToken();
+                    const res = await fetch('/api/admin/promos/redeem', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ code: promoCode.trim() }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed to redeem');
+                    toast('success', data.message || `Redeemed ${data.points} points!`);
+                    setPromoCode('');
+                    loadProfile();
+                  } catch (err) {
+                    toast('error', err.message);
+                  } finally {
+                    setRedeemingPromo(false);
+                  }
+                }} className="flex gap-2">
+                  <input
+                    type="text" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    placeholder="Enter promo code (e.g. IYK-ABCD1234)"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    maxLength={20}
+                  />
+                  <Button type="submit" variant="primary" disabled={redeemingPromo}>
+                    {redeemingPromo ? 'Redeeming...' : 'Redeem'}
+                  </Button>
+                </form>
+              </div>
 
               <div className="mt-8">
                 <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-600 mb-6" style={{ color: 'var(--accent-color)' }}>My Showcase</h3>

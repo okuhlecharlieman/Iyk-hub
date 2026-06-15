@@ -9,7 +9,7 @@ import { subscribeOnlineCount } from '../../../lib/presence';
 import Button from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/ToastProvider';
 import Skeleton from '../../../components/ui/Skeleton';
-import { FaSearch, FaUserShield, FaEdit, FaTrash, FaUsers, FaUserCog, FaCircle, FaBan } from 'react-icons/fa';
+import { FaSearch, FaUserShield, FaEdit, FaTrash, FaUsers, FaUserCog, FaCircle, FaBan, FaSortUp, FaSortDown, FaSort } from 'react-icons/fa';
 import { ROLE_OPTIONS, canManageTeam, formatRoleLabel, getRoleDefinition } from '../../../lib/roles';
 
 const roleBadgeClasses = {
@@ -106,6 +106,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, onRequestSuspend, isP
             <span className="ml-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 dark:text-amber-400 px-2 py-0.5 rounded-lg">setup needed</span>
           )}
         </td>
+        <td className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">{user.points?.lifetime ?? user.points ?? 0}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1.5">
             <Button ariaLabel={`Change role for ${user.displayName || user.email || user.uid}`} size="sm" variant="primary" disabled={isProcessing || !canManageClaims} onClick={() => setConfirmOpen(true)}>
@@ -120,7 +121,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, onRequestSuspend, isP
 
       {/* Mobile card */}
       <tr className="sm:hidden">
-        <td colSpan={6} className="p-0">
+        <td colSpan={7} className="p-0">
           <div className="p-4 border-b border-gray-100 dark:border-gray-700/50">
             <div className="flex items-start gap-3">
                 <div className="relative flex-shrink-0">
@@ -135,6 +136,7 @@ const UserRow = ({ user, onRequestUpdate, onRequestDelete, onRequestSuspend, isP
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{canManageClaims ? user.email : 'No email'}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Joined: {creationDate}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last Seen: {lastSeen}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Points: <span className="font-semibold text-purple-600 dark:text-purple-400">{user.points?.lifetime ?? user.points ?? 0}</span></p>
                 {user.activeBoost && (
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
                     Active Boost: {user.activeBoost.plan || 'active'}{boostRemaining ? ` • ${boostRemaining}` : ''}
@@ -282,6 +284,8 @@ export default function AdminUsersPage() {
   const [onlineUsers, setOnlineUsers] = useState(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState('displayName');
+  const [sortDir, setSortDir] = useState('asc');
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
@@ -339,16 +343,74 @@ export default function AdminUsersPage() {
   const [processingUid, setProcessingUid] = useState(null);
   const toast = useToast();
 
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) return <FaSort className="text-gray-300 dark:text-gray-600" size={10} />;
+    return sortDir === 'asc' ? <FaSortUp className="text-blue-500" size={10} /> : <FaSortDown className="text-blue-500" size={10} />;
+  };
+
   const filteredUsers = useMemo(() => {
-    if (!search.trim()) return users;
-    const q = search.toLowerCase();
-    return users.filter(u =>
-      (u.displayName || '').toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
-      (u.uid || '').toLowerCase().includes(q) ||
-      formatRoleLabel(u.role).toLowerCase().includes(q)
-    );
-  }, [users, search]);
+    let result = users;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(u =>
+        (u.displayName || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.uid || '').toLowerCase().includes(q) ||
+        formatRoleLabel(u.role).toLowerCase().includes(q)
+      );
+    }
+
+    const sorted = [...result].sort((a, b) => {
+      let valA, valB;
+      switch (sortField) {
+        case 'displayName':
+          valA = (a.displayName || '').toLowerCase();
+          valB = (b.displayName || '').toLowerCase();
+          break;
+        case 'email':
+          valA = (a.email || '').toLowerCase();
+          valB = (b.email || '').toLowerCase();
+          break;
+        case 'createdAt': {
+          const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.metadata?.creationTime ? new Date(a.metadata.creationTime) : new Date(0));
+          const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.metadata?.creationTime ? new Date(b.metadata.creationTime) : new Date(0));
+          valA = dateA.getTime();
+          valB = dateB.getTime();
+          break;
+        }
+        case 'lastSeen': {
+          valA = a.streak?.lastLoginDate ? new Date(a.streak.lastLoginDate).getTime() : 0;
+          valB = b.streak?.lastLoginDate ? new Date(b.streak.lastLoginDate).getTime() : 0;
+          break;
+        }
+        case 'role':
+          valA = (a.role || 'user').toLowerCase();
+          valB = (b.role || 'user').toLowerCase();
+          break;
+        case 'points':
+          valA = a.points?.lifetime ?? a.points ?? 0;
+          valB = b.points?.lifetime ?? b.points ?? 0;
+          break;
+        default:
+          valA = '';
+          valB = '';
+      }
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [users, search, sortField, sortDir]);
 
   const onlineCount = onlineUsers.size;
   const adminCount = users.filter(u => ['business_owner', 'admin'].includes((u.role || '').toLowerCase())).length;
@@ -473,18 +535,31 @@ export default function AdminUsersPage() {
           <table className="w-full">
             <thead className="hidden sm:table-header-group bg-gray-50 dark:bg-gray-900/50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created At</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Seen</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort('displayName')}>
+                  <span className="flex items-center gap-1">User <SortIcon field="displayName" /></span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort('email')}>
+                  <span className="flex items-center gap-1">Email <SortIcon field="email" /></span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort('createdAt')}>
+                  <span className="flex items-center gap-1">Created At <SortIcon field="createdAt" /></span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort('lastSeen')}>
+                  <span className="flex items-center gap-1">Last Seen <SortIcon field="lastSeen" /></span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort('role')}>
+                  <span className="flex items-center gap-1">Role <SortIcon field="role" /></span>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 dark:hover:text-gray-200 transition-colors" onClick={() => handleSort('points')}>
+                  <span className="flex items-center gap-1">Points <SortIcon field="points" /></span>
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-4 py-12 text-center">
                     <FaUsers className="mx-auto text-3xl text-gray-300 dark:text-gray-600 mb-2" />
                     <p className="text-sm text-gray-500 dark:text-gray-400">{search ? 'No users match your search.' : 'No users found.'}</p>
                   </td>

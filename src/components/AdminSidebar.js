@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
  * Links are filtered by role (manageTeamOnly items require elevated permissions).
  * Responsive: drawer on mobile, fixed sidebar on desktop.
  */
-import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding, FaUserCog, FaHistory, FaPoll, FaChartLine, FaGamepad, FaEye } from 'react-icons/fa';
+import { FaTachometerAlt, FaTasks, FaUsers, FaSignOutAlt, FaHome, FaMoneyBillWave, FaTrophy, FaBars, FaTimes, FaCrown, FaBuilding, FaUserCog, FaHistory, FaPoll, FaChartLine, FaGamepad, FaEye, FaGift } from 'react-icons/fa';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { useState } from 'react';
@@ -30,6 +30,7 @@ const AdminSidebar = () => {
     { href: '/admin/sponsored-challenges', label: 'Challenges', icon: <FaTrophy /> },
     { href: '/admin/payments', label: 'Revenue Management', icon: <FaMoneyBillWave /> },
     { href: '/admin/opportunity-analytics', label: 'Opp. Analytics', icon: <FaEye /> },
+    { href: '/admin/promotions', label: 'Promotions', icon: <FaGift /> },
     { href: '/admin/survey', label: 'Survey Responses', icon: <FaPoll /> },
     { href: '/admin/engagement', label: 'Engagement', icon: <FaChartLine /> },
     { href: '/admin/logs', label: 'System Logs', icon: <FaHistory /> },

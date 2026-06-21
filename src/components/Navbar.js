@@ -91,8 +91,8 @@ export default function Navbar() {
                                <div className="px-1 py-1">
                                 <Menu.Item>
                                     {({ active }) => (
-                                        <Link href={`/profile/${user.uid}`} className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex rounded-md items-center w-full px-2 py-2 text-sm text-gray-900 dark:text-gray-200`}>
-                                           <FaUserCircle className="mr-2"/> Profile
+                                        <Link href="/profile" className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex rounded-md items-center w-full px-2 py-2 text-sm text-gray-900 dark:text-gray-200`}>
+                                           <FaUserCircle className="mr-2"/> My Profile
                                         </Link>
                                     )}
                                 </Menu.Item>
@@ -165,7 +165,7 @@ export default function Navbar() {
                             <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                         </div>
                     </div>
-                                        <MobileNavLink href={`/profile/${user.uid}`} onClick={() => setIsMenuOpen(false)}>My Profile</MobileNavLink>
+                                        <MobileNavLink href="/profile" onClick={() => setIsMenuOpen(false)}>My Profile</MobileNavLink>
                     <button onClick={() => { signOut(auth); setIsMenuOpen(false); }} className="block w-full text-left px-4 py-3 rounded-lg text-base font-medium text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50">Logout</button>
                 </div>
               ) : (

@@ -3,7 +3,7 @@
  * Page component for /profile/[id].
  */
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { SkeletonProfile } from '../../../components/loaders/SkeletonLoader';
 import { ErrorEmptyState } from '../../../components/alerts/Alerts';
@@ -17,6 +17,7 @@ import { useToast } from '../../../components/ui/ToastProvider';
 export default function ProfileByIdPage() {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
+  const router = useRouter();
   const toast = useToast();
 
   const [profile, setProfile] = useState(null);
@@ -30,6 +31,11 @@ export default function ProfileByIdPage() {
   const [blockLoading, setBlockLoading] = useState(false);
 
   const isOwnProfile = currentUser && currentUser.uid === id;
+
+  // Redirect to /profile if viewing own profile — that page has editing, promo codes, etc.
+  useEffect(() => {
+    if (isOwnProfile) router.replace('/profile');
+  }, [isOwnProfile, router]);
   const accentColor = profile?.accentColor || null;
 
   const dynamicStyles = accentColor ? {

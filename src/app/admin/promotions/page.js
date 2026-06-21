@@ -406,8 +406,14 @@ function SendEmailTab({ user, toast, codes, loading, setLoading, onDone }) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to send emails');
-      toast('success', `Sent to ${data.sentCount} users${data.failedCount ? ` (${data.failedCount} failed)` : ''}`);
+      if (!res.ok) throw new Error(data.error || data.hint || 'Failed to send emails');
+      const providerLabel = data.provider === 'resend' ? ' via Resend' : data.provider === 'smtp' ? ' via SMTP' : '';
+      let msg = `Sent to ${data.sentCount} user${data.sentCount !== 1 ? 's' : ''}${providerLabel}`;
+      if (data.failedCount) {
+        const failReasons = (data.errors || []).map((e) => e.error).filter(Boolean).join('; ');
+        msg += ` (${data.failedCount} failed${failReasons ? ': ' + failReasons : ''})`;
+      }
+      toast(data.failedCount && !data.sentCount ? 'error' : 'success', msg);
       onDone();
     } catch (err) {
       toast('error', err.message);

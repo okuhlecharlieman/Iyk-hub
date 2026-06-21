@@ -10,6 +10,7 @@
  *   6. Stale video rooms (24 hours) + their signal subcollections
  *   7. Empty/orphaned collections
  *   8. Expired boost accent colors (revert to default)
+ *   9. Mark expired opportunities as 'expired'
  *
  * Testers: Trigger manually via GET /api/jobs/ttl-cleanup with proper cron auth.
  * Each step logs results for debugging.
@@ -252,7 +253,34 @@ export async function GET(request) {
       errors.push({ step: 'expiredBoostColors', error: err?.message });
     }
 
-    // 8. Remove empty collections (collections left with zero documents)
+    // 8. Mark expired opportunities as 'expired' so they no longer show in feeds
+    try {
+      const expiredOppsSnap = await db.collection('opportunities')
+        .where('status', '==', 'approved')
+        .limit(200)
+        .get();
+
+      let expiredCount = 0;
+      const batch = db.batch();
+      for (const oppDoc of expiredOppsSnap.docs) {
+        const data = oppDoc.data();
+        if (!data.expiresAt) continue;
+        const expiresAt = data.expiresAt.toDate ? data.expiresAt.toDate() : new Date(data.expiresAt);
+        if (expiresAt <= now) {
+          batch.update(oppDoc.ref, { status: 'expired', expiredAt: admin.firestore.FieldValue.serverTimestamp() });
+          expiredCount++;
+        }
+      }
+      if (expiredCount > 0) {
+        await batch.commit();
+        results['expiredOpportunities'] = { marked: expiredCount };
+      }
+    } catch (err) {
+      console.warn('TTL step 8 (expiredOpportunities) skipped:', err?.message);
+      errors.push({ step: 'expiredOpportunities', error: err?.message });
+    }
+
+    // 9. Remove empty collections (collections left with zero documents)
     try {
       const collectionsToCheck = [
         'rateLimits', 'moderationQueue', 'quotes', 'videoChatRooms',

@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
-import { handleApiError } from 'lib/api/validation';
+import { handleApiError } from '../../../lib/api/validation';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

@@ -7,7 +7,7 @@ import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/fireba
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { buildCacheKey, getOrSetCache } from '../../../../../lib/api/cache';
 import { buildMonetizationSummary } from '../../../../../lib/monetization/summary';
-import { handleApiError } from '../../lib/api/validation';
+import { handleApiError } from '../../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 /** Handles GET requests to /api/admin/monetization/summary. */

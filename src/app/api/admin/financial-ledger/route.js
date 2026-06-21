@@ -7,7 +7,7 @@ import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/
 import { AuthMiddleware } from '../../../../lib/api/auth-middleware';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { buildFinancialSummary, queryLedger } from '../../../../lib/monetization/ledger';
-import { handleApiError } from '../lib/api/validation';
+import { handleApiError } from '../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 /** Handles GET requests to /api/admin/financial-ledger. */

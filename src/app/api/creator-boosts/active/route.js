@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { queryActiveBoost } from '../../../../lib/api/boost-query';
-import { handleApiError } from '../lib/api/validation';
+import { handleApiError } from '../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 /** Handles GET requests to /api/creator-boosts/active. */

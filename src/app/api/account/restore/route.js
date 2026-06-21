@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
-import { handleApiError } from '../lib/api/validation';
+import { handleApiError } from '../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 /** Handles POST requests to /api/account/restore. */

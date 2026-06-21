@@ -1,10 +1,15 @@
+/**
+ * API route handler for /api/admin/payments/reconciliation.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getOrderConfig, LEDGER_ENTRY_TYPES } from '../../../../../lib/monetization/constants';
+import { handleApiError } from '../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles GET requests to /api/admin/payments/reconciliation. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'admin:payments:reconciliation:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -105,11 +110,6 @@ export async function GET(request) {
       nextCursor,
     });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/admin/payments/reconciliation:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/admin/payments/reconciliation:');
   }
 }

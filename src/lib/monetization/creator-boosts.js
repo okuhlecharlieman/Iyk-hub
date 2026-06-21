@@ -1,4 +1,7 @@
-export const CREATOR_BOOST_PLANS = {
+/**
+ * creator-boosts utilities (monetization).
+ */
+const CREATOR_BOOST_PLANS = {
   lite: {
     feeCents: 2000,
     pointsCost: 500,
@@ -34,4 +37,5 @@ export const CREATOR_BOOST_PLANS = {
   },
 };
 
+/** Fetches/retrieves data — getCreatorBoostPlan. */
 export const getCreatorBoostPlan = (plan) => CREATOR_BOOST_PLANS[plan] || null;

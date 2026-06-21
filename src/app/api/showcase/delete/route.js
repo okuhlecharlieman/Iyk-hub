@@ -1,12 +1,16 @@
+/**
+ * API route handler for /api/showcase/delete.
+ */
 import { NextResponse } from 'next/server';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import admin from 'firebase-admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateDeleteShowcasePostPayload. */
 const validateDeleteShowcasePostPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['postId']);
@@ -18,6 +22,7 @@ const validateDeleteShowcasePostPayload = (payload) => {
   return { postId: payload.postId.trim() };
 };
 
+/** Handles POST requests to /api/showcase/delete. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'showcase:delete', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -50,14 +55,6 @@ export async function POST(request) {
 
     return NextResponse.json({ message: 'Post deleted successfully' });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error deleting post:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return handleApiError(error, 'Error deleting post');
   }
 }

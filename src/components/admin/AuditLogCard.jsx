@@ -1,10 +1,13 @@
 'use client';
-
+/**
+ * AuditLogCardx component.
+ */
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
 import { FaFileDownload, FaShieldAlt } from 'react-icons/fa';
 
+/** download Json. */
 function downloadJson(filename, data) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -17,11 +20,13 @@ function downloadJson(filename, data) {
   URL.revokeObjectURL(url);
 }
 
+/** AuditLogCard — card display component. */
 export default function AuditLogCard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  /** Handles download action. */
   const handleDownload = async () => {
     setError(null);
     setLoading(true);

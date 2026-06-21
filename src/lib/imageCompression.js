@@ -1,8 +1,12 @@
+/**
+ * imageCompression utility module.
+ */
 const MAX_WIDTH = 1200;
 const MAX_HEIGHT = 1200;
 const QUALITY = 0.8;
 const MAX_FILE_SIZE = 1024 * 1024; // 1MB target after compression
 
+/** compress Image. */
 export function compressImage(file, options = {}) {
   const {
     maxWidth = MAX_WIDTH,
@@ -49,6 +53,7 @@ export function compressImage(file, options = {}) {
 
       const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
 
+      /** try Compress. */
       const tryCompress = (q) => {
         canvas.toBlob(
           (blob) => {

@@ -100,6 +100,7 @@ export const viewport = {
   maximumScale: 5,
 };
 
+/** RootLayout — layout wrapper component. */
 export default function RootLayout({ children }) {
   return (
     <html lang="en">

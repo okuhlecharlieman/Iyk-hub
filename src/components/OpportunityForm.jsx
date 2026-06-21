@@ -10,6 +10,7 @@ import { uploadToStorage } from '../lib/firebase/helpers';
 import { useToast } from './ui/ToastProvider';
 import { FaStar } from 'react-icons/fa';
 
+/** OpportunityForm — form component. */
 export default function OpportunityForm({ onSubmit, initialFormState, submitButtonText }) {
   const [form, setForm] = useState(initialFormState);
   const [mediaFile, setMediaFile] = useState(null);
@@ -21,11 +22,13 @@ export default function OpportunityForm({ onSubmit, initialFormState, submitButt
     setMediaFile(null);
   }, [initialFormState]);
 
+  /** Handles change action. */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  /** Handles submit action. */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);

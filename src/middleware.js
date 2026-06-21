@@ -1,3 +1,9 @@
+/**
+ * Next.js Edge Middleware — runs on every matched request.
+ *
+ * Adds security headers (CSP, HSTS, X-Frame-Options, etc.) to all
+ * responses and disables caching for API routes.
+ */
 import { NextResponse } from 'next/server';
 
 const CSP_DIRECTIVES = [
@@ -16,6 +22,13 @@ const CSP_DIRECTIVES = [
   "media-src 'self' blob: https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.googleapis.com",
 ].join('; ');
 
+/**
+ * Middleware handler — injects security headers into every response.
+ * API routes additionally get `Cache-Control: no-store`.
+ *
+ * @param {import('next/server').NextRequest} request
+ * @returns {import('next/server').NextResponse}
+ */
 export function middleware(request) {
   const response = NextResponse.next();
 
@@ -33,6 +46,7 @@ export function middleware(request) {
   return response;
 }
 
+/** Match all routes except static assets and images. */
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|logo.png).*)',

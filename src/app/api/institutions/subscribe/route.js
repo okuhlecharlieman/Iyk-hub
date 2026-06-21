@@ -1,11 +1,15 @@
+/**
+ * API route handler for /api/institutions/subscribe.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getInstitutionPlanConfig } from '../../../../lib/monetization/institution-plans';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateSubscriptionPayload. */
 const validateSubscriptionPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['institutionName', 'institutionType', 'billingEmail', 'plan']);
@@ -32,6 +36,7 @@ const validateSubscriptionPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/institutions/subscribe. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'institutions:subscribe', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -77,14 +82,6 @@ export async function POST(request) {
       message: 'Institutional subscription request submitted.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/institutions/subscribe:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/institutions/subscribe');
   }
 }

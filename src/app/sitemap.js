@@ -1,6 +1,10 @@
+/**
+ * Module: sitemap.js.
+ */
 
 const URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://iyk-hub.vercel.app';
 
+/** sitemap. */
 export default async function sitemap() {
   const now = new Date().toISOString();
 

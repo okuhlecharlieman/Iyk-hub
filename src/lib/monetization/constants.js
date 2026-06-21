@@ -4,7 +4,8 @@
  * defining ad-hoc maps in individual files.
  */
 
-export const ORDER_TYPES = {
+/** All purchasable product types in the app. */
+const ORDER_TYPES = {
   SPONSORED_CHALLENGE: 'sponsoredChallenge',
   CREATOR_BOOST: 'creatorBoost',
   INSTITUTION_PLAN: 'institutionPlan',
@@ -40,6 +41,12 @@ export const ORDER_CONFIG = {
   },
 };
 
+/**
+ * Returns the Firestore collection name and status field for a given
+ * order type, or null if the type is unknown.
+ * @param {string} orderType - One of the ORDER_TYPES values.
+ * @returns {{collection: string, statusField: string, label: string}|null}
+ */
 export const getOrderConfig = (orderType) => ORDER_CONFIG[orderType] || null;
 
 /**

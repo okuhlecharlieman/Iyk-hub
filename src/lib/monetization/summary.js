@@ -1,11 +1,17 @@
+/**
+ * summary utilities (monetization).
+ */
 import admin from 'firebase-admin';
 import { ORDER_CONFIG } from './constants';
 
+/** to Number. */
 const toNumber = (value, fallback = 0) => (typeof value === 'number' ? value : fallback);
 
+/** sum By. */
 const sumBy = (items, predicate, valueGetter) =>
   items.reduce((acc, item) => (predicate(item) ? acc + toNumber(valueGetter(item), 0) : acc), 0);
 
+/** Creates/generates — buildMonetizationSummary. */
 export async function buildMonetizationSummary(db = admin.firestore()) {
   const configs = Object.values(ORDER_CONFIG);
   const [
@@ -54,6 +60,7 @@ export async function buildMonetizationSummary(db = admin.firestore()) {
   };
 }
 
+/** group By Status. */
 function groupByStatus(items, key) {
   return items.reduce((acc, item) => {
     const status = item?.[key] || 'unknown';

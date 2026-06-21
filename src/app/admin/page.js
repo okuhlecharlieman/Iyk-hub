@@ -22,6 +22,7 @@ import PaymentsCard from '../../components/admin/PaymentsCard';
 import SponsoredChallengesCard from '../../components/admin/SponsoredChallengesCard';
 import MonetizationDashboard from '../../components/admin/MonetizationDashboard';
 
+/** AdminPage — main page component. */
 export default function AdminPage() {
   const { user, userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,7 @@ export default function AdminPage() {
 
     setLoading(true);
 
+    /** Fetches/retrieves data — fetchStats. */
     async function fetchStats() {
       try {
         const token = await user.getIdToken();

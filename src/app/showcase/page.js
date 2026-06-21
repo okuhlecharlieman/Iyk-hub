@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /showcase.
+ */
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import PostCard, { PostCardSkeleton } from '../../components/showcase/PostCard';
 import NewPostModal from '../../components/showcase/NewPostModal';
@@ -8,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/ToastProvider';
 import { FaPalette, FaBolt, FaCrown } from 'react-icons/fa';
 
+/** ShowcasePage — main page component. */
 const ShowcasePage = () => {
   const { user, userProfile } = useAuth();
   const toast = useToast();
@@ -39,10 +42,12 @@ const ShowcasePage = () => {
     fetchPosts();
   }, [fetchPosts]);
 
+  /** Handles edit action. */
   const handleEdit = (post) => {
     setEditingPost(post);
   };
 
+  /** Handles delete action. */
   const handleDelete = async (postId) => {
     if (!window.confirm('Are you sure you want to delete this post?')) return;
     if (!user) return;
@@ -65,6 +70,7 @@ const ShowcasePage = () => {
     }
   };
 
+  /** Handles edit save action. */
   const handleEditSave = async (postId, updates) => {
     if (!user) return;
     try {
@@ -93,6 +99,7 @@ const ShowcasePage = () => {
   const pinnedPosts = useMemo(() => featuredPosts.filter(p => p.boostBadge?.plan === 'ultra'), [featuredPosts]);
   const otherFeatured = useMemo(() => featuredPosts.filter(p => p.boostBadge?.plan !== 'ultra'), [featuredPosts]);
 
+  /** render Post Card. */
   const renderPostCard = (post) => (
     <PostCard
       key={post.id}

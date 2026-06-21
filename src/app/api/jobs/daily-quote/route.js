@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/jobs/daily-quote.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
@@ -7,6 +10,7 @@ export const dynamic = 'force-dynamic';
 const NINJAS_API_KEY = process.env.NINJAS_API_KEY;
 const NINJAS_API_URL = 'https://api.api-ninjas.com/v1/quotes';
 
+/** Handles GET requests to /api/jobs/daily-quote. */
 export async function GET(request) {
   console.log('[Cron: Daily Quote] Job triggered at:', new Date().toISOString());
 

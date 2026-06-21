@@ -1,6 +1,10 @@
+/**
+ * LeaderboardCardx component.
+ */
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 
+/** LeaderboardCard — card display component. */
 export default function LeaderboardCard({ users = [] }) {
   const leaderboard = Array.isArray(users) ? users : [];
 

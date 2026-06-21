@@ -1,4 +1,7 @@
 'use client';
+/**
+ * Page component for /games/[gameId].
+ */
 import { useParams } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
@@ -23,6 +26,7 @@ const GAME_DETAILS = {
   quiz: { name: 'Quiz', icon: <GiBrain size={32} /> },
 };
 
+/** GamePage — main page component. */
 export default function GamePage() {
   const { gameId } = useParams();
   const { user } = useAuth();
@@ -32,6 +36,7 @@ export default function GamePage() {
   const [copied, setCopied] = useState(false);
   const multiplier = 1;
 
+  /** Handles copy id action. */
   const handleCopyId = async () => {
     try {
       await navigator.clipboard.writeText(gameId);
@@ -42,6 +47,7 @@ export default function GamePage() {
 
   const singlePlayerAvailable = ['rps', 'quiz', 'tictactoe', 'memory', 'hangman'].includes(baseGameId);
 
+  /** finish Game. */
   async function finishGame(result = 1, duration = 0) {
     if (!user) return;
 
@@ -81,9 +87,11 @@ export default function GamePage() {
     }
   }
 
+  /** on End. */
   const onEnd = (score) => finishGame(score);
   const isSinglePlayer = mode === 'singleplayer' && singlePlayerAvailable;
 
+  /** GameComponent React component. */
   const GameComponent = (() => {
     switch (baseGameId) {
       case 'tictactoe':

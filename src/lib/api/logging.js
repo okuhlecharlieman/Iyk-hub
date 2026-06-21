@@ -1,3 +1,6 @@
+/**
+ * logging utilities (api).
+ */
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../firebase/admin.js';
 
@@ -157,38 +160,5 @@ export async function logDataAccess({
   }
 }
 
-/**
- * Structured console logging for development
- */
-export function logApiRequest(request, details = {}) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[API]', {
-      method: request.method,
-      url: request.url,
-      timestamp: new Date().toISOString(),
-      ...details,
-    });
-  }
-}
 
-export function logApiResponse(statusCode, details = {}) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[API_RESPONSE]', {
-      statusCode,
-      timestamp: new Date().toISOString(),
-      ...details,
-    });
-  }
-}
 
-export function logApiError(error, request, details = {}) {
-  console.error('[API_ERROR]', {
-    error: error?.message,
-    code: error?.code,
-    statusCode: error?.statusCode,
-    method: request?.method,
-    url: request?.url,
-    timestamp: new Date().toISOString(),
-    ...details,
-  });
-}

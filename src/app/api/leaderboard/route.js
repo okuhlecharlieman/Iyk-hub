@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/leaderboard.
+ */
 import { NextResponse } from 'next/server';
 import { initializeFirebaseAdmin } from '../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../lib/api/rate-limit';
@@ -15,6 +18,7 @@ if (rawServiceAccount) {
   }
 }
 
+/** Handles GET requests to /api/leaderboard. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'leaderboard:get', limit: 120, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

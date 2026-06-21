@@ -1,13 +1,17 @@
+/**
+ * API route handler for /api/admin/refunds.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields, handleApiError } from '../../../../lib/api/validation';
 import { enforceDistributedRateLimit } from '../../../../lib/api/rate-limit';
 import { logAdminAction } from '../../../../lib/api/audit-log';
 import { appendLedgerEntry } from '../../../../lib/monetization/ledger';
 import { LEDGER_ENTRY_TYPES } from '../../../../lib/monetization/constants';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateRefundPayload. */
 const validateRefundPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['paystackReference', 'amountCents', 'reason']);
@@ -31,6 +35,7 @@ const validateRefundPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/admin/refunds. */
 export async function POST(request) {
   const rateLimitResponse = await enforceDistributedRateLimit(request, {
     keyPrefix: 'admin:refunds:create',
@@ -140,17 +145,11 @@ export async function POST(request) {
       status: paystackRefundStatus,
     });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    console.error('Error creating refund:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error creating refund');
   }
 }
 
+/** Handles GET requests to /api/admin/refunds. */
 export async function GET(request) {
   const rateLimitResponse = await enforceDistributedRateLimit(request, {
     keyPrefix: 'admin:refunds:list',
@@ -191,10 +190,6 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, refunds, nextCursor });
   } catch (error) {
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-    console.error('Error listing refunds:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error listing refunds');
   }
 }

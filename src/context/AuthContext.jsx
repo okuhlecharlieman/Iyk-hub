@@ -1,4 +1,11 @@
 'use client';
+/**
+ * Authentication context provider.
+ *
+ * Wraps the entire app and provides the current Firebase Auth user,
+ * the user's Firestore profile document, admin status, and a loading
+ * flag to any descendant component via the `useAuth()` hook.
+ */
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -6,13 +13,21 @@ import { ensureUserDoc } from '../lib/firebase/helpers';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { hasAdminDashboardAccess } from '../lib/roles';
 
+/** React context that holds the current auth state for the entire app. */
 const AuthContext = createContext({ 
-  user: null, 
-  userProfile: null, 
-  isAdmin: false, // Default isAdmin to false
-  loading: true 
+  user: null,        // Firebase Auth user object (or null when signed out)
+  userProfile: null,  // Firestore `users/{uid}` document data
+  isAdmin: false,     // True if the user's role has admin dashboard access
+  loading: true       // True while the initial auth check is in progress
 });
 
+/**
+ * AuthProvider — wraps children with authentication state.
+ *
+ * Listens to Firebase Auth state changes and the user's Firestore
+ * document in real time.  When the user logs in, it ensures a user
+ * document exists (creating one with defaults if needed).
+ */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -73,6 +88,12 @@ export function AuthProvider({ children }) {
   );
 }
 
+/**
+ * useAuth hook — provides { user, userProfile, loading, isAdmin }
+ * from the nearest AuthProvider.
+ *
+ * @returns {{ user: Object|null, userProfile: Object|null, loading: boolean, isAdmin: boolean }}
+ */
 export function useAuth() {
   return useContext(AuthContext);
 }

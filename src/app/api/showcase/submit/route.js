@@ -1,18 +1,23 @@
+/**
+ * API route handler for /api/showcase/submit.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/moderation';
 export const dynamic = 'force-dynamic';
 
 const allowedTypes = new Set(['art', 'code', 'game', 'design', 'music', 'other']);
 
+/** normalize Showcase Type. */
 const normalizeShowcaseType = (value) => {
   if (value === undefined) return 'other';
   return typeof value === 'string' ? value.trim().toLowerCase() : value;
 };
 
+/** Validates or checks — validateShowcasePayload. */
 const validateShowcasePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'description', 'link', 'mediaUrl', 'type']);
@@ -47,6 +52,7 @@ const validateShowcasePayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/showcase/submit. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'showcase:submit', limit: 25, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -99,14 +105,6 @@ export async function POST(request) {
       message: moderationStatus === 'approved' ? 'Post published successfully.' : 'Post submitted and queued for moderation review.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/showcase/submit:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/showcase/submit');
   }
 }

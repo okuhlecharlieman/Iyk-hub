@@ -1,7 +1,10 @@
 'use client';
-
+/**
+ * ServiceWorkerRegistration component.
+ */
 import { useEffect } from 'react';
 
+/** ServiceWorkerRegistration React component. */
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {

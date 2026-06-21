@@ -1,8 +1,11 @@
 'use client';
-
+/**
+ * Layout wrapper for /app/admin.
+ */
 import AdminSidebar from '../../components/AdminSidebar';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
+/** AdminLayout — layout wrapper component. */
 export default function AdminLayout({ children }) {
   return (
     <ProtectedRoute adminOnly>

@@ -1,11 +1,15 @@
+/**
+ * API route handler for /api/placements/report.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getPlacementFeeRule } from '../../../../lib/monetization/placement-fees';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validatePlacementPayload. */
 const validatePlacementPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['opportunityId', 'candidateUid', 'companyName', 'placementType', 'hiredAt']);
@@ -33,6 +37,7 @@ const validatePlacementPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/placements/report. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'placements:report', limit: 15, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -66,14 +71,6 @@ export async function POST(request) {
       message: 'Placement reported successfully. Fee review pending.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/placements/report:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/placements/report');
   }
 }

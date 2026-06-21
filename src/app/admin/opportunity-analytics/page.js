@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { FaEye, FaMousePointer, FaChartBar, FaStar, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 
+/** OpportunityAnalyticsPage — main page component. */
 export default function OpportunityAnalyticsPage() {
   const { user } = useAuth();
   const [analytics, setAnalytics] = useState([]);
@@ -19,6 +20,7 @@ export default function OpportunityAnalyticsPage() {
 
   useEffect(() => {
     if (!user) return;
+    /** Fetches/retrieves data — fetchAnalytics. */
     const fetchAnalytics = async () => {
       try {
         const token = await user.getIdToken();
@@ -37,6 +39,7 @@ export default function OpportunityAnalyticsPage() {
     fetchAnalytics();
   }, [user]);
 
+  /** Handles sort action. */
   const handleSort = (field) => {
     if (sortField === field) {
       setSortAsc(!sortAsc);
@@ -52,6 +55,7 @@ export default function OpportunityAnalyticsPage() {
     return sortAsc ? valA - valB : valB - valA;
   });
 
+  /** SortIcon React component. */
   const SortIcon = ({ field }) => {
     if (sortField !== field) return null;
     return sortAsc ? <FaSortAmountUp className="inline ml-1 text-xs" /> : <FaSortAmountDown className="inline ml-1 text-xs" />;

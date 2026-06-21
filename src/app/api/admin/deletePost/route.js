@@ -1,11 +1,15 @@
+/**
+ * API route handler for /api/admin/deletePost.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
-import { initializeFirebaseAdmin, authenticate } from '@/lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '@/lib/api/validation';
-import { enforceRateLimit } from '@/lib/api/rate-limit';
-import { logAdminAction } from '@/lib/api/audit-log';
+import { initializeFirebaseAdmin, authenticate } from '../../../../lib/firebase/admin';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { enforceRateLimit } from '../../../../lib/api/rate-limit';
+import { logAdminAction } from '../../../../lib/api/audit-log';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateDeletePostPayload. */
 const validateDeletePostPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['postId']);
@@ -17,6 +21,7 @@ const validateDeletePostPayload = (payload) => {
   return { postId: payload.postId.trim() };
 };
 
+/** Handles POST requests to /api/admin/deletePost. */
 export async function POST(req) {
   const rateLimitResponse = enforceRateLimit(req, { keyPrefix: 'admin:posts:delete', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

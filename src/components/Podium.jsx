@@ -7,7 +7,9 @@ import Link from 'next/link';
 import { FaTrophy } from 'react-icons/fa';
 import BoostBadge from './BoostBadge';
 
+/** PodiumPlace React component. */
 const PodiumPlace = ({ user, rank, filter }) => {
+  /** Fetches/retrieves data — getPodiumClass. */
   const getPodiumClass = () => {
     switch (rank) {
       case 1: return 'bg-yellow-400 dark:bg-yellow-500 order-2 h-48';
@@ -17,6 +19,7 @@ const PodiumPlace = ({ user, rank, filter }) => {
     }
   };
 
+  /** Fetches/retrieves data — getTrophyColor. */
   const getTrophyColor = () => {
     switch (rank) {
       case 1: return 'text-white dark:text-yellow-200';
@@ -43,6 +46,7 @@ const PodiumPlace = ({ user, rank, filter }) => {
   );
 };
 
+/** Podium React component. */
 export default function Podium({ users, filter }) {
     // users prop is a sorted array of the top 3 users. users[0] is #1.
     // We arrange them for visual podium order: 2nd, 1st, 3rd.

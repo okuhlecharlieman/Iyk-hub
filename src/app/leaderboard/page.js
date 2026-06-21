@@ -1,5 +1,7 @@
 'use client';
-
+/**
+ * Page component for /leaderboard.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { listTopUsersPage } from '../../lib/firebase/helpers';
 import Podium from '../../components/Podium';
@@ -13,6 +15,7 @@ import Button from '../../components/ui/Button';
 
 const PAGE_SIZE = 20;
 
+/** LeaderboardPage — main page component. */
 export default function LeaderboardPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +107,7 @@ export default function LeaderboardPage() {
     );
   }
 
+  /** Handles refresh action. */
   const handleRefresh = () => {
     if (typeof window !== 'undefined') {
       loadLeaderboard();

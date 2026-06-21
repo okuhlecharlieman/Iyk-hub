@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/sponsored-challenges/[id]/submissions.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin, authenticateAndGetUid } from '../../../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { logAdminAction, logDataAccess } from '../../../../../lib/api/logging';
 export const dynamic = 'force-dynamic';
 
+/** Formats/parses data — serializeSubmission. */
 const serializeSubmission = (doc) => {
   const data = doc.data();
   return {
@@ -16,6 +20,7 @@ const serializeSubmission = (doc) => {
   };
 };
 
+/** Validates or checks — validateSubmissionPayload. */
 const validateSubmissionPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'description', 'submissionUrl']);
@@ -44,6 +49,7 @@ const validateSubmissionPayload = (payload) => {
   };
 };
 
+/** Validates or checks — validateModerationPayload. */
 const validateModerationPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['submissionId', 'status', 'score', 'judgeNotes']);
@@ -76,16 +82,19 @@ const validateModerationPayload = (payload) => {
   };
 };
 
+/** Fetches/retrieves data — fetchChallenge. */
 const fetchChallenge = async (db, challengeId) => {
   const challengeSnap = await db.collection('sponsoredChallenges').doc(challengeId).get();
   return challengeSnap.exists ? { id: challengeSnap.id, ...challengeSnap.data() } : null;
 };
 
+/** Fetches/retrieves data — fetchUserProfile. */
 const fetchUserProfile = async (db, uid) => {
   const userSnap = await db.collection('users').doc(uid).get();
   return userSnap.exists ? userSnap.data() : null;
 };
 
+/** Handles GET requests to /api/sponsored-challenges/[id]/submissions. */
 export async function GET(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'sponsored-challenge-submissions:get', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -140,6 +149,7 @@ export async function GET(request, { params }) {
   }
 }
 
+/** Handles POST requests to /api/sponsored-challenges/[id]/submissions. */
 export async function POST(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'sponsored-challenge-submissions:create', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -210,6 +220,7 @@ export async function POST(request, { params }) {
   }
 }
 
+/** Handles PATCH requests to /api/sponsored-challenges/[id]/submissions. */
 export async function PATCH(request, { params }) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'sponsored-challenge-submissions:moderate', limit: 30, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

@@ -81,6 +81,7 @@ const DEFAULT_HANGMAN_WORDS = [
   { word: 'satellite', category: 'Technology', hint: 'Orbits the Earth' },
 ];
 
+/** Handles GET requests to /api/games/content. */
 export async function GET(request) {
   try {
     await initializeFirebaseAdmin();

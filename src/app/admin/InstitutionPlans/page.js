@@ -1,8 +1,11 @@
 'use client';
-
+/**
+ * Page component for /admin/InstitutionPlans.
+ */
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { FaBuilding } from 'react-icons/fa';
 
+/** InstitutionPlansPage — main page component. */
 export default function InstitutionPlansPage() {
   return (
     <ProtectedRoute adminOnly={true}>

@@ -54,6 +54,7 @@ const GAME_DETAILS = {
   },
 };
 
+/** GameCard — card display component. */
 export default function GameCard({ gameId }) {
   const details = GAME_DETAILS[gameId];
   const router = useRouter();
@@ -65,6 +66,7 @@ export default function GameCard({ gameId }) {
 
   const isScratchCard = gameId === 'scratchcard';
 
+  /** Handles create session action. */
   const handleCreateSession = () => {
     setCreating(true);
     if (gameId === 'scratchcard') {
@@ -78,6 +80,7 @@ export default function GameCard({ gameId }) {
     }
   };
 
+  /** Handles join game action. */
   const handleJoinGame = () => {
     if (joinGameId.trim()) {
       setJoining(true);
@@ -85,6 +88,7 @@ export default function GameCard({ gameId }) {
     }
   };
 
+  /** Handles copy id action. */
   const handleCopyId = async () => {
     if (lastCreatedId) {
       try {

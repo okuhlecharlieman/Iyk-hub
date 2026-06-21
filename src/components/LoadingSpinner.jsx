@@ -1,3 +1,6 @@
+/**
+ * LoadingSpinnerx component.
+ */
 // components/LoadingSpinner.jsx
 //
 // Simple loading spinner for async states

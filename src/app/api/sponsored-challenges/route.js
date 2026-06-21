@@ -1,3 +1,6 @@
+/**
+ * API route handler for /api/sponsored-challenges.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../lib/firebase/admin';
@@ -6,6 +9,7 @@ import { enforceRateLimit } from '../../../lib/api/rate-limit';
 import { logAdminAction, logDataAccess } from '../../../lib/api/logging';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateCreatePayload. */
 const validateCreatePayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'description', 'challengeType', 'deadline', 'prizeDescription', 'sponsorName', 'sponsorEmail', 'budgetCents', 'bannerUrl']);
@@ -56,6 +60,7 @@ const validateCreatePayload = (payload) => {
   };
 };
 
+/** Handles GET requests to /api/sponsored-challenges. */
 export async function GET(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'sponsored-challenges:list', limit: 60, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -93,6 +98,7 @@ export async function GET(request) {
   }
 }
 
+/** Handles POST requests to /api/sponsored-challenges. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'sponsored-challenges:create', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

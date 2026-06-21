@@ -1,3 +1,6 @@
+/**
+ * ContentCardx component.
+ */
 import { memo } from 'react';
 import Link from 'next/link';
 import { FaThumbsUp, FaFire, FaHeart, FaPencilAlt, FaTrash } from 'react-icons/fa';
@@ -14,12 +17,14 @@ const TYPE_STYLES = {
   other: { icon: <FileText size={16} />, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-900/30' },
 };
 
+/** ContentCard — card display component. */
 function ContentCard({ p, react, onEdit, onDelete, canManage }) {
   const { icon, color, bg } = TYPE_STYLES[p.type] || TYPE_STYLES.art;
   const voteCount = Array.isArray(p.voters) ? p.voters.length : (p.votes ?? 0);
   const fireCount = Array.isArray(p.fireVoters) ? p.fireVoters.length : (p.fireCount ?? 0);
   const heartCount = Array.isArray(p.heartVoters) ? p.heartVoters.length : (p.heartCount ?? 0);
   const canReact = typeof react === 'function';
+  /** Handles reaction action. */
   const handleReaction = (type) => {
     if (!canReact) return;
     react(p.id, type);

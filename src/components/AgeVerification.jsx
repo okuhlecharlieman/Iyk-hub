@@ -1,9 +1,13 @@
 'use client';
+/**
+ * AgeVerificationx component.
+ */
 import { useState, useEffect } from 'react';
 
 const AGE_VERIFIED_KEY = 'iyk_age_verified';
 const MIN_AGE = 13;
 
+/** AgeVerification React component. */
 export default function AgeVerification() {
   const [visible, setVisible] = useState(false);
   const [birthYear, setBirthYear] = useState('');
@@ -16,6 +20,7 @@ export default function AgeVerification() {
     }
   }, []);
 
+  /** Handles verify action. */
   const handleVerify = () => {
     const year = parseInt(birthYear, 10);
     const currentYear = new Date().getFullYear();

@@ -1,11 +1,15 @@
+/**
+ * API route handler for /api/opportunities/submit.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { enqueueModerationItem, screenTextContent } from '../../../../lib/api/moderation';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateOpportunityPayload. */
 const validateOpportunityPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['title', 'org', 'link', 'description', 'tags', 'expiresAt', 'mediaUrl']);
@@ -44,6 +48,7 @@ const validateOpportunityPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/opportunities/submit. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'opportunities:submit', limit: 20, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -86,14 +91,6 @@ export async function POST(request) {
       message: 'Opportunity submitted for review.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/opportunities/submit:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/opportunities/submit');
   }
 }

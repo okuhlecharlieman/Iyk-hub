@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { FaArrowLeft } from 'react-icons/fa';
 import { GiTicket } from 'react-icons/gi';
 
+/** ScratchCardPage — main page component. */
 export default function ScratchCardPage() {
   return (
     <ProtectedRoute>

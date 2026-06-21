@@ -1,10 +1,15 @@
+/**
+ * API route handler for /api/creator-boosts/redeem-points.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
+import { handleApiError } from '../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/creator-boosts/redeem-points. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'creator-boosts:redeem', limit: 10, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;

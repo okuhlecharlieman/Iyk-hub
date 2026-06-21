@@ -1,9 +1,13 @@
 'use client';
+/**
+ * XOGamex component.
+ */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { db } from '@/lib/firebase';
+import { db } from '../../lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 
+/** calculate Winner. */
 function calculateWinner(bd) {
   const lines = [
     [0,1,2],[3,4,5],[6,7,8],
@@ -17,12 +21,14 @@ function calculateWinner(bd) {
   return '';
 }
 
+/** XOSinglePlayer React component. */
 function XOSinglePlayer({ onEnd }) {
   const [board, setBoard] = useState(Array(9).fill(''));
   const [playerSymbol] = useState('X');
   const [winner, setWinner] = useState('');
   const hasEnded = useRef(false);
 
+  /** ai Move. */
   const aiMove = (currentBoard) => {
     const empty = currentBoard.map((c, i) => c === '' ? i : null).filter(i => i !== null);
     if (empty.length === 0) return currentBoard;
@@ -59,6 +65,7 @@ function XOSinglePlayer({ onEnd }) {
     return result;
   };
 
+  /** Handles click action. */
   const handleClick = (idx) => {
     if (board[idx] !== '' || winner !== '') return;
 
@@ -89,12 +96,14 @@ function XOSinglePlayer({ onEnd }) {
     }
   }, [winner, onEnd, playerSymbol]);
 
+  /** Handles reset action. */
   const handleReset = () => {
     setBoard(Array(9).fill(''));
     setWinner('');
     hasEnded.current = false;
   };
 
+  /** Fetches/retrieves data — getStatusMessage. */
   const getStatusMessage = () => {
     if (winner === 'draw') return "It's a draw!";
     if (winner === playerSymbol) return 'You win!';
@@ -132,6 +141,7 @@ function XOSinglePlayer({ onEnd }) {
   );
 }
 
+/** XOMultiplayer React component. */
 function XOMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
@@ -148,6 +158,7 @@ function XOMultiplayer({ gameId, onEnd }) {
       setLoading(false);
       return;
     }
+    /** join Game. */
     async function joinGame() {
       try {
         const snap = await getDoc(gameDocRef);
@@ -220,11 +231,13 @@ function XOMultiplayer({ gameId, onEnd }) {
     }
   }, [gameState, onEnd, onEndCalled, playerSymbol, gameId]);
 
+  /** Handles click action. */
   async function handleClick(idx) {
     if (gameState.board[idx] !== '' || gameState.winner !== '' || gameState.currentPlayer !== playerSymbol) return;
     const newBoard = [...gameState.board];
     newBoard[idx] = playerSymbol;
     const newWinner = calculateWinner(newBoard);
+    /** next Player. */
     const nextPlayer = (playerSymbol === 'X') ? 'O' : 'X';
     try {
       await updateDoc(gameDocRef, {
@@ -237,6 +250,7 @@ function XOMultiplayer({ gameId, onEnd }) {
     }
   }
 
+  /** Handles reset action. */
   async function handleReset() {
     try {
       await updateDoc(gameDocRef, {
@@ -255,6 +269,7 @@ function XOMultiplayer({ gameId, onEnd }) {
 
   const { board, currentPlayer, winner, players } = gameState;
 
+  /** Fetches/retrieves data — getStatusMessage. */
   const getStatusMessage = () => {
     if (winner) return 'Game Over';
     if (!players.X || !players.O) return 'Waiting for opponent...';
@@ -300,6 +315,7 @@ function XOMultiplayer({ gameId, onEnd }) {
   );
 }
 
+/** XOGame React component. */
 export default function XOGame({ gameId, onEnd, singlePlayer = false }) {
   if (singlePlayer) {
     return <XOSinglePlayer onEnd={onEnd} />;

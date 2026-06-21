@@ -1,9 +1,12 @@
 'use client';
-
+/**
+ * PaymentsCardx component.
+ */
 import Link from 'next/link';
 import { FaMoneyBillWave } from 'react-icons/fa';
 import Button from '../ui/Button';
 
+/** PaymentsCard — card display component. */
 export default function PaymentsCard() {
   return (
     <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">

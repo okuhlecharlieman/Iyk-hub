@@ -1,11 +1,15 @@
+/**
+ * API route handler for /api/creator-boosts/submit.
+ */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { authenticateAndGetUid, initializeFirebaseAdmin } from '../../../../lib/firebase/admin';
-import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields } from '../../../../lib/api/validation';
+import { ensurePlainObject, parseJsonBody, RequestValidationError, validateNoExtraFields , handleApiError } from '../../../../lib/api/validation';
 import { enforceRateLimit } from '../../../../lib/api/rate-limit';
 import { getCreatorBoostPlan } from '../../../../lib/monetization/creator-boosts';
 export const dynamic = 'force-dynamic';
 
+/** Validates or checks — validateBoostPayload. */
 const validateBoostPayload = (payload) => {
   ensurePlainObject(payload);
   validateNoExtraFields(payload, ['plan', 'targetType', 'targetId']);
@@ -36,6 +40,7 @@ const validateBoostPayload = (payload) => {
   };
 };
 
+/** Handles POST requests to /api/creator-boosts/submit. */
 export async function POST(request) {
   const rateLimitResponse = enforceRateLimit(request, { keyPrefix: 'creator-boosts:submit', limit: 12, windowMs: 60 * 1000 });
   if (rateLimitResponse) return rateLimitResponse;
@@ -87,14 +92,6 @@ export async function POST(request) {
       message: 'Creator boost order submitted.',
     });
   } catch (error) {
-    if (error instanceof RequestValidationError) {
-      return NextResponse.json({ error: error.message, details: error.details }, { status: 400 });
-    }
-    if (error?.code === 401 || error?.code === 403) {
-      return NextResponse.json({ error: error.message }, { status: error.code });
-    }
-
-    console.error('Error in /api/creator-boosts/submit:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(error, 'Error in /api/creator-boosts/submit');
   }
 }

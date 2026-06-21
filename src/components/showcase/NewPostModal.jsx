@@ -1,3 +1,6 @@
+/**
+ * NewPostModalx component.
+ */
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { createShowcasePost } from '../../lib/firebase/helpers';
@@ -6,6 +9,7 @@ import Button from '../ui/Button';
 import FileUploadField from '../ui/FileUploadField';
 import { useToast } from '../ui/ToastProvider';
 
+/** NewPostModal — modal dialog component. */
 export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
@@ -17,6 +21,7 @@ export default function NewPostModal({ isOpen, onClose, onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
+  /** Handles submit action. */
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !description || !type) {

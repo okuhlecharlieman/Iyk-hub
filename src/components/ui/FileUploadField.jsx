@@ -1,13 +1,18 @@
 'use client';
+/**
+ * FileUploadFieldx component.
+ */
 import { useState, useRef } from 'react';
 import { FaCloudUploadAlt, FaImage, FaTrash } from 'react-icons/fa';
 
+/** FileUploadField React component. */
 export default function FileUploadField({ label = 'Media', accept = 'image/*,audio/*,video/*', maxSizeMB = 10, value, onChange, previewUrl }) {
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(previewUrl || '');
   const fileInputRef = useRef(null);
 
+  /** Handles file select action. */
   const handleFileSelect = (file) => {
     if (!file) return;
     const maxSize = maxSizeMB * 1024 * 1024;
@@ -26,6 +31,7 @@ export default function FileUploadField({ label = 'Media', accept = 'image/*,aud
     }
   };
 
+  /** Handles drop action. */
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -33,6 +39,7 @@ export default function FileUploadField({ label = 'Media', accept = 'image/*,aud
     if (file) handleFileSelect(file);
   };
 
+  /** remove File. */
   const removeFile = () => {
     onChange(null);
     setPreview('');

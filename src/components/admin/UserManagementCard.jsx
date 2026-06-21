@@ -1,7 +1,11 @@
 'use client';
+/**
+ * UserManagementCardx component.
+ */
 import Link from 'next/link';
 import { FaArrowRight } from 'react-icons/fa';
 
+/** UserManagementCard — card display component. */
 const UserManagementCard = () => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 h-full flex flex-col justify-between">

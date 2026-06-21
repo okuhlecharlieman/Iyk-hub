@@ -6,8 +6,8 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 
 // Minimal hardcoded fallback if API fails
@@ -31,10 +31,12 @@ async function fetchQuizQuestions() {
   return FALLBACK_QUESTIONS;
 }
 
+/** shuffle And Pick. */
 const shuffleAndPick = (all, count = 5) => {
   return [...all].sort(() => 0.5 - Math.random()).slice(0, count);
 };
 
+/** QuizSinglePlayer React component. */
 function QuizSinglePlayer({ onEnd }) {
   const router = useRouter();
   const { user } = useAuth();
@@ -61,6 +63,7 @@ function QuizSinglePlayer({ onEnd }) {
     });
   }, [user]);
 
+  /** Handles answer single action. */
   const handleAnswerSingle = (option) => {
     if (isProcessing || localFinished || !localQuestions[localIndex] || !user) return;
 
@@ -145,6 +148,7 @@ function QuizSinglePlayer({ onEnd }) {
   );
 }
 
+/** QuizMultiplayer React component. */
 function QuizMultiplayer({ gameId, onEnd }) {
   const router = useRouter();
   const { user } = useAuth();
@@ -163,6 +167,7 @@ function QuizMultiplayer({ gameId, onEnd }) {
       return;
     }
 
+    /** join Game. */
     const joinGame = async () => {
       try {
         const snap = await getDoc(gameDocRef);
@@ -287,11 +292,13 @@ function QuizMultiplayer({ gameId, onEnd }) {
     return () => unsubscribe();
   }, [gameDocRef, processAnswers]);
 
+  /** Handles answer action. */
   const handleAnswer = async (option) => {
     if (!playerRole || gameState.status !== 'playing' || isProcessing || gameState.players[playerRole].answer) return;
     await updateDoc(gameDocRef, { [`players.${playerRole}.answer`]: option });
   };
 
+  /** Handles reset game action. */
   const handleResetGame = async () => {
     if (gameState.status !== 'result') return;
     const allQ = await fetchQuizQuestions();
@@ -316,6 +323,7 @@ function QuizMultiplayer({ gameId, onEnd }) {
   const opponent = playerRole === 'player1' ? players?.player2 : players?.player1;
   const currentQuestion = questions[currentQuestionIndex];
 
+  /** Fetches/retrieves data — getStatusMessage. */
   const getStatusMessage = () => {
     if (status === 'waiting') return 'Waiting for opponent...';
     if (status === 'playing') {
@@ -399,6 +407,7 @@ function QuizMultiplayer({ gameId, onEnd }) {
   );
 }
 
+/** QuizGame React component. */
 export default function QuizGame({ gameId, onEnd, singlePlayer = false }) {
   if (singlePlayer) {
     return <QuizSinglePlayer onEnd={onEnd} />;

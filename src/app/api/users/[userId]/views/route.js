@@ -1,9 +1,13 @@
+/**
+ * API route handler for /api/users/[userId]/views.
+ */
 
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
+/** Handles POST requests to /api/users/[userId]/views. */
 export async function POST(request, { params }) {
   try {
     await initializeFirebaseAdmin();

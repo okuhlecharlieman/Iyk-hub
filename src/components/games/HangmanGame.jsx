@@ -5,8 +5,8 @@
  */
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { db } from '@/lib/firebase';
+import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
 import { doc, onSnapshot, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 
 const FALLBACK_WORDS = [
@@ -29,6 +29,7 @@ async function fetchHangmanWords() {
   return FALLBACK_WORDS;
 }
 
+/** pick Random Word. */
 const pickRandomWord = (words) => {
   const item = words[Math.floor(Math.random() * words.length)];
   return typeof item === 'string' ? item : item.word;
@@ -43,6 +44,7 @@ const HANGMAN_PARTS = [
   { part: 'bothLegs', draw: ' / \\' },
 ];
 
+/** HangmanDrawing React component. */
 function HangmanDrawing({ wrongGuesses }) {
   const count = Math.min(wrongGuesses, 6);
   return (
@@ -57,6 +59,7 @@ function HangmanDrawing({ wrongGuesses }) {
   );
 }
 
+/** HangmanSinglePlayer React component. */
 function HangmanSinglePlayer({ onEnd }) {
   const [word, setWord] = useState('');
   const [loading, setLoading] = useState(true);
@@ -89,11 +92,13 @@ function HangmanSinglePlayer({ onEnd }) {
     }
   }, [word, loading, wordGuessed, lost, wrongGuesses, onEnd]);
 
+  /** Handles guess action. */
   const handleGuess = (letter) => {
     if (guessedLetters.includes(letter) || gameOver) return;
     setGuessedLetters(prev => [...prev, letter]);
   };
 
+  /** reset. */
   const reset = () => {
     onEndCalledRef.current = false;
     setGuessedLetters([]);
@@ -153,6 +158,7 @@ function HangmanSinglePlayer({ onEnd }) {
   );
 }
 
+/** HangmanMultiplayer React component. */
 function HangmanMultiplayer({ gameId, onEnd }) {
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
@@ -170,6 +176,7 @@ function HangmanMultiplayer({ gameId, onEnd }) {
       return;
     }
 
+    /** join Game. */
     const joinGame = async () => {
       try {
         const snap = await getDoc(gameDocRef);
@@ -276,6 +283,7 @@ function HangmanMultiplayer({ gameId, onEnd }) {
     return () => unsubscribe();
   }, [gameDocRef, checkAndEndGame]);
 
+  /** Handles guess action. */
   const handleGuess = async (letter) => {
     if (!gameState || gameState.currentPlayer !== playerSymbol || gameState.guessedLetters.includes(letter) || gameState.status !== 'playing') return;
 
@@ -299,6 +307,7 @@ function HangmanMultiplayer({ gameId, onEnd }) {
     });
   };
 
+  /** Handles reset game action. */
   const handleResetGame = async () => {
     gameEndedRef.current = false;
     const allW = await fetchHangmanWords();
@@ -327,6 +336,7 @@ function HangmanMultiplayer({ gameId, onEnd }) {
   const wordWithGuesses = word.split('').map(letter => (guessedLetters.includes(letter) ? letter : '_')).join(' ');
   const yourWrongGuesses = you?.wrongGuesses || 0;
 
+  /** Fetches/retrieves data — getStatusMessage. */
   const getStatusMessage = () => {
     if (status === 'waiting') return 'Waiting for an opponent...';
     if (status === 'playing') return currentPlayer === playerSymbol ? 'Your turn to guess' : `${players[currentPlayer]?.displayName}'s turn`;
@@ -392,6 +402,7 @@ function HangmanMultiplayer({ gameId, onEnd }) {
   );
 }
 
+/** HangmanGame React component. */
 export default function HangmanGame({ gameId, onEnd, singlePlayer = false }) {
   if (singlePlayer) {
     return <HangmanSinglePlayer onEnd={onEnd} />;

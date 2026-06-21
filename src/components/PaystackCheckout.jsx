@@ -1,10 +1,14 @@
 'use client';
+/**
+ * PaystackCheckoutx component.
+ */
 import { useEffect, useState } from 'react';
 import { FaLock } from 'react-icons/fa';
 
 const PAYSTACK_SCRIPT_ID = 'paystack-script';
 const PAYSTACK_SCRIPT_SRC = 'https://js.paystack.co/v2/inline.js';
 
+/** PaystackCheckout React component. */
 export default function PaystackCheckout({ email, amountCents, reference, onSuccess, onError, metadata = {} }) {
   const [loading, setLoading] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -12,7 +16,9 @@ export default function PaystackCheckout({ email, amountCents, reference, onSucc
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
+    /** Handles load action. */
     const handleLoad = () => setScriptLoaded(Boolean(window.PaystackPop));
+    /** Handles error action. */
     const handleError = () => {
       setScriptLoaded(false);
       onError?.({ message: 'Payment system failed to load. Please refresh and try again.' });
@@ -41,6 +47,7 @@ export default function PaystackCheckout({ email, amountCents, reference, onSucc
     };
   }, [onError]);
 
+  /** Handles pay action. */
   const handlePay = () => {
     if (!scriptLoaded || !window.PaystackPop) {
       onError?.({ message: 'Payment system is loading. Please try again.' });

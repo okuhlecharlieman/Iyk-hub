@@ -1,10 +1,15 @@
 'use client';
+/**
+ * Page component for /admin/logs.
+ */
 import { useState, useEffect } from 'react';
 import { db } from '../../../lib/firebase';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { FaSearch } from 'react-icons/fa';
 
+/** LogCard — card display component. */
 const LogCard = ({ log }) => {
+  /** render Content. */
   const renderContent = () => {
     switch (log.collection) {
       case 'adminAuditLogs':
@@ -53,6 +58,7 @@ const LogCard = ({ log }) => {
   );
 };
 
+/** LogsPage — main page component. */
 export default function LogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +66,7 @@ export default function LogsPage() {
   const [filterType, setFilterType] = useState('all');
 
   useEffect(() => {
+    /** Fetches/retrieves data — fetchLogs. */
     async function fetchLogs() {
       setLoading(true);
       const allLogs = [];

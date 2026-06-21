@@ -58,27 +58,14 @@ const buildPromoEmail = (displayName, promoCode, points, message) => {
 };
 
 /**
- * Sends a single email via Resend API or SMTP fallback.
- * Returns true on success, throws on failure.
+ * Sends via SMTP (nodemailer). Throws on failure.
  */
-const sendEmail = async (to, subject, html, fromEmail) => {
-  const resendKey = process.env.RESEND_API_KEY;
-
-  if (resendKey) {
-    const { Resend } = await import('resend');
-    const resend = new Resend(resendKey);
-    const fromAddr = process.env.RESEND_FROM || 'Iyk Hub <onboarding@resend.dev>';
-    const { error } = await resend.emails.send({ from: fromAddr, to, subject, html });
-    if (error) throw new Error(error.message);
-    return true;
-  }
-
-  // Fallback to SMTP
+const sendViaSMTP = async (to, subject, html, fromEmail) => {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!host || !user || !pass) {
-    throw new Error('NO_EMAIL_CONFIG');
+    throw new Error('SMTP not configured (SMTP_HOST, SMTP_USER, SMTP_PASS).');
   }
 
   const nodemailer = (await import('nodemailer')).default;
@@ -95,7 +82,49 @@ const sendEmail = async (to, subject, html, fromEmail) => {
     subject,
     html,
   });
-  return true;
+  return 'smtp';
+};
+
+/**
+ * Sends via Resend API. Throws on failure.
+ */
+const sendViaResend = async (to, subject, html) => {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) throw new Error('RESEND_API_KEY not set.');
+
+  const { Resend } = await import('resend');
+  const resend = new Resend(resendKey);
+  const fromAddr = process.env.RESEND_FROM || 'Iyk Hub <onboarding@resend.dev>';
+  const { error } = await resend.emails.send({ from: fromAddr, to, subject, html });
+  if (error) throw new Error(error.message);
+  return 'resend';
+};
+
+/**
+ * Sends a single email. Tries Resend first, falls back to SMTP on failure.
+ * If neither is configured, throws.
+ */
+const sendEmail = async (to, subject, html, fromEmail) => {
+  const hasResend = !!process.env.RESEND_API_KEY;
+  const hasSMTP = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+  if (hasResend) {
+    try {
+      return await sendViaResend(to, subject, html);
+    } catch (resendErr) {
+      console.warn(`Resend failed for ${to}: ${resendErr.message} — trying SMTP fallback`);
+      if (hasSMTP) {
+        return await sendViaSMTP(to, subject, html, fromEmail);
+      }
+      throw resendErr;
+    }
+  }
+
+  if (hasSMTP) {
+    return await sendViaSMTP(to, subject, html, fromEmail);
+  }
+
+  throw new Error('No email provider configured. Set RESEND_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS.');
 };
 
 export async function POST(request) {
@@ -159,10 +188,12 @@ export async function POST(request) {
     let failedCount = 0;
     const errors = [];
 
+    let provider = null;
     for (const recipient of recipientList) {
       try {
         const { subject, html } = buildPromoEmail(recipient.displayName, promoCode, points, message);
-        await sendEmail(recipient.email, subject, html, fromEmail);
+        const usedProvider = await sendEmail(recipient.email, subject, html, fromEmail);
+        if (!provider) provider = usedProvider;
         sentCount++;
       } catch (err) {
         failedCount++;
@@ -189,7 +220,7 @@ export async function POST(request) {
       details: { promoCode, sentCount, failedCount, totalRecipients: recipientList.length },
     });
 
-    return NextResponse.json({ success: true, sentCount, failedCount, errors: errors.slice(0, 10) });
+    return NextResponse.json({ success: true, sentCount, failedCount, provider, errors: errors.slice(0, 10) });
   } catch (error) {
     return handleApiError(error, 'Send promo email error');
   }

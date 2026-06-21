@@ -26,12 +26,17 @@ const TAB_STYLES = {
     active: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     badge: 'bg-red-200 dark:bg-red-800',
   },
+  expired: {
+    active: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400',
+    badge: 'bg-gray-200 dark:bg-gray-700',
+  },
 };
 
 const STATUS_STYLES = {
   approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  expired: 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400',
 };
 
 /** Formats/parses data — parseFlexibleDate. */
@@ -70,6 +75,18 @@ const formatExpiryCountdown = (expiresAt) => {
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   if (days > 0) return `${days} day${days === 1 ? '' : 's'} left`;
   return `${hours} hour${hours === 1 ? '' : 's'} left`;
+};
+
+/**
+ * Checks whether an opportunity is expired based on its expiresAt field.
+ * An opportunity is expired if its status is 'expired' OR if its expiresAt
+ * date is in the past (even if the TTL cron hasn't marked it yet).
+ */
+const isExpiredOpportunity = (opp) => {
+  if (opp.status === 'expired') return true;
+  if (!opp.expiresAt) return false;
+  const expiry = parseFlexibleDate(opp.expiresAt);
+  return expiry ? expiry <= new Date() : false;
 };
 
 /** ManageOpportunities React component. */
@@ -173,15 +190,25 @@ export default function ManageOpportunities() {
         }
     };
 
-    const filteredOpps = opps.filter(o => o.status === filter);
-    const pendingCount = opps.filter(o => o.status === 'pending').length;
-    const approvedCount = opps.filter(o => o.status === 'approved').length;
-    const rejectedCount = opps.filter(o => o.status === 'rejected').length;
+    // Classify opportunities: 'approved' ones that are past expiry get grouped under 'expired'
+    const classifiedOpps = opps.map(opp => {
+      if (opp.status === 'approved' && isExpiredOpportunity(opp)) {
+        return { ...opp, _displayStatus: 'expired' };
+      }
+      return { ...opp, _displayStatus: opp.status };
+    });
+
+    const filteredOpps = classifiedOpps.filter(o => o._displayStatus === filter);
+    const pendingCount = classifiedOpps.filter(o => o._displayStatus === 'pending').length;
+    const approvedCount = classifiedOpps.filter(o => o._displayStatus === 'approved').length;
+    const rejectedCount = classifiedOpps.filter(o => o._displayStatus === 'rejected').length;
+    const expiredCount = classifiedOpps.filter(o => o._displayStatus === 'expired').length;
 
     const tabs = [
       { key: 'pending', label: 'Pending', count: pendingCount },
       { key: 'approved', label: 'Approved', count: approvedCount },
       { key: 'rejected', label: 'Rejected', count: rejectedCount },
+      { key: 'expired', label: 'Expired', count: expiredCount },
     ];
 
     return (
@@ -244,8 +271,8 @@ export default function ManageOpportunities() {
                                       <div className="flex-1 min-w-0">
                                         <div className="flex flex-wrap items-center gap-2 mb-1">
                                           <h3 className="font-bold text-gray-900 dark:text-white">{opp.title}</h3>
-                                          <span className={`px-2 py-0.5 rounded-lg text-xs font-medium ${STATUS_STYLES[opp.status] || STATUS_STYLES.pending}`}>
-                                            {opp.status}
+                                          <span className={`px-2 py-0.5 rounded-lg text-xs font-medium ${STATUS_STYLES[opp._displayStatus] || STATUS_STYLES.pending}`}>
+                                            {opp._displayStatus === 'expired' ? 'expired' : opp.status}
                                           </span>
                                         </div>
                                         <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">{opp.org}</p>

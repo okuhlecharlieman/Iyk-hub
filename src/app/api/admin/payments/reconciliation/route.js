@@ -6,7 +6,7 @@ import admin from 'firebase-admin';
 import { authenticate, initializeFirebaseAdmin } from '../../../../../lib/firebase/admin';
 import { enforceRateLimit } from '../../../../../lib/api/rate-limit';
 import { getOrderConfig, LEDGER_ENTRY_TYPES } from '../../../../../lib/monetization/constants';
-import { handleApiError } from '../../lib/api/validation';
+import { handleApiError } from '../../../../../lib/api/validation';
 export const dynamic = 'force-dynamic';
 
 /** Handles GET requests to /api/admin/payments/reconciliation. */

@@ -1,18 +1,18 @@
 /**
- * Admin Game Manager — manage quiz questions and hangman words.
+ * Admin Game Manager — manage quiz questions and Word guesser words.
  * Supports adding single items, batch JSON import, and deletion.
  * Data is stored in Firestore under gameContent/{type}/items.
  *
  * JSON format for batch import:
  *   Quiz:    [{ "question": "...", "options": ["A","B","C","D"], "answer": "A", "category": "Science" }]
- *   Hangman: [{ "word": "example", "category": "General", "hint": "A sample word" }]
+ *   Word guesser: [{ "word": "example", "category": "General", "hint": "A sample word" }]
  */
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { FaGamepad, FaPlus, FaTrash, FaUpload, FaQuestionCircle, FaFont } from 'react-icons/fa';
 
-const TABS = { QUIZ: 'quiz', HANGMAN: 'hangman' };
+const TABS = { QUIZ: 'quiz', WORD_GUESSER: 'word_guesser' };
 
 /** GameManagerPage — main page component. */
 export default function GameManagerPage() {
@@ -26,7 +26,7 @@ export default function GameManagerPage() {
   // Single item form
   const [showAddForm, setShowAddForm] = useState(false);
   const [quizForm, setQuizForm] = useState({ question: '', options: ['', '', '', ''], answer: '', category: '' });
-  const [hangmanForm, setHangmanForm] = useState({ word: '', category: '', hint: '' });
+  const [wordGuesserForm, setWordGuesserForm] = useState({ word: '', category: '', hint: '' });
 
   // Batch JSON import
   const [jsonInput, setJsonInput] = useState('');
@@ -60,7 +60,7 @@ export default function GameManagerPage() {
       const token = await user.getIdToken();
       const item = activeTab === TABS.QUIZ
         ? { question: quizForm.question, options: quizForm.options.filter(Boolean), answer: quizForm.answer, category: quizForm.category }
-        : { word: hangmanForm.word.toLowerCase().trim(), category: hangmanForm.category, hint: hangmanForm.hint };
+        : { word: wordGuesserForm.word.toLowerCase().trim(), category: wordGuesserForm.category, hint: wordGuesserForm.hint };
 
       const res = await fetch('/api/admin/game-content', {
         method: 'POST',
@@ -72,26 +72,22 @@ export default function GameManagerPage() {
       setSuccess(data.message);
       setShowAddForm(false);
       setQuizForm({ question: '', options: ['', '', '', ''], answer: '', category: '' });
-      setHangmanForm({ word: '', category: '', hint: '' });
+      setWordGuesserForm({ word: '', category: '', hint: '' });
       fetchItems();
     } catch (err) {
       setError(err.message);
     }
   };
 
-  /** Handles batch import action. */
-  const handleBatchImport = async () => {
+  /** Handles batch JSON import. */
+  const handleJsonImport = async () => {
     setError('');
     setSuccess('');
     try {
-      const parsed = JSON.parse(jsonInput);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        setError('JSON must be a non-empty array.');
-        return;
-      }
-
       const token = await user.getIdToken();
-      const res = await fetch('/api/admin/game-content', {
+      const parsed = JSON.parse(jsonInput);
+      if (!Array.isArray(parsed)) throw new Error('JSON must be an array');
+      const res = await fetch('/api/admin/game-content/batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ type: activeTab, items: parsed }),
@@ -103,162 +99,282 @@ export default function GameManagerPage() {
       setShowJsonImport(false);
       fetchItems();
     } catch (err) {
-      setError(err.message === 'Unexpected token' ? 'Invalid JSON format' : err.message);
+      setError(err.message);
     }
   };
 
   /** Handles delete action. */
   const handleDelete = async (id) => {
-    if (!confirm('Delete this item?')) return;
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    setError('');
+    setSuccess('');
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`/api/admin/game-content?type=${activeTab}&id=${id}`, {
+      const res = await fetch(`/api/admin/game-content/${id}?type=${activeTab}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error('Failed to delete');
-      setItems((prev) => prev.filter((i) => i.id !== id));
-      setSuccess('Item deleted.');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSuccess(data.message);
+      fetchItems();
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const inputClass = 'w-full p-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none';
+  const tabLabel = activeTab === TABS.QUIZ ? 'Quiz' : 'Word guesser';
+  const formTitle = activeTab === TABS.QUIZ ? 'Add Quiz Question' : 'Add Word guesser Word';
+  const formFields = activeTab === TABS.QUIZ ? (
+    <>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Question</label>
+        <textarea
+          value={quizForm.question}
+          onChange={(e) => setQuizForm({ ...quizForm, question: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          rows={3}
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Options (4 required)</label>
+        <div className="space-y-2">
+          {quizForm.options.map((opt, idx) => (
+            <input
+              key={idx}
+              type="text"
+              value={opt}
+              onChange={(e) => {
+                const newOpts = [...quizForm.options];
+                newOpts[idx] = e.target.value;
+                setQuizForm({ ...quizForm, options: newOpts });
+              }}
+              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+              required
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer (A/B/C/D)</label>
+        <select
+          value={quizForm.answer}
+          onChange={(e) => setQuizForm({ ...quizForm, answer: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          required
+        >
+          <option value="">Select answer</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+        </select>
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+        <input
+          type="text"
+          value={quizForm.category}
+          onChange={(e) => setQuizForm({ ...quizForm, category: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="e.g., Science, History"
+        />
+      </div>
+    </>
+  ) : (
+    <>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Word</label>
+        <input
+          type="text"
+          value={wordGuesserForm.word}
+          onChange={(e) => setWordGuesserForm({ ...wordGuesserForm, word: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="e.g., javascript"
+          required
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+        <input
+          type="text"
+          value={wordGuesserForm.category}
+          onChange={(e) => setWordGuesserForm({ ...wordGuesserForm, category: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="e.g., Programming, Animals"
+        />
+      </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Hint (optional)</label>
+        <input
+          type="text"
+          value={wordGuesserForm.hint}
+          onChange={(e) => setWordGuesserForm({ ...wordGuesserForm, hint: e.target.value })}
+          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="e.g., A popular programming language"
+        />
+      </div>
+    </>
+  );
+
+  const batchExample = activeTab === TABS.QUIZ
+    ? '[{ "question": "What is 2+2?", "options": ["3", "4", "5", "6"], "answer": "B", "category": "Math" }]'
+    : '[{ "word": "example", "category": "General", "hint": "A sample word" }]';
 
   return (
-          <div className="max-w-6xl mx-auto">
-            {/* Header */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-gradient-to-br from-green-500 to-blue-600 rounded-xl p-2.5 text-white shadow-lg">
-                  <FaGamepad className="text-xl" />
-                </div>
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Game Manager</h1>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400">Manage quiz questions and hangman words. Add individually or batch import via JSON.</p>
-            </div>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Game Content Manager</h1>
+          <p className="mt-2 text-gray-600">Manage Quiz questions and Word guesser words</p>
+        </div>
 
-            {/* Tabs */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => { setActiveTab(TABS.QUIZ); setShowAddForm(false); setShowJsonImport(false); }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === TABS.QUIZ ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-              >
-                <FaQuestionCircle /> Quiz Questions
-              </button>
-              <button
-                onClick={() => { setActiveTab(TABS.HANGMAN); setShowAddForm(false); setShowJsonImport(false); }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === TABS.HANGMAN ? 'bg-purple-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-              >
-                <FaFont /> Hangman Words
-              </button>
-            </div>
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="flex">
+            <button
+              onClick={() => { setActiveTab(TABS.QUIZ); fetchItems(); }}
+              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === TABS.QUIZ ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            >
+              <FaQuestionCircle className="inline-block w-4 h-4 mr-2" /> Quiz
+            </button>
+            <button
+              onClick={() => { setActiveTab(TABS.WORD_GUESSER); fetchItems(); }}
+              className={`flex-1 py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === TABS.WORD_GUESSER ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            >
+              <FaFont className="inline-block w-4 h-4 mr-2" /> Word guesser
+            </button>
+          </div>
+        </div>
 
-            {/* Alerts */}
-            {error && <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm">{error}</div>}
-            {success && <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm">{success}</div>}
+        {/* Messages */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-md" role="alert
+          >
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md" role="alert">
+            {success}
+          </div>
+        )}
 
-            {/* Action buttons */}
-            <div className="flex gap-3 mb-6">
-              <button onClick={() => { setShowAddForm(!showAddForm); setShowJsonImport(false); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                <FaPlus /> Add {activeTab === TABS.QUIZ ? 'Question' : 'Word'}
-              </button>
-              <button onClick={() => { setShowJsonImport(!showJsonImport); setShowAddForm(false); }} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
-                <FaUpload /> Batch Import JSON
-              </button>
-            </div>
-
-            {/* Single add form */}
-            {showAddForm && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md mb-6">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">
-                  Add {activeTab === TABS.QUIZ ? 'Quiz Question' : 'Hangman Word'}
-                </h3>
-                {activeTab === TABS.QUIZ ? (
-                  <div className="space-y-3">
-                    <input className={inputClass} placeholder="Question" value={quizForm.question} onChange={(e) => setQuizForm({ ...quizForm, question: e.target.value })} />
-                    {quizForm.options.map((opt, i) => (
-                      <input key={i} className={inputClass} placeholder={`Option ${i + 1}`} value={opt} onChange={(e) => { const o = [...quizForm.options]; o[i] = e.target.value; setQuizForm({ ...quizForm, options: o }); }} />
-                    ))}
-                    <input className={inputClass} placeholder="Correct answer (must match an option exactly)" value={quizForm.answer} onChange={(e) => setQuizForm({ ...quizForm, answer: e.target.value })} />
-                    <input className={inputClass} placeholder="Category (e.g., Science, History)" value={quizForm.category} onChange={(e) => setQuizForm({ ...quizForm, category: e.target.value })} />
-                    <button onClick={handleAddSingle} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">Add Question</button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <input className={inputClass} placeholder="Word" value={hangmanForm.word} onChange={(e) => setHangmanForm({ ...hangmanForm, word: e.target.value })} />
-                    <input className={inputClass} placeholder="Category (e.g., Animals, Technology)" value={hangmanForm.category} onChange={(e) => setHangmanForm({ ...hangmanForm, category: e.target.value })} />
-                    <input className={inputClass} placeholder="Hint (optional)" value={hangmanForm.hint} onChange={(e) => setHangmanForm({ ...hangmanForm, hint: e.target.value })} />
-                    <button onClick={handleAddSingle} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium">Add Word</button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Batch JSON import */}
-            {showJsonImport && (
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md mb-6">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Batch Import via JSON</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  {activeTab === TABS.QUIZ
-                    ? 'Format: [{ "question": "...", "options": ["A","B","C","D"], "answer": "A", "category": "Science" }]'
-                    : 'Format: [{ "word": "example", "category": "General", "hint": "A sample word" }]'}
-                </p>
-                <textarea
-                  className={`${inputClass} h-40 font-mono text-xs`}
-                  placeholder="Paste JSON array here..."
-                  value={jsonInput}
-                  onChange={(e) => setJsonInput(e.target.value)}
-                />
-                <button onClick={handleBatchImport} className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">
-                  Import
+        {/* Add Single Form */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900/{tabLabel} Content</h2>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className={`text-sm font-medium transition-colors ${showAddForm ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+            >
+              {showAddForm ? 'Cancel' : 'Add Single Item'}
+            </button>
+          </div>
+          {showAddForm && (
+            <div className="p-6 space-y-4">
+              <h3 className="text-md font-medium text-gray-900/{formTitle}</h3>
+              {formFields}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddSingle}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Saving...' : 'Save'}
                 </button>
               </div>
-            )}
-
-            {/* Items list */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-bold text-gray-800 dark:text-white">
-                  {activeTab === TABS.QUIZ ? 'Quiz Questions' : 'Hangman Words'} ({items.length})
-                </h3>
-              </div>
-              {loading ? (
-                <div className="p-8 text-center text-gray-500">Loading...</div>
-              ) : items.length === 0 ? (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                  No items yet. Add some or import via JSON. Default built-in content will be used until you add custom items.
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
-                  {items.map((item) => (
-                    <div key={item.id} className="p-4 flex items-start justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        {activeTab === TABS.QUIZ ? (
-                          <>
-                            <p className="font-medium text-gray-800 dark:text-white text-sm">{item.question}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Options: {item.options?.join(' | ')} — Answer: <span className="font-semibold text-green-600">{item.answer}</span>
-                            </p>
-                            {item.category && <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs">{item.category}</span>}
-                          </>
-                        ) : (
-                          <>
-                            <p className="font-medium text-gray-800 dark:text-white text-sm">{item.word}</p>
-                            {item.hint && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Hint: {item.hint}</p>}
-                            {item.category && <span className="inline-block mt-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs">{item.category}</span>}
-                          </>
-                        )}
-                      </div>
-                      <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:text-red-700 p-1 flex-shrink-0" title="Delete">
-                        <FaTrash />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+          )}
+        </div>
+
+        {/* Batch Import */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900">Batch Import</h2>
+            <button
+              onClick={() => setShowJsonImport(!showJsonImport)}
+              className={`text-sm font-medium transition-colors ${showJsonImport ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+            >
+              {showJsonImport ? 'Cancel' : 'Import JSON'}
+            </button>
           </div>
+          {showJsonImport && (
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">Paste a JSON array of {tabLabel.toLowerCase()} items.</p>
+              <textarea
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                rows={8}
+                placeholder={batchExample}
+              />
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => { setShowJsonImport(false); setJsonInput(''); }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleJsonImport}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Importing...' : 'Import'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Items List */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Existing {tabLabel} Items</h2>
+          </div>
+          <div className="divide-y divide-gray-200">
+            {loading ? (
+              <div className="px-6 py-12 text-center text-gray-500">Loading...</div>
+            ) : items.length === 0 ? (
+              <div className="px-6 py-12 text-center text-gray-500">No {tabLabel.toLowerCase()} items yet. Add one above!</div>
+            ) : (
+              items.map((item) => (
+                <div key={item.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                  <div className="flex-1 min-w-0">
+                    {activeTab === TABS.QUIZ ? (
+                      <>
+                        <p className="text-sm font-medium text-gray-900 truncate/{item.question}</p>
+                        <p className="text-xs text-gray-500">Category: {item.category || 'Uncategorized'} | Answer: {item.answer}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-gray-900 truncate/{item.word}</p>
+                        <p className="text-xs text-gray-500">Category: {item.category || 'Uncategorized'} | Hint: {item.hint || 'None'}</p>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    disabled={loading}
+                    className="ml-4 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <FaTrash className="inline-block w-3 h-3 mr-1" /> Delete
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

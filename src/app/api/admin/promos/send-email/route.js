@@ -7,7 +7,8 @@
  *
  * Required env vars (pick one):
  *   Option A (recommended): RESEND_API_KEY
- *   Option B (fallback):    SMTP_HOST, SMTP_USER, SMTP_PASS
+ *   Option B:               BREVO_API_KEY
+ *   Option C (fallback):    SMTP_HOST, SMTP_USER, SMTP_PASS
  */
 import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
@@ -18,7 +19,13 @@ import { TEAM_MANAGEMENT_ROLES } from '../../../../../lib/roles';
 
 export const dynamic = 'force-dynamic';
 
+const DEFAULT_FROM_EMAIL = 'intwanakasi@gmail.com';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://iyk-hub.vercel.app';
+
+const getSharedFromEmail = (...candidates) => {
+  const value = [...candidates, process.env.BREVO_FROM, process.env.RESEND_FROM, process.env.SMTP_FROM, process.env.SMTP_USER, DEFAULT_FROM_EMAIL].find(Boolean);
+  return value || DEFAULT_FROM_EMAIL;
+};
 
 /**
  * Builds the promo email HTML with a direct redemption link.
@@ -76,8 +83,9 @@ const sendViaSMTP = async (to, subject, html, fromEmail) => {
     secure: port === 465,
     auth: { user, pass },
   });
+  const sender = getSharedFromEmail(fromEmail, user, DEFAULT_FROM_EMAIL);
   await transporter.sendMail({
-    from: `"Iyk Hub" <${fromEmail || user}>`,
+    from: `"Iyk Hub" <${sender}>`,
     to,
     subject,
     html,
@@ -88,31 +96,69 @@ const sendViaSMTP = async (to, subject, html, fromEmail) => {
 /**
  * Sends via Resend API. Throws on failure.
  */
-const sendViaResend = async (to, subject, html) => {
+const sendViaResend = async (to, subject, html, fromEmail) => {
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) throw new Error('RESEND_API_KEY not set.');
 
   const { Resend } = await import('resend');
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM || 'Iyk Hub <onboarding@resend.dev>';
+  const fromAddr = `Iyk Hub <${getSharedFromEmail(fromEmail, process.env.RESEND_FROM, DEFAULT_FROM_EMAIL)}>`;
   const { error } = await resend.emails.send({ from: fromAddr, to, subject, html });
   if (error) throw new Error(error.message);
   return 'resend';
 };
 
 /**
- * Sends a single email. Tries Resend first, falls back to SMTP on failure.
+ * Sends via Brevo API. Throws on failure.
+ */
+const sendViaBrevo = async (to, subject, html, fromEmail) => {
+  const brevoKey = process.env.BREVO_API_KEY;
+  if (!brevoKey) throw new Error('BREVO_API_KEY not set.');
+
+  const senderEmail = getSharedFromEmail(fromEmail, process.env.BREVO_FROM, process.env.SMTP_FROM, DEFAULT_FROM_EMAIL);
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': brevoKey,
+    },
+    body: JSON.stringify({
+      sender: {
+        name: 'Iyk Hub',
+        email: senderEmail,
+      },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload?.message || payload?.error || 'Brevo send failed.';
+    throw new Error(message);
+  }
+
+  return 'brevo';
+};
+
+/**
+ * Sends a single email. Tries Resend first, then Brevo, then SMTP on failure.
  * If neither is configured, throws.
  */
 const sendEmail = async (to, subject, html, fromEmail) => {
   const hasResend = !!process.env.RESEND_API_KEY;
+  const hasBrevo = !!process.env.BREVO_API_KEY;
   const hasSMTP = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
   if (hasResend) {
     try {
-      return await sendViaResend(to, subject, html);
+      return await sendViaResend(to, subject, html, fromEmail);
     } catch (resendErr) {
-      console.warn(`Resend failed for ${to}: ${resendErr.message} — trying SMTP fallback`);
+      console.warn(`Resend failed for ${to}: ${resendErr.message} — trying Brevo fallback`);
+      if (hasBrevo) {
+        return await sendViaBrevo(to, subject, html, fromEmail);
+      }
       if (hasSMTP) {
         return await sendViaSMTP(to, subject, html, fromEmail);
       }
@@ -120,11 +166,23 @@ const sendEmail = async (to, subject, html, fromEmail) => {
     }
   }
 
+  if (hasBrevo) {
+    try {
+      return await sendViaBrevo(to, subject, html, fromEmail);
+    } catch (brevoErr) {
+      console.warn(`Brevo failed for ${to}: ${brevoErr.message} — trying SMTP fallback`);
+      if (hasSMTP) {
+        return await sendViaSMTP(to, subject, html, fromEmail);
+      }
+      throw brevoErr;
+    }
+  }
+
   if (hasSMTP) {
     return await sendViaSMTP(to, subject, html, fromEmail);
   }
 
-  throw new Error('No email provider configured. Set RESEND_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS.');
+  throw new Error('No email provider configured. Set RESEND_API_KEY, BREVO_API_KEY, or SMTP_HOST/SMTP_USER/SMTP_PASS.');
 };
 
 export async function POST(request) {
@@ -144,10 +202,16 @@ export async function POST(request) {
     }
 
     // Check that at least one email provider is configured
-    if (!process.env.RESEND_API_KEY && !(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)) {
+    const hasConfiguredEmailProvider = !!(
+      process.env.RESEND_API_KEY ||
+      process.env.BREVO_API_KEY ||
+      (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+    );
+
+    if (!hasConfiguredEmailProvider) {
       return NextResponse.json({
-        error: 'Email not configured. Set RESEND_API_KEY (recommended) or SMTP_HOST + SMTP_USER + SMTP_PASS.',
-        hint: 'Sign up free at https://resend.com — 3,000 emails/month, no spam issues.',
+        error: 'Email not configured. Set RESEND_API_KEY, BREVO_API_KEY, or SMTP_HOST + SMTP_USER + SMTP_PASS.',
+        hint: 'Configure one of the supported providers before sending bulk email.',
       }, { status: 503 });
     }
 
@@ -183,7 +247,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No recipients found for the given criteria.' }, { status: 404 });
     }
 
-    const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+    const fromEmail = getSharedFromEmail(process.env.SMTP_FROM, process.env.RESEND_FROM, process.env.BREVO_FROM, process.env.SMTP_USER, DEFAULT_FROM_EMAIL);
     let sentCount = 0;
     let failedCount = 0;
     const errors = [];

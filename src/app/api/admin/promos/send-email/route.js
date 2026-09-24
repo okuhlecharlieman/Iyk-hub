@@ -252,12 +252,12 @@ export async function POST(request) {
     let failedCount = 0;
     const errors = [];
 
-    let provider = null;
+    const providerCounts = {};
     for (const recipient of recipientList) {
       try {
         const { subject, html } = buildPromoEmail(recipient.displayName, promoCode, points, message);
         const usedProvider = await sendEmail(recipient.email, subject, html, fromEmail);
-        if (!provider) provider = usedProvider;
+        providerCounts[usedProvider] = (providerCounts[usedProvider] || 0) + 1;
         sentCount++;
       } catch (err) {
         failedCount++;
@@ -272,6 +272,8 @@ export async function POST(request) {
       recipientCount: recipientList.length,
       sentCount,
       failedCount,
+      provider: Object.keys(providerCounts).length === 1 ? Object.keys(providerCounts)[0] : 'mixed',
+      providerCounts,
       adminUid: decoded.uid,
       adminEmail: decoded.email,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -281,10 +283,19 @@ export async function POST(request) {
       actorUid: decoded.uid,
       actorEmail: decoded.email,
       action: 'send_promo_email',
-      details: { promoCode, sentCount, failedCount, totalRecipients: recipientList.length },
+      details: { promoCode, sentCount, failedCount, totalRecipients: recipientList.length, providerCounts },
     });
 
-    return NextResponse.json({ success: true, sentCount, failedCount, provider, errors: errors.slice(0, 10) });
+    const providers = Object.entries(providerCounts).map(([name, count]) => ({ name, count }));
+    return NextResponse.json({
+      success: true,
+      sentCount,
+      failedCount,
+      provider: providers.length === 1 ? providers[0].name : providers.length > 1 ? 'mixed' : null,
+      providerCounts,
+      providers,
+      errors: errors.slice(0, 10),
+    });
   } catch (error) {
     return handleApiError(error, 'Send promo email error');
   }

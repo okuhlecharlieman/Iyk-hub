@@ -407,7 +407,10 @@ function SendEmailTab({ user, toast, codes, loading, setLoading, onDone }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || data.hint || 'Failed to send emails');
-      const providerLabel = data.provider === 'resend' ? ' via Resend' : data.provider === 'smtp' ? ' via SMTP' : '';
+      const providerNames = { brevo: 'Brevo', resend: 'Resend', smtp: 'SMTP' };
+      const providerLabel = data.providers?.length
+        ? ` via ${data.providers.map(({ name, count }) => `${providerNames[name] || name} (${count})`).join(', ')}`
+        : data.provider ? ` via ${providerNames[data.provider] || data.provider}` : '';
       let msg = `Sent to ${data.sentCount} user${data.sentCount !== 1 ? 's' : ''}${providerLabel}`;
       if (data.failedCount) {
         const failReasons = (data.errors || []).map((e) => e.error).filter(Boolean).join('; ');
@@ -524,6 +527,11 @@ function HistoryTab({ history, dataLoading }) {
                     {item.type === 'codes_created' && `${item.codes?.length || 0} code(s) • ${item.points} pts each`}
                     {item.type === 'email_sent' && `${item.sentCount} sent, ${item.failedCount} failed • Code: ${item.promoCode}`}
                   </p>
+                  {item.type === 'email_sent' && item.providerCounts && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      Sent via {Object.entries(item.providerCounts).map(([provider, count]) => `${provider === 'brevo' ? 'Brevo' : provider === 'resend' ? 'Resend' : provider === 'smtp' ? 'SMTP' : provider} (${count})`).join(', ')}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-400 mt-0.5">by {item.adminEmail || 'Unknown'}</p>
                 </div>
               </div>

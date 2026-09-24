@@ -142,6 +142,29 @@ service cloud.firestore {
             || isAdmin());
     }
 
+    // Venue-hosted multiplayer rooms. The host controls the round; players can
+    // join waiting rooms and submit their own answer during a live round.
+    match /venueRooms/{roomId} {
+      allow read: if request.auth.uid != null;
+      allow create: if request.auth.uid != null
+        && request.resource.data.hostUid == request.auth.uid
+        && request.resource.data.players[request.auth.uid].uid == request.auth.uid;
+      allow update: if request.auth.uid != null && (
+        resource.data.hostUid == request.auth.uid
+        || (
+          resource.data.status == 'lobby'
+          && request.resource.data.players[request.auth.uid].uid == request.auth.uid
+        )
+        || (
+          resource.data.status == 'live'
+          && resource.data.players[request.auth.uid].uid == request.auth.uid
+          && request.resource.data.players.diff(resource.data.players).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.players[request.auth.uid].diff(resource.data.players[request.auth.uid]).affectedKeys().hasOnly(['answer'])
+        )
+      );
+      allow delete: if request.auth.uid != null && resource.data.hostUid == request.auth.uid;
+    }
+
     // Rules for video chat
     match /videoRooms/{roomId} {
       allow get: if request.auth.uid != null;

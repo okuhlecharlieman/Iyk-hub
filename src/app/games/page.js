@@ -12,7 +12,7 @@ import GameCard from '../../components/GameCard';
 import UserRoomsList from '../../components/UserRoomsList';
 import InstallButton from '../../components/InstallButton';
 import { ErrorBoundary } from '../../components/error/ErrorBoundary';
-import { FaGamepad, FaSearch } from 'react-icons/fa';
+import { FaGamepad, FaSearch, FaUsers } from 'react-icons/fa';
 
 /** Game IDs rendered on the games listing page. Order determines display order. */
 const GAMES = ['scratchcard', 'rps', 'tictactoe', 'memory', 'hangman', 'quiz', 'randomchat'];
@@ -61,6 +61,21 @@ export default function GamesPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="md:col-span-2 lg:col-span-3 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-900 rounded-2xl shadow-xl overflow-hidden text-white">
+              <div className="p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <FaUsers className="text-emerald-300 text-2xl" />
+                    <span className="text-xs uppercase tracking-widest text-emerald-200 font-semibold">Venue mode</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-bold">Live Quiz Night</h2>
+                  <p className="mt-2 text-blue-100 max-w-2xl">Host a live quiz for your venue, share a four-digit room PIN, and keep the leaderboard moving round by round.</p>
+                </div>
+                <a href="/games/venue" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 hover:bg-emerald-50 transition-colors whitespace-nowrap">
+                  Host or join a room
+                </a>
+              </div>
+            </div>
             {filteredGames.map((gameId) => (
               <GameCard key={gameId} gameId={gameId} />
             ))}

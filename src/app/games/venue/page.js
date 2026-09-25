@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import { db } from '../../../lib/firebase';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
-import { FaArrowLeft, FaCopy, FaPlay, FaQrcode, FaTrophy, FaUsers } from 'react-icons/fa';
+import { doc, getDoc, onSnapshot, runTransaction, updateDoc } from 'firebase/firestore';
+import { FaArrowLeft, FaCopy, FaPlay, FaQrcode, FaStopCircle, FaTrophy, FaUsers } from 'react-icons/fa';
 import Link from 'next/link';
 
 const FALLBACK_QUESTIONS = [
@@ -42,7 +42,7 @@ export default function VenueQuizPage() {
 
   const isHost = Boolean(room && user && room.hostUid === user.uid);
   const roomRef = useMemo(() => roomPin ? doc(db, 'venueRooms', roomPin) : null, [roomPin]);
-  const players = Object.values(room?.players || {});
+  const players = Object.values(room?.players || {}).filter((player) => player.uid !== room?.hostUid);
   const currentQuestion = room?.questions?.[room?.currentQuestionIndex || 0];
   const currentPlayer = room?.players?.[user?.uid];
 
@@ -67,7 +67,13 @@ export default function VenueQuizPage() {
     setLoading(true);
     setError('');
     try {
-      const newPin = createPin();
+      let newPin = createPin();
+      let attempts = 0;
+      while ((await getDoc(doc(db, 'venueRooms', newPin))).exists() && attempts < 10) {
+        newPin = createPin();
+        attempts += 1;
+      }
+      if (attempts >= 10) throw new Error('Could not find an available room PIN. Please try again.');
       const questions = await getQuestions();
       const roomData = {
         hostUid: user.uid,
@@ -78,7 +84,12 @@ export default function VenueQuizPage() {
         players: { [user.uid]: { uid: user.uid, name: playerName(user), score: 0, answer: null } },
         createdAt: new Date().toISOString(),
       };
-      await setDoc(doc(db, 'venueRooms', newPin), roomData);
+      await runTransaction(db, async (transaction) => {
+        const ref = doc(db, 'venueRooms', newPin);
+        const snapshot = await transaction.get(ref);
+        if (snapshot.exists()) throw new Error('That room PIN was just taken. Please try again.');
+        transaction.set(ref, roomData);
+      });
       setRoomPin(newPin);
       setRoom(roomData);
       router.replace(`/games/venue?room=${newPin}`);
@@ -131,7 +142,7 @@ export default function VenueQuizPage() {
   const nextQuestion = async () => {
     if (!isHost || !roomRef || !currentQuestion) return;
     const nextPlayers = { ...room.players };
-    Object.values(nextPlayers).forEach((player) => {
+    Object.values(nextPlayers).filter((player) => player.uid !== room.hostUid).forEach((player) => {
       nextPlayers[player.uid] = {
         ...player,
         score: player.score + (player.answer === currentQuestion.answer ? 1 : 0),
@@ -190,6 +201,7 @@ export default function VenueQuizPage() {
                 {room.status === 'live' && currentQuestion && <div className="py-8"><div className="flex items-center justify-between text-sm text-slate-500"><span>Question {(room.currentQuestionIndex || 0) + 1} of {room.questions.length}</span><span>{players.filter((player) => player.answer).length}/{players.length} answered</span></div><h2 className="mt-8 text-2xl font-black sm:text-3xl">{currentQuestion.question}</h2><div className="mt-7 grid gap-3 sm:grid-cols-2">{currentQuestion.options.map((option) => <button key={option} onClick={() => submitAnswer(option)} disabled={Boolean(currentPlayer?.answer) || isHost} className={`rounded-xl border-2 px-4 py-4 text-left font-semibold transition-colors ${currentPlayer?.answer === option ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:border-emerald-400'} disabled:cursor-default`}>{option}</button>)}</div>{isHost && <button onClick={revealAnswer} className="mt-8 rounded-xl bg-amber-500 px-5 py-3 font-bold text-white">Reveal answer</button>}</div>}
                 {room.status === 'reveal' && currentQuestion && <div className="py-14 text-center"><FaTrophy className="mx-auto text-5xl text-amber-500" /><p className="mt-5 text-sm font-bold uppercase tracking-widest text-slate-500">Correct answer</p><h2 className="mt-2 text-3xl font-black text-emerald-600">{currentQuestion.answer}</h2>{isHost && <button onClick={nextQuestion} className="mt-8 rounded-xl bg-slate-900 px-6 py-3 font-bold text-white">{room.currentQuestionIndex + 1 >= room.questions.length ? 'Show leaderboard' : 'Next question'}</button>}</div>}
                 {room.status === 'finished' && <div className="py-10 text-center"><FaTrophy className="mx-auto text-5xl text-amber-500" /><h2 className="mt-4 text-3xl font-black">Final leaderboard</h2><div className="mx-auto mt-6 max-w-md space-y-2 text-left">{players.sort((a, b) => b.score - a.score).map((player, index) => <div key={player.uid} className="flex items-center justify-between rounded-xl bg-slate-100 px-4 py-3"><span className="font-semibold">{index + 1}. {player.name}</span><strong>{player.score} pts</strong></div>)}</div></div>}
+                {room.status === 'closed' && <div className="py-16 text-center"><FaStopCircle className="mx-auto text-5xl text-red-500" /><h2 className="mt-4 text-3xl font-black">Room closed</h2><p className="mt-2 text-slate-500">This quiz room was closed by an administrator.</p></div>}
               </main>
               <aside className="rounded-2xl border border-white/10 bg-white/10 p-5"><h2 className="flex items-center gap-2 font-bold"><FaUsers className="text-emerald-300" /> Players ({players.length})</h2><div className="mt-4 space-y-2">{players.map((player) => <div key={player.uid} className="flex items-center justify-between rounded-lg bg-white/10 px-3 py-2 text-sm"><span>{player.name}{player.uid === room.hostUid ? ' (host)' : ''}</span><span className="text-emerald-300">{player.score}</span></div>)}</div><p className="mt-6 text-xs leading-5 text-slate-300">Share the room PIN or invite link on the venue screen. Players join free; venue host access can later be tied to a subscription or event pass.</p></aside>
             </div>

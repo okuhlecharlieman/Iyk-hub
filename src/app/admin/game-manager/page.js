@@ -10,15 +10,16 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../../context/AuthContext';
-import { FaGamepad, FaPlus, FaTrash, FaUpload, FaQuestionCircle, FaFont } from 'react-icons/fa';
+import { FaGamepad, FaPlus, FaTrash, FaUpload, FaQuestionCircle, FaFont, FaUsers, FaSyncAlt, FaStopCircle } from 'react-icons/fa';
 
-const TABS = { QUIZ: 'quiz', HANGMAN: 'hangman' };
+const TABS = { QUIZ: 'quiz', HANGMAN: 'hangman', ROOMS: 'rooms' };
 
 /** GameManagerPage — main page component. */
 export default function GameManagerPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(TABS.QUIZ);
   const [items, setItems] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -50,7 +51,56 @@ export default function GameManagerPage() {
     setLoading(false);
   }, [user, activeTab]);
 
-  useEffect(() => { fetchItems(); }, [fetchItems]);
+  const fetchRooms = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setError('');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/admin/venue-rooms', { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRooms(data.rooms || []);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab === TABS.ROOMS) fetchRooms();
+    else fetchItems();
+  }, [activeTab, fetchItems, fetchRooms]);
+
+  const updateRoom = async (id, status) => {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/admin/venue-rooms', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRooms((current) => current.map((room) => room.id === id ? { ...room, status } : room));
+      setSuccess(`Room ${id} marked ${status}.`);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const closeRoom = async (id) => {
+    if (!confirm(`Remove room ${id}? Players will be disconnected.`)) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/admin/venue-rooms?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('Failed to remove room');
+      setRooms((current) => current.filter((room) => room.id !== id));
+      setSuccess(`Room ${id} removed.`);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   /** Handles add single action. */
   const handleAddSingle = async () => {
@@ -153,21 +203,58 @@ export default function GameManagerPage() {
               >
                 <FaFont /> Hangman Words
               </button>
+              <button
+                onClick={() => { setActiveTab(TABS.ROOMS); setShowAddForm(false); setShowJsonImport(false); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === TABS.ROOMS ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              >
+                <FaUsers /> Live Rooms
+              </button>
             </div>
 
             {/* Alerts */}
             {error && <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm">{error}</div>}
             {success && <div className="mb-4 p-3 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg text-sm">{success}</div>}
 
-            {/* Action buttons */}
-            <div className="flex gap-3 mb-6">
+            {/* Content actions */}
+            {activeTab !== TABS.ROOMS && <div className="flex gap-3 mb-6">
               <button onClick={() => { setShowAddForm(!showAddForm); setShowJsonImport(false); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                 <FaPlus /> Add {activeTab === TABS.QUIZ ? 'Question' : 'Word'}
               </button>
               <button onClick={() => { setShowJsonImport(!showJsonImport); setShowAddForm(false); }} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
                 <FaUpload /> Batch Import JSON
               </button>
-            </div>
+            </div>}
+
+            {activeTab === TABS.ROOMS ? (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                  <div>
+                    <h3 className="font-bold text-gray-800 dark:text-white">Live Quiz Rooms ({rooms.length})</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Monitor rooms, end disruptive sessions, or reopen a lobby.</p>
+                  </div>
+                  <button onClick={fetchRooms} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="Refresh rooms"><FaSyncAlt /></button>
+                </div>
+                {loading ? <div className="p-8 text-center text-gray-500">Loading rooms...</div> : rooms.length === 0 ? <div className="p-8 text-center text-gray-500 dark:text-gray-400">No live quiz rooms found.</div> : (
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {rooms.map((room) => (
+                      <div key={room.id} className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex items-center gap-3"><span className="text-xl font-black tracking-widest text-emerald-600 dark:text-emerald-400">{room.id}</span><span className="rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-1 text-xs font-semibold uppercase text-gray-600 dark:text-gray-300">{room.status}</span></div>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Host: {room.hostName} · {room.playerCount} players · {room.questionCount} questions</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select value={room.status} onChange={(event) => updateRoom(room.id, event.target.value)} className="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white" aria-label={`Status for room ${room.id}`}>
+                            {['lobby', 'live', 'reveal', 'finished', 'closed'].map((status) => <option key={status} value={status}>{status}</option>)}
+                          </select>
+                          <button onClick={() => closeRoom(room.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove room"><FaStopCircle /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+            <>
 
             {/* Single add form */}
             {showAddForm && (
@@ -259,6 +346,8 @@ export default function GameManagerPage() {
                 </div>
               )}
             </div>
+            </>
+            )}
           </div>
   );
 }

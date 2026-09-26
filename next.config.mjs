@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const gcsBucketName = process.env.GCS_BUCKET_NAME || 'okuhlesbucket';
+const gcsBucketName = process.env.GCS_BUCKET_NAME || 'okuhlesbucket-free';
 
 const nextConfig = {
   images: {
